@@ -93,6 +93,54 @@ jobs:
           ALEMBIC_DATABASE_URL: ${{ env.PG_SYNC_SCHEME }}://${{ env.PG_AUTH }}@localhost:5433/deltaledger
         run: python -m pytest -m "integration and postgres" -q
 
+  migration-validation:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.0-pg16
+        env:
+          POSTGRES_USER: deltaledger
+          POSTGRES_PASSWORD: deltaledger
+          POSTGRES_DB: deltaledger
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U deltaledger -d deltaledger"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      APP_PROFILE: ci
+      PG_ASYNC_SCHEME: postgresql+asyncpg
+      PG_SYNC_SCHEME: postgresql+psycopg
+      PG_AUTH: deltaledger:deltaledger
+      RUN_INTEGRATION_TESTS: "1"
+      RUN_POSTGRES_TESTS: "1"
+      OBJECT_STORAGE_PROVIDER: filesystem
+      EMBEDDING_PROVIDER: fake
+      RERANKER_PROVIDER: fake
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Create migration validation database
+        env:
+          PGPASSWORD: deltaledger
+        run: psql -h localhost -p 5433 -U deltaledger -d deltaledger -c "CREATE DATABASE deltaledger_migration_test;"
+      - name: Install backend
+        working-directory: backend
+        run: python -m pip install -e ".[dev]"
+      - name: Validate clean migration schema
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ env.PG_ASYNC_SCHEME }}://${{ env.PG_AUTH }}@localhost:5433/deltaledger
+          TEST_DATABASE_URL: ${{ env.PG_ASYNC_SCHEME }}://${{ env.PG_AUTH }}@localhost:5433/deltaledger_migration_test
+          ALEMBIC_DATABASE_URL: ${{ env.PG_SYNC_SCHEME }}://${{ env.PG_AUTH }}@localhost:5433/deltaledger_migration_test
+        run: python -m pytest tests/test_migration_integration.py -q
+
   redis-integration:
     runs-on: ubuntu-latest
     services:

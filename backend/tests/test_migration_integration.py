@@ -26,7 +26,7 @@ def test_clean_database_migrates_to_head_and_schema_objects_exist(test_database_
 
     assert "0002_phase2_processing_retrieval" in current.stdout
 
-    sync_url = test_database_url.replace("+asyncpg", "")
+    sync_url = test_database_url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
     engine = create_engine(sync_url)
     with engine.connect() as connection:
         vector_ext = connection.execute(
