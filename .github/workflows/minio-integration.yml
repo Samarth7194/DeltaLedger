@@ -1,0 +1,41 @@
+name: Manual MinIO Integration
+
+on:
+  workflow_dispatch:
+
+jobs:
+  minio:
+    runs-on: ubuntu-latest
+    services:
+      minio:
+        image: minio/minio:RELEASE.2024-07-31T05-46-26Z
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
+        ports:
+          - 9000:9000
+        options: >-
+          --health-cmd "curl -f http://localhost:9000/minio/health/ready"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        command: server /data
+    env:
+      APP_PROFILE: ci
+      OBJECT_STORAGE_PROVIDER: minio
+      RUN_INTEGRATION_TESTS: "1"
+      RUN_MINIO_TESTS: "1"
+      MINIO_ENDPOINT: http://localhost:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install backend
+        working-directory: backend
+        run: python -m pip install -e ".[dev]"
+      - name: Run MinIO integration tests
+        working-directory: backend
+        run: python -m pytest -m "integration and minio" -q

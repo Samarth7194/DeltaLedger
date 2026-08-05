@@ -1,0 +1,66 @@
+[project]
+name = "deltaledger-ai-backend"
+version = "0.1.0"
+description = "Financial disclosure change and contradiction intelligence backend"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  "alembic>=1.13.2",
+  "asyncpg>=0.29.0",
+  "beautifulsoup4>=4.12.3",
+  "dramatiq[redis]>=1.17.0",
+  "fastapi>=0.115.0",
+  "httpx>=0.27.0",
+  "minio>=7.2.8",
+  "pgvector>=0.3.3",
+  "psycopg[binary]>=3.2.3",
+  "pydantic>=2.8.0",
+  "pydantic-settings>=2.4.0",
+  "python-dotenv>=1.0.1",
+  "sqlalchemy>=2.0.32",
+  "structlog>=24.4.0",
+  "tenacity>=9.0.0",
+  "uvicorn[standard]>=0.30.6"
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+exclude = ["alembic*"]
+
+[project.optional-dependencies]
+ai = [
+  "sentence-transformers>=3.0.1"
+]
+dev = [
+  "pytest>=8.3.2",
+  "pytest-asyncio>=0.24.0",
+  "respx>=0.21.1",
+  "ruff>=0.6.3"
+]
+
+[tool.pytest.ini_options]
+addopts = "-p no:cacheprovider"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+markers = [
+  "unit: offline deterministic unit tests",
+  "integration: integration tests requiring local services",
+  "postgres: tests requiring PostgreSQL with PGVector",
+  "redis: tests requiring Redis/Dramatiq",
+  "minio: tests requiring MinIO",
+  "live: tests that call live external services",
+  "model_smoke: manual Hugging Face model smoke tests",
+  "hosted_model: manual hosted embedding provider smoke tests",
+  "slow: slow tests"
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

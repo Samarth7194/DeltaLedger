@@ -1,0 +1,48 @@
+# Secrets and local env
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.egg-info/
+.venv/
+venv/
+
+# Node/frontend
+node_modules/
+.next/
+out/
+dist/
+build/
+
+# Local infrastructure data
+postgres_data/
+redis_data/
+minio_data/
+data/minio/
+data/postgres/
+data/redis/
+
+# Model caches
+.cache/
+model_cache/
+models/
+huggingface/
+.huggingface/
+
+# Logs and artifacts
+*.log
+tmp/
+temp/
+reports/
+artifacts/
+
