@@ -4,7 +4,17 @@ import uuid
 from datetime import date, datetime
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Date, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Computed,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -144,7 +154,11 @@ class FilingChunk(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
     embedding_model: Mapped[str | None] = mapped_column(String(255), nullable=True)
     embedding_version: Mapped[str | None] = mapped_column(String(255), nullable=True)
     embedded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    search_vector: Mapped[object | None] = mapped_column(TSVECTOR, nullable=True)
+    search_vector: Mapped[object | None] = mapped_column(
+        TSVECTOR,
+        Computed("to_tsvector('english', coalesce(text, ''))", persisted=True),
+        nullable=True,
+    )
     metadata_: Mapped[dict[str, object]] = mapped_column(
         "metadata",
         JSONB,
