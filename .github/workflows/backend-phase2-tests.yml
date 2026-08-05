@@ -70,28 +70,28 @@ jobs:
         env:
           DATABASE_URL: ${{ env.PG_ASYNC_SCHEME }}://${{ env.PG_AUTH }}@localhost:5433/deltaledger_test
           ALEMBIC_DATABASE_URL: ${{ env.PG_SYNC_SCHEME }}://${{ env.PG_AUTH }}@localhost:5433/deltaledger_test
-        run: python -m alembic upgrade head
+        run: python -m app.cli.ci "Migration upgrade failed" -- python -m alembic upgrade head
       - name: Migration current
         working-directory: backend
         env:
           DATABASE_URL: ${{ env.PG_ASYNC_SCHEME }}://${{ env.PG_AUTH }}@localhost:5433/deltaledger_test
           ALEMBIC_DATABASE_URL: ${{ env.PG_SYNC_SCHEME }}://${{ env.PG_AUTH }}@localhost:5433/deltaledger_test
-        run: python -m alembic current
+        run: python -m app.cli.ci "Migration current failed" -- python -m alembic current
       - name: Migration downgrade and upgrade
         working-directory: backend
         env:
           DATABASE_URL: ${{ env.PG_ASYNC_SCHEME }}://${{ env.PG_AUTH }}@localhost:5433/deltaledger_test
           ALEMBIC_DATABASE_URL: ${{ env.PG_SYNC_SCHEME }}://${{ env.PG_AUTH }}@localhost:5433/deltaledger_test
         run: |
-          python -m alembic downgrade -1
-          python -m alembic upgrade head
+          python -m app.cli.ci "Migration downgrade failed" -- python -m alembic downgrade -1
+          python -m app.cli.ci "Migration re-upgrade failed" -- python -m alembic upgrade head
       - name: Postgres integration tests
         working-directory: backend
         env:
           DATABASE_URL: ${{ env.PG_ASYNC_SCHEME }}://${{ env.PG_AUTH }}@localhost:5433/deltaledger
           TEST_DATABASE_URL: ${{ env.PG_ASYNC_SCHEME }}://${{ env.PG_AUTH }}@localhost:5433/deltaledger_test
           ALEMBIC_DATABASE_URL: ${{ env.PG_SYNC_SCHEME }}://${{ env.PG_AUTH }}@localhost:5433/deltaledger
-        run: python -m pytest -m "integration and postgres" -q --tb=short
+        run: python -m app.cli.ci "Postgres integration tests failed" -- python -m pytest -m "integration and postgres" -q --tb=short
 
   migration-validation:
     runs-on: ubuntu-latest
@@ -139,7 +139,7 @@ jobs:
           DATABASE_URL: ${{ env.PG_ASYNC_SCHEME }}://${{ env.PG_AUTH }}@localhost:5433/deltaledger
           TEST_DATABASE_URL: ${{ env.PG_ASYNC_SCHEME }}://${{ env.PG_AUTH }}@localhost:5433/deltaledger_migration_test
           ALEMBIC_DATABASE_URL: ${{ env.PG_SYNC_SCHEME }}://${{ env.PG_AUTH }}@localhost:5433/deltaledger_migration_test
-        run: python -m pytest tests/test_migration_integration.py -q --tb=short
+        run: python -m app.cli.ci "Migration validation tests failed" -- python -m pytest tests/test_migration_integration.py -q --tb=short
 
   redis-integration:
     runs-on: ubuntu-latest
@@ -173,7 +173,7 @@ jobs:
         run: python -m app.cli.health redis
       - name: Redis integration tests
         working-directory: backend
-        run: python -m pytest -m "integration and redis" -q --tb=short
+        run: python -m app.cli.ci "Redis integration tests failed" -- python -m pytest -m "integration and redis" -q --tb=short
 
   minio-integration:
     runs-on: ubuntu-latest
@@ -208,4 +208,4 @@ jobs:
         run: python -m pip install -e ".[dev]"
       - name: MinIO integration tests
         working-directory: backend
-        run: python -m pytest -m "integration and minio" -q --tb=short
+        run: python -m app.cli.ci "MinIO integration tests failed" -- python -m pytest -m "integration and minio" -q --tb=short

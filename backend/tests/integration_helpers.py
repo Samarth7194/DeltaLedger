@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import uuid
 from datetime import date
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -251,6 +251,5 @@ async def create_retrieval_corpus(session: AsyncSession) -> dict[str, object]:
     }
 
 
-def stable_uuid(value: str) -> uuid.UUID:
-    return uuid.uuid5(uuid.NAMESPACE_URL, value)
-
+def stable_uuid(value: str) -> UUID:
+    return uuid5(NAMESPACE_URL, value)
