@@ -35,7 +35,7 @@ data/redis/
 # Model caches
 .cache/
 model_cache/
-models/
+/models/
 huggingface/
 .huggingface/
 
@@ -45,4 +45,3 @@ tmp/
 temp/
 reports/
 artifacts/
-
