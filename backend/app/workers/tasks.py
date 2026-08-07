@@ -7,6 +7,7 @@ from dramatiq.brokers.redis import RedisBroker
 
 from app.core.config import get_settings
 from app.db.session import AsyncSessionLocal
+from app.services.filing_comparison_service import FilingComparisonService
 from app.services.filing_processing_service import FilingProcessingService
 
 settings = get_settings()
@@ -24,6 +25,11 @@ def enqueue_process_filing(filing_id: uuid.UUID) -> str:
     return message.message_id
 
 
+def enqueue_process_comparison(comparison_id: uuid.UUID) -> str:
+    message = process_comparison_task.send(str(comparison_id))
+    return message.message_id
+
+
 @dramatiq.actor(max_retries=3, time_limit=30 * 60 * 1000)
 def process_filing_task(filing_id: str) -> None:
     import asyncio
@@ -35,6 +41,19 @@ async def _process_filing(filing_id: uuid.UUID) -> None:
     async with AsyncSessionLocal() as session:
         service = FilingProcessingService(session, get_settings())
         await service.process_filing(filing_id)
+
+
+@dramatiq.actor(max_retries=3, time_limit=30 * 60 * 1000)
+def process_comparison_task(comparison_id: str) -> None:
+    import asyncio
+
+    asyncio.run(_process_comparison(uuid.UUID(comparison_id)))
+
+
+async def _process_comparison(comparison_id: uuid.UUID) -> None:
+    async with AsyncSessionLocal() as session:
+        service = FilingComparisonService(session, get_settings())
+        await service.process_comparison(comparison_id)
 
 
 def main() -> None:

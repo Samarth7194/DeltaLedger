@@ -1,0 +1,362 @@
+[
+  {
+    "id": "add-001",
+    "previous_text": null,
+    "current_text": "We may need additional financing if customer demand declines.",
+    "expected_change_type": "added",
+    "expected_risk_category": "liquidity",
+    "expected_important_changed_spans": ["additional financing", "demand declines"],
+    "notes": "New liquidity risk language."
+  },
+  {
+    "id": "add-002",
+    "previous_text": null,
+    "current_text": "Revenue guidance now assumes lower enterprise orders in the second half.",
+    "expected_change_type": "added",
+    "expected_risk_category": "revenue_guidance",
+    "expected_important_changed_spans": ["lower enterprise orders"],
+    "notes": "New revenue outlook constraint."
+  },
+  {
+    "id": "add-003",
+    "previous_text": null,
+    "current_text": "A newly filed lawsuit alleges breach of contract and seeks damages.",
+    "expected_change_type": "added",
+    "expected_risk_category": "litigation",
+    "expected_important_changed_spans": ["newly filed lawsuit"],
+    "notes": "New legal proceeding."
+  },
+  {
+    "id": "add-004",
+    "previous_text": null,
+    "current_text": "We identified supplier concentration risk for key components.",
+    "expected_change_type": "added",
+    "expected_risk_category": "other",
+    "expected_important_changed_spans": ["supplier concentration risk"],
+    "notes": "New operating dependency."
+  },
+  {
+    "id": "add-005",
+    "previous_text": null,
+    "current_text": "Debt covenant compliance could depend on future refinancing availability.",
+    "expected_change_type": "added",
+    "expected_risk_category": "liquidity",
+    "expected_important_changed_spans": ["debt covenant compliance", "refinancing availability"],
+    "notes": "New financing condition."
+  },
+  {
+    "id": "add-006",
+    "previous_text": null,
+    "current_text": "Backlog conversion may be delayed if customer budgets tighten.",
+    "expected_change_type": "added",
+    "expected_risk_category": "revenue_guidance",
+    "expected_important_changed_spans": ["backlog conversion", "budgets tighten"],
+    "notes": "New demand uncertainty."
+  },
+  {
+    "id": "add-007",
+    "previous_text": null,
+    "current_text": "An investigation by a state regulator remains ongoing.",
+    "expected_change_type": "added",
+    "expected_risk_category": "litigation",
+    "expected_important_changed_spans": ["state regulator", "ongoing"],
+    "notes": "New regulatory proceeding."
+  },
+  {
+    "id": "add-008",
+    "previous_text": null,
+    "current_text": "Cybersecurity insurance coverage may not fully offset incident costs.",
+    "expected_change_type": "added",
+    "expected_risk_category": "other",
+    "expected_important_changed_spans": ["may not fully offset"],
+    "notes": "New insurance limitation."
+  },
+  {
+    "id": "remove-001",
+    "previous_text": "We may need additional financing if customer demand declines.",
+    "current_text": null,
+    "expected_change_type": "removed",
+    "expected_risk_category": "liquidity",
+    "expected_important_changed_spans": ["additional financing", "demand declines"],
+    "notes": "Removed liquidity warning."
+  },
+  {
+    "id": "remove-002",
+    "previous_text": "Revenue guidance assumes lower enterprise orders in the second half.",
+    "current_text": null,
+    "expected_change_type": "removed",
+    "expected_risk_category": "revenue_guidance",
+    "expected_important_changed_spans": ["lower enterprise orders"],
+    "notes": "Removed revenue outlook caveat."
+  },
+  {
+    "id": "remove-003",
+    "previous_text": "A pending lawsuit could require material settlement payments.",
+    "current_text": null,
+    "expected_change_type": "removed",
+    "expected_risk_category": "litigation",
+    "expected_important_changed_spans": ["pending lawsuit", "settlement payments"],
+    "notes": "Removed legal exposure."
+  },
+  {
+    "id": "remove-004",
+    "previous_text": "Supplier concentration risk may affect production continuity.",
+    "current_text": null,
+    "expected_change_type": "removed",
+    "expected_risk_category": "other",
+    "expected_important_changed_spans": ["supplier concentration risk"],
+    "notes": "Removed operating dependency."
+  },
+  {
+    "id": "remove-005",
+    "previous_text": "Borrowings under the credit facility may increase during seasonal peaks.",
+    "current_text": null,
+    "expected_change_type": "removed",
+    "expected_risk_category": "liquidity",
+    "expected_important_changed_spans": ["borrowings", "credit facility"],
+    "notes": "Removed seasonal borrowing language."
+  },
+  {
+    "id": "remove-006",
+    "previous_text": "Sales may be adversely affected by customer budget reviews.",
+    "current_text": null,
+    "expected_change_type": "removed",
+    "expected_risk_category": "revenue_guidance",
+    "expected_important_changed_spans": ["sales", "budget reviews"],
+    "notes": "Removed sales uncertainty."
+  },
+  {
+    "id": "remove-007",
+    "previous_text": "The company is defending claims related to prior product warranties.",
+    "current_text": null,
+    "expected_change_type": "removed",
+    "expected_risk_category": "litigation",
+    "expected_important_changed_spans": ["defending claims"],
+    "notes": "Removed claims disclosure."
+  },
+  {
+    "id": "remove-008",
+    "previous_text": "Macroeconomic volatility could increase component costs.",
+    "current_text": null,
+    "expected_change_type": "removed",
+    "expected_risk_category": "other",
+    "expected_important_changed_spans": ["macroeconomic volatility"],
+    "notes": "Removed cost-risk language."
+  },
+  {
+    "id": "strong-001",
+    "previous_text": "We may maintain sufficient liquidity through the next quarter.",
+    "current_text": "We will maintain sufficient liquidity through the next quarter.",
+    "expected_change_type": "strengthened",
+    "expected_risk_category": "liquidity",
+    "expected_important_changed_spans": ["may", "will"],
+    "notes": "Uncertainty reduced."
+  },
+  {
+    "id": "strong-002",
+    "previous_text": "Revenue may improve if enterprise demand recovers.",
+    "current_text": "Revenue will improve as enterprise demand recovers.",
+    "expected_change_type": "strengthened",
+    "expected_risk_category": "revenue_guidance",
+    "expected_important_changed_spans": ["may improve", "will improve"],
+    "notes": "Conditional revenue language strengthened."
+  },
+  {
+    "id": "strong-003",
+    "previous_text": "The lawsuit could have a material adverse effect.",
+    "current_text": "The lawsuit is not expected to have a material adverse effect.",
+    "expected_change_type": "strengthened",
+    "expected_risk_category": "litigation",
+    "expected_important_changed_spans": ["could", "not expected"],
+    "notes": "Litigation risk reduced."
+  },
+  {
+    "id": "strong-004",
+    "previous_text": "We could complete the remediation plan during 2026.",
+    "current_text": "We will complete the remediation plan during 2026.",
+    "expected_change_type": "strengthened",
+    "expected_risk_category": "other",
+    "expected_important_changed_spans": ["could", "will"],
+    "notes": "Commitment increased."
+  },
+  {
+    "id": "strong-005",
+    "previous_text": "Cash balances may support planned capital expenditures.",
+    "current_text": "Cash balances will support planned capital expenditures.",
+    "expected_change_type": "strengthened",
+    "expected_risk_category": "liquidity",
+    "expected_important_changed_spans": ["may support", "will support"],
+    "notes": "Liquidity certainty increased."
+  },
+  {
+    "id": "strong-006",
+    "previous_text": "Orders could normalize if channel inventory declines.",
+    "current_text": "Orders are expected to normalize as channel inventory declines.",
+    "expected_change_type": "strengthened",
+    "expected_risk_category": "revenue_guidance",
+    "expected_important_changed_spans": ["could normalize", "expected to normalize"],
+    "notes": "Revenue outlook more confident."
+  },
+  {
+    "id": "strong-007",
+    "previous_text": "Settlement discussions may resolve the claim.",
+    "current_text": "Settlement discussions are expected to resolve the claim.",
+    "expected_change_type": "strengthened",
+    "expected_risk_category": "litigation",
+    "expected_important_changed_spans": ["may resolve", "expected to resolve"],
+    "notes": "Legal uncertainty reduced."
+  },
+  {
+    "id": "strong-008",
+    "previous_text": "The system migration could be completed by year end.",
+    "current_text": "The system migration will be completed by year end.",
+    "expected_change_type": "strengthened",
+    "expected_risk_category": "other",
+    "expected_important_changed_spans": ["could", "will"],
+    "notes": "Execution commitment increased."
+  },
+  {
+    "id": "weak-001",
+    "previous_text": "We will maintain sufficient liquidity through the next quarter.",
+    "current_text": "We may maintain sufficient liquidity through the next quarter.",
+    "expected_change_type": "weakened",
+    "expected_risk_category": "liquidity",
+    "expected_important_changed_spans": ["will", "may"],
+    "notes": "Liquidity commitment weakened."
+  },
+  {
+    "id": "weak-002",
+    "previous_text": "Revenue will improve as enterprise demand recovers.",
+    "current_text": "Revenue may improve if enterprise demand recovers.",
+    "expected_change_type": "weakened",
+    "expected_risk_category": "revenue_guidance",
+    "expected_important_changed_spans": ["will improve", "may improve"],
+    "notes": "Revenue outlook became conditional."
+  },
+  {
+    "id": "weak-003",
+    "previous_text": "The lawsuit is not expected to have a material adverse effect.",
+    "current_text": "The lawsuit could have a material adverse effect.",
+    "expected_change_type": "weakened",
+    "expected_risk_category": "litigation",
+    "expected_important_changed_spans": ["not expected", "could"],
+    "notes": "Legal exposure increased."
+  },
+  {
+    "id": "weak-004",
+    "previous_text": "We will complete the remediation plan during 2026.",
+    "current_text": "We could complete the remediation plan during 2026.",
+    "expected_change_type": "weakened",
+    "expected_risk_category": "other",
+    "expected_important_changed_spans": ["will", "could"],
+    "notes": "Execution commitment weakened."
+  },
+  {
+    "id": "weak-005",
+    "previous_text": "Cash balances will support planned capital expenditures.",
+    "current_text": "Cash balances may support planned capital expenditures.",
+    "expected_change_type": "weakened",
+    "expected_risk_category": "liquidity",
+    "expected_important_changed_spans": ["will support", "may support"],
+    "notes": "Liquidity certainty decreased."
+  },
+  {
+    "id": "weak-006",
+    "previous_text": "Orders are expected to normalize as channel inventory declines.",
+    "current_text": "Orders could normalize if channel inventory declines.",
+    "expected_change_type": "weakened",
+    "expected_risk_category": "revenue_guidance",
+    "expected_important_changed_spans": ["expected to normalize", "could normalize"],
+    "notes": "Demand outlook less certain."
+  },
+  {
+    "id": "weak-007",
+    "previous_text": "Settlement discussions are expected to resolve the claim.",
+    "current_text": "Settlement discussions may resolve the claim.",
+    "expected_change_type": "weakened",
+    "expected_risk_category": "litigation",
+    "expected_important_changed_spans": ["expected to resolve", "may resolve"],
+    "notes": "Legal resolution less certain."
+  },
+  {
+    "id": "weak-008",
+    "previous_text": "The system migration will be completed by year end.",
+    "current_text": "The system migration could be completed by year end.",
+    "expected_change_type": "weakened",
+    "expected_risk_category": "other",
+    "expected_important_changed_spans": ["will", "could"],
+    "notes": "Execution language weakened."
+  },
+  {
+    "id": "same-001",
+    "previous_text": "We maintain sufficient liquidity for the next twelve months.",
+    "current_text": "We maintain sufficient liquidity for the next twelve months.",
+    "expected_change_type": "no_material_change",
+    "expected_risk_category": "liquidity",
+    "expected_important_changed_spans": [],
+    "notes": "Exact liquidity statement."
+  },
+  {
+    "id": "same-002",
+    "previous_text": "Revenue increased due to higher demand from existing customers.",
+    "current_text": "Revenue increased due to higher demand from existing customers.",
+    "expected_change_type": "no_material_change",
+    "expected_risk_category": "revenue_guidance",
+    "expected_important_changed_spans": [],
+    "notes": "Exact revenue statement."
+  },
+  {
+    "id": "same-003",
+    "previous_text": "The company is not party to material legal proceedings.",
+    "current_text": "The company is not party to material legal proceedings.",
+    "expected_change_type": "no_material_change",
+    "expected_risk_category": "litigation",
+    "expected_important_changed_spans": [],
+    "notes": "Exact legal statement."
+  },
+  {
+    "id": "same-004",
+    "previous_text": "Inventory levels remain aligned with production plans.",
+    "current_text": "Inventory levels remain aligned with production plans.",
+    "expected_change_type": "no_material_change",
+    "expected_risk_category": "other",
+    "expected_important_changed_spans": [],
+    "notes": "Exact operating statement."
+  },
+  {
+    "id": "same-005",
+    "previous_text": "Cash and cash equivalents were $25.0 million at quarter end.",
+    "current_text": "Cash and cash equivalents were $25.0 million at quarter end.",
+    "expected_change_type": "no_material_change",
+    "expected_risk_category": "liquidity",
+    "expected_important_changed_spans": [],
+    "notes": "Exact numeric liquidity statement."
+  },
+  {
+    "id": "same-006",
+    "previous_text": "Backlog remained concentrated among enterprise customers.",
+    "current_text": "Backlog remained concentrated among enterprise customers.",
+    "expected_change_type": "no_material_change",
+    "expected_risk_category": "revenue_guidance",
+    "expected_important_changed_spans": [],
+    "notes": "Exact backlog statement."
+  },
+  {
+    "id": "same-007",
+    "previous_text": "Routine claims are handled in the ordinary course of business.",
+    "current_text": "Routine claims are handled in the ordinary course of business.",
+    "expected_change_type": "no_material_change",
+    "expected_risk_category": "litigation",
+    "expected_important_changed_spans": [],
+    "notes": "Exact claims statement."
+  },
+  {
+    "id": "same-008",
+    "previous_text": "The company maintains insurance coverage for property losses.",
+    "current_text": "The company maintains insurance coverage for property losses.",
+    "expected_change_type": "no_material_change",
+    "expected_risk_category": "other",
+    "expected_important_changed_spans": [],
+    "notes": "Exact insurance statement."
+  }
+]

@@ -6,8 +6,10 @@
 - Limited to 4 quarterly reporting periods per company.
 - Limited to 10-Q filings.
 - Limited to SEC filing HTML and SEC company facts/XBRL APIs.
-- Initial change categories are added, removed, strengthened, and weakened language.
-- Initial risk categories are revenue and margin, liquidity and debt, and customer concentration.
+- Initial change categories are added, removed, strengthened, weakened, and
+  no-material-change.
+- Initial Phase 3 risk categories are liquidity, revenue guidance, litigation,
+  and other.
 
 ## Analytical Limits
 
@@ -36,6 +38,19 @@ DeltaLedger AI does not provide investment advice, buy/sell/hold recommendations
 - Parser coverage now includes repeated headings, Item 1A classification, tables,
   not-applicable sections, evidence hashes, and deterministic output, but it does
   not yet prove robust parsing for every issuer-specific SEC HTML variant.
-- Phase 3 capabilities are intentionally not implemented here: temporal filing
-  comparison, semantic disclosure diff, financial-claim extraction, XBRL
-  contradiction detection, and LangGraph analysis.
+## Phase 3 Known Limits
+
+- Temporal 10-Q comparison, section matching, passage alignment, and semantic
+  disclosure-change storage are implemented.
+- Passage segmentation is paragraph-based. Sentence, list-item, and table-text
+  units are schema-supported but not yet generated.
+- Passage alignment emits matched, added, and removed passages. Split and merged
+  passage types are reserved but not yet inferred.
+- The default classifier is deterministic and CI-safe. It is useful for
+  repeatable acceptance tests but should be replaced or augmented before
+  claiming production model quality.
+- The 40-example Phase 3 fixture is a seed regression set, not the full
+  150-example human-labeled benchmark.
+- Financial-claim extraction, XBRL verification, contradiction detection,
+  LangGraph analysis orchestration, report generation, and frontend workflows
+  remain future phases.

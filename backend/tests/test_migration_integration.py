@@ -13,7 +13,12 @@ def test_clean_database_migrates_to_head_and_schema_objects_exist(test_database_
     from app.core.config import get_settings
 
     get_settings().require_safe_test_database()
-    env = {**os.environ, "DATABASE_URL": test_database_url}
+    sync_url = test_database_url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
+    env = {
+        **os.environ,
+        "DATABASE_URL": test_database_url,
+        "ALEMBIC_DATABASE_URL": sync_url,
+    }
     subprocess.run(["python", "-m", "alembic", "downgrade", "base"], check=True, env=env)
     subprocess.run(["python", "-m", "alembic", "upgrade", "head"], check=True, env=env)
     current = subprocess.run(
@@ -24,9 +29,8 @@ def test_clean_database_migrates_to_head_and_schema_objects_exist(test_database_
         capture_output=True,
     )
 
-    assert "0002_phase2_processing_retrieval" in current.stdout
+    assert "0003_phase3_comparisons" in current.stdout
 
-    sync_url = test_database_url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
     engine = create_engine(sync_url)
     with engine.connect() as connection:
         vector_ext = connection.execute(
@@ -50,8 +54,16 @@ def test_clean_database_migrates_to_head_and_schema_objects_exist(test_database_
             row[0]
             for row in connection.execute(
                 text(
-                    "SELECT tablename FROM pg_tables "
-                    "WHERE schemaname = 'public' AND tablename LIKE 'filing_%'"
+                    "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"
+                )
+            )
+        }
+        disclosure_columns = {
+            row[0]
+            for row in connection.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'disclosure_changes'"
                 )
             )
         }
@@ -60,4 +72,15 @@ def test_clean_database_migrates_to_head_and_schema_objects_exist(test_database_
     assert embedding_type == "vector(1024)"
     assert "ix_filing_chunks_embedding_hnsw" in indexes
     assert "ix_filing_chunks_search_vector_gin" in indexes
-    assert {"filing_tables", "filing_processing_stages"} <= tables
+    assert {
+        "filing_tables",
+        "filing_processing_stages",
+        "filing_comparisons",
+        "section_matches",
+        "passage_units",
+        "passage_matches",
+        "disclosure_changes",
+    } <= tables
+    assert {"original_model_output", "reviewer_edits", "reviewed_by", "reviewed_at"} <= (
+        disclosure_columns
+    )

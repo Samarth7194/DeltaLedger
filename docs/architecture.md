@@ -95,6 +95,29 @@ own database session and executes `FilingProcessingService`, which performs:
 Routes enqueue work or read stored results; parsing, chunking, embedding, retrieval, and
 worker progress logic stay in services and repositories.
 
+## Phase 3 Comparison Flow
+
+Parsed 10-Q filings are compared by `FilingComparisonService` through the same
+route, service, repository, database pattern as Phase 2. `POST /api/v1/comparisons`
+validates that both filings exist, belong to the same company, are 10-Qs, have
+different periods, and already contain parsed sections and chunks. The worker
+takes a PostgreSQL advisory lock per comparison before processing.
+
+The comparison worker progresses through:
+
+1. `matching_sections`: combines SEC structure, headings, dense embeddings,
+   lexical similarity, reranker scores, and relative section position.
+2. `aligning_passages`: segments matched sections into deterministic paragraph
+   units and runs monotonic dynamic-programming alignment.
+3. `detecting_changes`: classifies added, removed, strengthened, weakened, and
+   no-material-change passages with deterministic signals plus a typed classifier.
+4. `completed` or `failed`: persists metrics, model names, versions, errors, and
+   reviewable disclosure findings.
+
+Findings store current and previous passage evidence, changed spans, materiality
+components, model/prompt metadata, and original model output. Reviewer edits are
+stored separately so the raw classifier result remains auditable.
+
 ## AI Boundaries
 
 Allowed LLM responsibilities:

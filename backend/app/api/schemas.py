@@ -122,3 +122,91 @@ class RetrievalResultResponse(BaseModel):
     final_score: float
     source: dict[str, Any]
 
+
+class ComparisonCreateRequest(BaseModel):
+    current_filing_id: uuid.UUID
+    comparison_filing_id: uuid.UUID
+
+
+class ComparisonCreateResponse(BaseModel):
+    comparison_id: uuid.UUID
+    status: str
+    job_id: str
+
+
+class ComparisonSummaryResponse(BaseModel):
+    id: uuid.UUID
+    company_id: uuid.UUID
+    current_filing_id: uuid.UUID
+    comparison_filing_id: uuid.UUID
+    status: str
+    comparison_version: str
+    processing_metrics: dict[str, Any]
+    summary_counts: dict[str, int]
+
+
+class SectionMatchResponse(BaseModel):
+    id: uuid.UUID
+    comparison_id: uuid.UUID
+    current_section_id: uuid.UUID | None
+    previous_section_id: uuid.UUID | None
+    match_type: str
+    heading_similarity: float | None
+    dense_similarity: float | None
+    lexical_similarity: float | None
+    reranker_score: float | None
+    structural_score: float | None
+    combined_score: float
+    confidence: float
+    match_reason: dict[str, Any]
+    review_status: str
+
+
+class PassageMatchResponse(BaseModel):
+    id: uuid.UUID
+    section_match_id: uuid.UUID
+    current_passage_id: uuid.UUID | None
+    previous_passage_id: uuid.UUID | None
+    alignment_type: str
+    dense_similarity: float | None
+    lexical_similarity: float | None
+    reranker_score: float | None
+    sequence_score: float | None
+    combined_score: float | None
+    confidence: float
+    alignment_metadata: dict[str, Any]
+
+
+class DisclosureChangeResponse(BaseModel):
+    id: uuid.UUID
+    comparison_id: uuid.UUID
+    section_match_id: uuid.UUID
+    passage_match_id: uuid.UUID | None
+    change_type: str
+    risk_category: str
+    previous_text: str | None
+    current_text: str | None
+    changed_spans: list[dict[str, Any]]
+    change_summary: str
+    change_explanation: str
+    materiality_score: float
+    confidence: float
+    detection_method: str
+    supporting_evidence: dict[str, Any]
+    materiality_components: dict[str, Any]
+    original_model_output: dict[str, Any]
+    model_name: str | None
+    model_version: str | None
+    prompt_version: str | None
+    review_status: str
+    review_comment: str | None
+    reviewer_edits: dict[str, Any]
+
+
+class ChangeReviewRequest(BaseModel):
+    review_status: str
+    comment: str | None = None
+    reviewer_id: str | None = None
+    change_type: str | None = None
+    risk_category: str | None = None
+    summary: str | None = None

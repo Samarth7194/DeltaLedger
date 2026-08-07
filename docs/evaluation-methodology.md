@@ -30,6 +30,39 @@ Each example includes:
 - Human annotations.
 - Dataset version.
 
+## Phase 3 Seed Fixture
+
+Phase 3 adds `backend/tests/fixtures/comparison/phase3_examples.json`, a
+40-example manually curated seed fixture for semantic disclosure changes. It is
+not the full MVP benchmark, but it gives CI and reviewers a stable starting
+point for regression checks.
+
+The seed fixture contains:
+
+- 8 added-disclosure examples.
+- 8 removed-disclosure examples.
+- 8 strengthened-language examples.
+- 8 weakened-language examples.
+- 8 no-material-change examples.
+
+Each example includes previous text, current text, expected change type,
+expected risk category, expected important changed spans, and annotation notes.
+
+Annotation rules:
+
+- `added`: previous passage is absent and current passage introduces a new
+  disclosure.
+- `removed`: current passage is absent and previous passage contained a
+  disclosure.
+- `strengthened`: current passage reduces uncertainty, adds commitment, removes
+  negative/risk language, or otherwise makes the disclosure materially stronger.
+- `weakened`: current passage adds uncertainty, conditions, negation, risk terms,
+  or removes commitment.
+- `no_material_change`: wording is identical or semantically unchanged for the
+  available evidence.
+- Risk category is assigned from the dominant topic: liquidity/financing,
+  revenue/demand/guidance, litigation/legal proceedings, or other.
+
 ## Metrics
 
 Retrieval:
@@ -47,6 +80,11 @@ Change detection:
 Risk classification:
 
 - Macro F1 and confusion matrix.
+
+Phase 3 includes deterministic metric helpers in
+`app.services.evaluation_metrics` for per-label precision, recall, F1, macro-F1,
+and aggregate change-type/risk-category reporting. These helpers do not call
+live models.
 
 Numerical extraction:
 
@@ -104,4 +142,3 @@ Each run generates:
 ## RAGAS Usage
 
 RAGAS can evaluate retrieval and answer faithfulness where report prose is generated from evidence. Custom deterministic evaluators remain authoritative for section matching, XBRL verification, calculations, and citation existence checks.
-

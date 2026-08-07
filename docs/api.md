@@ -73,6 +73,36 @@ Creation APIs accept `Idempotency-Key`. List APIs support pagination and documen
 - `POST /api/v1/retrieval/lexical-search`
   - Diagnostic PostgreSQL full-text search.
 
+## Comparisons
+
+- `POST /api/v1/comparisons`
+  - Body: `current_filing_id`, `comparison_filing_id`
+  - Validates same-company 10-Q filings with parsed sections/chunks.
+  - Creates or reuses a versioned comparison and queues worker processing.
+  - Returns `202` with `comparison_id`, `status`, and `job_id`.
+- `GET /api/v1/comparisons`
+  - Filters: `company_id`, `status`, `current_filing_id`,
+    `comparison_filing_id`
+  - Pagination: `limit`, `offset`
+- `GET /api/v1/comparisons/{comparison_id}`
+  - Returns status, processing metrics, version, filing IDs, and summary counts.
+- `GET /api/v1/comparisons/{comparison_id}/section-matches`
+  - Returns current/previous section IDs, match type, signal scores, confidence,
+    reason metadata, and review status.
+- `GET /api/v1/comparisons/{comparison_id}/passage-matches`
+  - Returns current/previous passage IDs, alignment type, signal scores,
+    confidence, and alignment metadata.
+- `GET /api/v1/comparisons/{comparison_id}/changes`
+  - Filters: `change_type`, `risk_category`, `min_materiality`, `review_status`
+  - Pagination: `limit`, `offset`
+- `GET /api/v1/comparisons/{comparison_id}/changes/{change_id}`
+  - Returns one disclosure change with evidence, materiality components, model
+    metadata, original model output, and review state.
+- `PATCH /api/v1/comparisons/{comparison_id}/changes/{change_id}/review`
+  - Body: `review_status`, optional `comment`, `reviewer_id`, `change_type`,
+    `risk_category`, and `summary`
+  - Preserves original classifier output while recording reviewer edits.
+
 ## Analyses
 
 - `POST /api/v1/analyses`

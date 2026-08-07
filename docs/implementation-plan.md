@@ -27,10 +27,10 @@
 
 ## Week 4: Temporal Comparison
 
-- Implement hybrid retrieval with metadata filters, dense retrieval, lexical retrieval, fusion, and reranking.
-- Implement section matching using normalized names, structure, similarity, reranker scores, position signals, and rule-based standard section matching.
-- Implement deterministic sentence/paragraph diff and initial change classifier.
-- Tests: section matching, negative matches, ignored boilerplate changes, change classification.
+- Implement hybrid retrieval with metadata filters, dense retrieval, lexical retrieval, fusion, and reranking. Status: complete in Phase 2.
+- Implement section matching using normalized names, structure, similarity, reranker scores, position signals, and rule-based standard section matching. Status: complete in Phase 3 backend.
+- Implement deterministic paragraph segmentation, monotonic passage alignment, semantic disclosure-change classification, materiality components, evidence persistence, and reviewer edits. Status: complete in Phase 3 backend.
+- Tests: section matching, negative matches, passage alignment, change classification, review preservation, comparison API, and PostgreSQL persistence. Status: added for Phase 3.
 
 ## Week 5: Numerical Verification
 
@@ -61,4 +61,3 @@
 - Add GitHub Actions for backend, frontend, evaluation regression, and Docker build.
 - Add security tests, load tests with Locust or k6, deployment docs, model card, limitations, and demo script.
 - Run full test suite and record measured benchmark results in README.
-

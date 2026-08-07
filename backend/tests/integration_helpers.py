@@ -251,5 +251,121 @@ async def create_retrieval_corpus(session: AsyncSession) -> dict[str, object]:
     }
 
 
+async def create_comparison_corpus(session: AsyncSession) -> dict[str, object]:
+    await reset_corpus(session)
+    company = Company(cik="0000000100", ticker="CMP", legal_name="Comparison Test Inc.")
+    session.add(company)
+    await session.flush()
+
+    previous_filing = Filing(
+        company_id=company.id,
+        accession_number="0000000100-26-000001",
+        form_type="10-Q",
+        filing_date=date(2026, 5, 1),
+        report_period=date(2026, 3, 31),
+        primary_document="previous.htm",
+        source_url="https://www.sec.gov/Archives/edgar/data/100/1/previous.htm",
+        ingestion_status="processed",
+        raw_metadata={},
+    )
+    current_filing = Filing(
+        company_id=company.id,
+        accession_number="0000000100-26-000002",
+        form_type="10-Q",
+        filing_date=date(2026, 8, 1),
+        report_period=date(2026, 6, 30),
+        primary_document="current.htm",
+        source_url="https://www.sec.gov/Archives/edgar/data/100/2/current.htm",
+        ingestion_status="processed",
+        raw_metadata={},
+    )
+    session.add_all([previous_filing, current_filing])
+    await session.flush()
+
+    previous_text = (
+        "Liquidity remained sufficient and we will fund operations with cash on hand.\n\n"
+        "Revenue demand was stable and we expect orders to improve.\n\n"
+        "A lawsuit could have an adverse effect."
+    )
+    current_text = (
+        "Liquidity remained sufficient but we may need additional financing if demand declines.\n\n"
+        "Revenue demand was stable and we will fulfill orders under committed contracts.\n\n"
+        "A lawsuit could have an adverse effect.\n\n"
+        "We identified new supplier concentration risk during the quarter."
+    )
+    previous_section = FilingSection(
+        filing_id=previous_filing.id,
+        section_type="mda",
+        canonical_section_type="mda",
+        part_number="I",
+        item_number="2",
+        section_title="Item 2. Management Discussion and Analysis",
+        section_order=0,
+        raw_text=previous_text,
+        normalized_text=previous_text.lower(),
+        text_hash="previous-mda",
+        token_count=len(previous_text.split()),
+        source_anchor="#previous-mda",
+        metadata_={},
+    )
+    current_section = FilingSection(
+        filing_id=current_filing.id,
+        section_type="mda",
+        canonical_section_type="mda",
+        part_number="I",
+        item_number="2",
+        section_title="Item 2. Management Discussion and Analysis",
+        section_order=0,
+        raw_text=current_text,
+        normalized_text=current_text.lower(),
+        text_hash="current-mda",
+        token_count=len(current_text.split()),
+        source_anchor="#current-mda",
+        metadata_={},
+    )
+    session.add_all([previous_section, current_section])
+    await session.flush()
+
+    chunks = [
+        FilingChunk(
+            filing_section_id=previous_section.id,
+            chunk_index=0,
+            text=previous_text,
+            embedding=unit_vector(5),
+            token_count=len(previous_text.split()),
+            start_offset=0,
+            end_offset=len(previous_text),
+            source_reference="#previous-mda",
+            content_hash="previous-mda-chunk",
+            embedding_model="fake",
+            embedding_version="fake-v1",
+            metadata_={},
+        ),
+        FilingChunk(
+            filing_section_id=current_section.id,
+            chunk_index=0,
+            text=current_text,
+            embedding=unit_vector(5),
+            token_count=len(current_text.split()),
+            start_offset=0,
+            end_offset=len(current_text),
+            source_reference="#current-mda",
+            content_hash="current-mda-chunk",
+            embedding_model="fake",
+            embedding_version="fake-v1",
+            metadata_={},
+        ),
+    ]
+    session.add_all(chunks)
+    await session.commit()
+    return {
+        "company_id": company.id,
+        "current_filing_id": current_filing.id,
+        "comparison_filing_id": previous_filing.id,
+        "current_section_id": current_section.id,
+        "previous_section_id": previous_section.id,
+    }
+
+
 def stable_uuid(value: str) -> UUID:
     return uuid5(NAMESPACE_URL, value)

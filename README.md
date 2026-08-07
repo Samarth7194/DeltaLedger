@@ -10,10 +10,11 @@ Portfolio message:
 
 ## Current Status
 
-Phase 2 backend foundation is implemented: SEC filing parsing, table extraction,
+Phase 3 backend foundation is implemented: SEC filing parsing, table extraction,
 section-aware chunking, embedding/reranker abstractions, PGVector and PostgreSQL
 full-text retrieval repositories, hybrid retrieval, processing worker integration,
-and versioned retrieval/filing processing endpoints.
+cross-quarter 10-Q comparison, section matching, passage alignment, semantic
+disclosure-change classification, reviewable findings, and versioned APIs.
 
 ## MVP Scope
 
@@ -44,13 +45,13 @@ SEC APIs
   -> object storage and PostgreSQL
   -> parser, sectioning, chunking, embeddings
   -> hybrid retrieval and section matching
-  -> disclosure diff, claim extraction, XBRL verification
-  -> contradiction candidates and evidence assembly
+  -> passage alignment and disclosure diff
+  -> claim extraction, XBRL verification, contradiction candidates, evidence assembly
   -> human review interrupt
   -> citation-validated report export
 ```
 
-## Phase 2 Local Commands
+## Local Commands
 
 ```bash
 cd backend
@@ -158,6 +159,26 @@ been added, but this workstation did not have Docker available on `PATH`; local
 PostgreSQL/PGVector and MinIO integration commands can only pass after those
 services are running. Redis was available locally during validation.
 
+## Phase 3 Comparison APIs
+
+Phase 3 compares two parsed 10-Q filings from the same company and different
+periods. `POST /api/v1/comparisons` creates or reuses a comparison, queues a
+Dramatiq worker job, and returns `202`. The worker uses PostgreSQL advisory
+locks to avoid duplicate comparison processing.
+
+Read APIs expose comparison summaries, section matches, passage matches, and
+reviewable disclosure changes:
+
+- `GET /api/v1/comparisons`
+- `GET /api/v1/comparisons/{comparison_id}`
+- `GET /api/v1/comparisons/{comparison_id}/section-matches`
+- `GET /api/v1/comparisons/{comparison_id}/passage-matches`
+- `GET /api/v1/comparisons/{comparison_id}/changes`
+- `PATCH /api/v1/comparisons/{comparison_id}/changes/{change_id}/review`
+
+See [docs/semantic-diff.md](docs/semantic-diff.md) and
+[docs/section-matching.md](docs/section-matching.md).
+
 ## Phase 0 Review Packet
 
 - [Architecture design](docs/architecture.md)
@@ -168,6 +189,7 @@ services are running. Redis was available locally during validation.
 - [Ingestion pipeline](docs/ingestion-pipeline.md)
 - [Retrieval design](docs/retrieval-design.md)
 - [Section matching](docs/section-matching.md)
+- [Semantic disclosure diff](docs/semantic-diff.md)
 - [XBRL verification](docs/xbrl-verification.md)
 - [Contradiction detection](docs/contradiction-detection.md)
 - [Security](docs/security.md)

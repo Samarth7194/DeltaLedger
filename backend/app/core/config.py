@@ -71,6 +71,29 @@ class Settings(BaseSettings):
     reranker_candidate_limit: int = 40
     reranker_timeout_seconds: float = 60.0
 
+    comparison_version: str = "phase3-v1"
+    passage_segmentation_version: str = "paragraph-segmentation-v1"
+    section_match_min_score: float = 0.62
+    section_match_weight_structural: float = 0.30
+    section_match_weight_heading: float = 0.20
+    section_match_weight_dense: float = 0.20
+    section_match_weight_lexical: float = 0.15
+    section_match_weight_reranker: float = 0.10
+    section_match_weight_position: float = 0.05
+    passage_alignment_min_score: float = 0.58
+    passage_alignment_weight_dense: float = 0.35
+    passage_alignment_weight_lexical: float = 0.35
+    passage_alignment_weight_reranker: float = 0.15
+    passage_alignment_weight_position: float = 0.15
+    change_classifier_provider: str = "fake"
+    change_classifier_model: str = "deterministic-disclosure-change-v1"
+    change_classifier_timeout: float = 30.0
+    materiality_weight_novelty: float = 0.25
+    materiality_weight_risk: float = 0.25
+    materiality_weight_uncertainty: float = 0.20
+    materiality_weight_section: float = 0.15
+    materiality_weight_numeric: float = 0.15
+
     @field_validator("sec_user_agent")
     @classmethod
     def validate_sec_user_agent(cls, value: str) -> str:
@@ -111,6 +134,38 @@ class Settings(BaseSettings):
             raise ValueError("EMBEDDING_MODEL and EMBEDDING_MODEL_NAME must match.")
         if self.chunk_overlap_tokens >= self.chunk_max_tokens:
             raise ValueError("CHUNK_OVERLAP_TOKENS must be less than CHUNK_MAX_TOKENS.")
+        _require_unit_interval("SECTION_MATCH_MIN_SCORE", self.section_match_min_score)
+        _require_unit_interval("PASSAGE_ALIGNMENT_MIN_SCORE", self.passage_alignment_min_score)
+        _require_weight_sum(
+            "SECTION_MATCH",
+            [
+                self.section_match_weight_structural,
+                self.section_match_weight_heading,
+                self.section_match_weight_dense,
+                self.section_match_weight_lexical,
+                self.section_match_weight_reranker,
+                self.section_match_weight_position,
+            ],
+        )
+        _require_weight_sum(
+            "PASSAGE_ALIGNMENT",
+            [
+                self.passage_alignment_weight_dense,
+                self.passage_alignment_weight_lexical,
+                self.passage_alignment_weight_reranker,
+                self.passage_alignment_weight_position,
+            ],
+        )
+        _require_weight_sum(
+            "MATERIALITY",
+            [
+                self.materiality_weight_novelty,
+                self.materiality_weight_risk,
+                self.materiality_weight_uncertainty,
+                self.materiality_weight_section,
+                self.materiality_weight_numeric,
+            ],
+        )
         if self.app_profile == "docker":
             _require_host(self.database_url, "postgres", "DATABASE_URL")
             _require_host(self.redis_url, "redis", "REDIS_URL")
@@ -151,3 +206,15 @@ def _require_host(url: str, expected: str, name: str) -> None:
     actual = urlparse(url).hostname
     if actual != expected:
         raise ValueError(f"{name} must use host '{expected}' for APP_PROFILE=docker.")
+
+
+def _require_unit_interval(name: str, value: float) -> None:
+    if not 0.0 <= value <= 1.0:
+        raise ValueError(f"{name} must be between 0.0 and 1.0.")
+
+
+def _require_weight_sum(name: str, values: list[float]) -> None:
+    for value in values:
+        _require_unit_interval(f"{name} weight", value)
+    if abs(sum(values) - 1.0) > 0.0001:
+        raise ValueError(f"{name} weights must sum to 1.0.")

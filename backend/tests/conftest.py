@@ -63,7 +63,16 @@ def migrated_test_database(test_database_url: str) -> str:
     from app.core.config import get_settings
 
     get_settings().require_safe_test_database()
-    env = {**os.environ, "DATABASE_URL": test_database_url}
+    alembic_url = test_database_url.replace(
+        "postgresql+asyncpg://",
+        "postgresql+psycopg://",
+        1,
+    )
+    env = {
+        **os.environ,
+        "DATABASE_URL": test_database_url,
+        "ALEMBIC_DATABASE_URL": alembic_url,
+    }
     subprocess.run(["python", "-m", "alembic", "upgrade", "head"], check=True, env=env)
     return test_database_url
 

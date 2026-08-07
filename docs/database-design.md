@@ -279,6 +279,128 @@ Primary queries:
 - Compare current and previous period values.
 - Validate units, instant/duration periods, and frames.
 
+## Phase 3 Comparison Tables
+
+### filing_comparisons
+
+Stores one versioned cross-quarter comparison request for a current 10-Q and a
+previous 10-Q from the same company.
+
+Key fields:
+
+- `company_id`
+- `current_filing_id`
+- `comparison_filing_id`
+- `status`
+- `comparison_version`
+- `matching_model_name`
+- `matching_model_version`
+- `change_model_name`
+- `change_model_version`
+- `processing_metrics`
+- `error_code`
+- `error_message`
+
+Important constraints and indexes:
+
+- `CHECK (current_filing_id <> comparison_filing_id)`
+- `UNIQUE (current_filing_id, comparison_filing_id, comparison_version)`
+- Index on `(company_id, current_filing_id, comparison_filing_id)`
+
+### section_matches
+
+Stores section pair decisions for a comparison. Matches can be structural,
+semantic, hybrid, unmatched-current, or unmatched-previous.
+
+Key fields:
+
+- `comparison_id`
+- `current_section_id`
+- `previous_section_id`
+- `match_type`
+- `heading_similarity`
+- `dense_similarity`
+- `lexical_similarity`
+- `reranker_score`
+- `structural_score`
+- `combined_score`
+- `confidence`
+- `match_reason`
+- `review_status`
+
+### passage_units
+
+Stores deterministic paragraph-level units derived from parsed sections. Units
+preserve offsets, source anchors, hashes, and segmentation version.
+
+Key fields:
+
+- `filing_section_id`
+- `unit_type`
+- `unit_index`
+- `text`
+- `normalized_text`
+- `raw_char_start`
+- `raw_char_end`
+- `source_anchor`
+- `content_hash`
+- `segmentation_version`
+
+Important constraint:
+
+- `UNIQUE (filing_section_id, unit_type, unit_index, segmentation_version)`
+
+### passage_matches
+
+Stores monotonic passage alignment results for each matched section pair.
+
+Key fields:
+
+- `section_match_id`
+- `current_passage_id`
+- `previous_passage_id`
+- `alignment_type`
+- `dense_similarity`
+- `lexical_similarity`
+- `reranker_score`
+- `sequence_score`
+- `combined_score`
+- `confidence`
+- `alignment_metadata`
+
+### disclosure_changes
+
+Stores semantic disclosure findings generated from passage matches.
+
+Key fields:
+
+- `comparison_id`
+- `section_match_id`
+- `passage_match_id`
+- `change_type`
+- `risk_category`
+- `previous_text`
+- `current_text`
+- `changed_spans`
+- `change_summary`
+- `change_explanation`
+- `materiality_score`
+- `confidence`
+- `supporting_evidence`
+- `materiality_components`
+- `original_model_output`
+- `model_name`
+- `model_version`
+- `prompt_version`
+- `review_status`
+- `review_comment`
+- `reviewed_by`
+- `reviewed_at`
+- `reviewer_edits`
+
+Reviewer edits intentionally do not overwrite `original_model_output`; the
+system keeps classifier output and human changes separately for auditability.
+
 ### analysis_runs
 
 Tracks a comparison workflow.
@@ -720,6 +842,7 @@ base, upgrades to head, checks `alembic current`, and inspects schema objects:
 - `filing_chunks.search_vector` is generated for full-text retrieval.
 - `ix_filing_chunks_search_vector_gin` exists.
 - Filing, section, table, chunk, and processing-stage tables exist.
+- Phase 3 comparison tables exist with review-preserving disclosure fields.
 
 Run the migration suite with:
 
