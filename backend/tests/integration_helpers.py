@@ -283,13 +283,13 @@ async def create_comparison_corpus(session: AsyncSession) -> dict[str, object]:
     await session.flush()
 
     previous_text = (
-        "Liquidity remained sufficient and we will fund operations with cash on hand.\n\n"
-        "Revenue demand was stable and we expect orders to improve.\n\n"
+        "We will maintain sufficient liquidity through the next quarter.\n\n"
+        "Revenue may improve if enterprise demand recovers.\n\n"
         "A lawsuit could have an adverse effect."
     )
     current_text = (
-        "Liquidity remained sufficient but we may need additional financing if demand declines.\n\n"
-        "Revenue demand was stable and we will fulfill orders under committed contracts.\n\n"
+        "We may maintain sufficient liquidity through the next quarter.\n\n"
+        "Revenue will improve as enterprise demand recovers.\n\n"
         "A lawsuit could have an adverse effect.\n\n"
         "We identified new supplier concentration risk during the quarter."
     )
