@@ -118,6 +118,20 @@ Findings store current and previous passage evidence, changed spans, materiality
 components, model/prompt metadata, and original model output. Reviewer edits are
 stored separately so the raw classifier result remains auditable.
 
+## Phase 4 Financial Verification Flow
+
+Financial claim verification follows the existing route, service, repository,
+database layering. API routes enqueue extraction or verification jobs and expose
+stored results; services own extraction, metric resolution, fact ranking, and
+calculation; repositories own SQLAlchemy access to `financial_claims`,
+`claim_fact_candidates`, `claim_verifications`, `derived_financial_metrics`, and
+the existing `xbrl_facts` table.
+
+The worker uses PostgreSQL advisory locks before filing-level or
+comparison-level verification so duplicate jobs do not create duplicate claims or
+verification rows. Standard CI keeps `CLAIM_EXTRACTOR_PROVIDER=fake` and does
+not call external LLMs, live SEC APIs, or hosted model downloads.
+
 ## AI Boundaries
 
 Allowed LLM responsibilities:

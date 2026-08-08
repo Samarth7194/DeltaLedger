@@ -29,7 +29,7 @@ def test_clean_database_migrates_to_head_and_schema_objects_exist(test_database_
         capture_output=True,
     )
 
-    assert "0003_phase3_comparisons" in current.stdout
+    assert "0004_phase4_financial_verification" in current.stdout
 
     engine = create_engine(sync_url)
     with engine.connect() as connection:
@@ -67,6 +67,21 @@ def test_clean_database_migrates_to_head_and_schema_objects_exist(test_database_
                 )
             )
         }
+        financial_claim_columns = {
+            row[0]
+            for row in connection.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'financial_claims'"
+                )
+            )
+        }
+        metric_count = connection.execute(
+            text("SELECT count(*) FROM financial_metric_definitions")
+        ).scalar_one()
+        concept_count = connection.execute(
+            text("SELECT count(*) FROM financial_metric_concepts")
+        ).scalar_one()
 
     assert vector_ext == 1
     assert embedding_type == "vector(1024)"
@@ -80,7 +95,22 @@ def test_clean_database_migrates_to_head_and_schema_objects_exist(test_database_
         "passage_units",
         "passage_matches",
         "disclosure_changes",
+        "financial_metric_definitions",
+        "financial_metric_concepts",
+        "financial_claims",
+        "claim_fact_candidates",
+        "claim_verifications",
+        "derived_financial_metrics",
     } <= tables
     assert {"original_model_output", "reviewer_edits", "reviewed_by", "reviewed_at"} <= (
         disclosure_columns
     )
+    assert {
+        "original_model_output",
+        "reviewer_edits",
+        "metric_definition_id",
+        "reported_change",
+        "comparison_basis",
+    } <= financial_claim_columns
+    assert metric_count == 9
+    assert concept_count == 12

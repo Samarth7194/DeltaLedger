@@ -51,6 +51,20 @@ DeltaLedger AI does not provide investment advice, buy/sell/hold recommendations
   claiming production model quality.
 - The 40-example Phase 3 fixture is a seed regression set, not the full
   150-example human-labeled benchmark.
-- Financial-claim extraction, XBRL verification, contradiction detection,
-  LangGraph analysis orchestration, report generation, and frontend workflows
-  remain future phases.
+- Contradiction detection, LangGraph analysis orchestration, report generation,
+  and frontend workflows remain future phases.
+
+## Phase 4 Known Limits
+
+- Financial-claim extraction and XBRL verification are implemented for the
+  seeded canonical metrics only.
+- The default extractor is deterministic/fake in CI. It is designed for
+  repeatable acceptance tests, not broad production-quality language coverage.
+- Non-GAAP metrics, adjusted EBITDA, operating margin, and issuer-specific custom
+  XBRL concepts are unsupported until added to the registry with tests.
+- Gross margin is the only derived metric implemented.
+- Fact selection preserves candidates and abstains on ambiguity, unit mismatch,
+  or period mismatch. Reviewer fact-mapping selection is supported for preserved
+  candidates.
+- Phase 4 does not produce contradiction or misleadingness scores. It only
+  verifies extracted numerical claims against XBRL facts.

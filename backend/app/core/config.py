@@ -94,6 +94,17 @@ class Settings(BaseSettings):
     materiality_weight_section: float = 0.15
     materiality_weight_numeric: float = 0.15
 
+    claim_extractor_provider: str = "fake"
+    claim_extractor_model: str = "deterministic-financial-claim-extractor-v1"
+    claim_extractor_timeout: float = 30.0
+    metric_resolution_min_confidence: float = 0.75
+    xbrl_fact_min_score: float = 0.72
+    xbrl_fact_ambiguity_margin: float = 0.03
+    claim_absolute_tolerance: float = 0.01
+    claim_percent_tolerance: float = 0.25
+    claim_percentage_point_tolerance: float = 0.10
+    financial_verification_version: str = "phase4-v1"
+
     @field_validator("sec_user_agent")
     @classmethod
     def validate_sec_user_agent(cls, value: str) -> str:
@@ -166,6 +177,19 @@ class Settings(BaseSettings):
                 self.materiality_weight_numeric,
             ],
         )
+        _require_unit_interval(
+            "METRIC_RESOLUTION_MIN_CONFIDENCE",
+            self.metric_resolution_min_confidence,
+        )
+        _require_unit_interval("XBRL_FACT_MIN_SCORE", self.xbrl_fact_min_score)
+        _require_unit_interval("XBRL_FACT_AMBIGUITY_MARGIN", self.xbrl_fact_ambiguity_margin)
+        _require_non_negative("CLAIM_EXTRACTOR_TIMEOUT", self.claim_extractor_timeout)
+        _require_non_negative("CLAIM_ABSOLUTE_TOLERANCE", self.claim_absolute_tolerance)
+        _require_non_negative("CLAIM_PERCENT_TOLERANCE", self.claim_percent_tolerance)
+        _require_non_negative(
+            "CLAIM_PERCENTAGE_POINT_TOLERANCE",
+            self.claim_percentage_point_tolerance,
+        )
         if self.app_profile == "docker":
             _require_host(self.database_url, "postgres", "DATABASE_URL")
             _require_host(self.redis_url, "redis", "REDIS_URL")
@@ -211,6 +235,11 @@ def _require_host(url: str, expected: str, name: str) -> None:
 def _require_unit_interval(name: str, value: float) -> None:
     if not 0.0 <= value <= 1.0:
         raise ValueError(f"{name} must be between 0.0 and 1.0.")
+
+
+def _require_non_negative(name: str, value: float) -> None:
+    if value < 0:
+        raise ValueError(f"{name} must be greater than or equal to 0.")
 
 
 def _require_weight_sum(name: str, values: list[float]) -> None:

@@ -10,11 +10,13 @@ Portfolio message:
 
 ## Current Status
 
-Phase 3 backend foundation is implemented: SEC filing parsing, table extraction,
+Phase 4 backend foundation is implemented: SEC filing parsing, table extraction,
 section-aware chunking, embedding/reranker abstractions, PGVector and PostgreSQL
 full-text retrieval repositories, hybrid retrieval, processing worker integration,
 cross-quarter 10-Q comparison, section matching, passage alignment, semantic
-disclosure-change classification, reviewable findings, and versioned APIs.
+disclosure-change classification, financial claim extraction, XBRL fact
+verification, derived gross margin calculation, reviewable findings, and
+versioned APIs. Phase 5 contradiction scoring has not started.
 
 ## MVP Scope
 
@@ -179,6 +181,17 @@ reviewable disclosure changes:
 See [docs/semantic-diff.md](docs/semantic-diff.md) and
 [docs/section-matching.md](docs/section-matching.md).
 
+## Phase 4 Financial Claim Verification
+
+Phase 4 extracts financial claims from filing prose, resolves them to a seeded
+canonical metric registry, ranks candidate facts from the existing
+`xbrl_facts` table, and stores deterministic verification records. Standard CI
+uses fake extraction/model providers and does not call live SEC endpoints,
+external LLMs, or hosted model downloads.
+
+See [docs/financial-claims.md](docs/financial-claims.md) and
+[docs/xbrl-verification.md](docs/xbrl-verification.md).
+
 ## Phase 0 Review Packet
 
 - [Architecture design](docs/architecture.md)
@@ -190,6 +203,7 @@ See [docs/semantic-diff.md](docs/semantic-diff.md) and
 - [Retrieval design](docs/retrieval-design.md)
 - [Section matching](docs/section-matching.md)
 - [Semantic disclosure diff](docs/semantic-diff.md)
+- [Financial claim verification](docs/financial-claims.md)
 - [XBRL verification](docs/xbrl-verification.md)
 - [Contradiction detection](docs/contradiction-detection.md)
 - [Security](docs/security.md)

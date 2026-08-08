@@ -103,6 +103,42 @@ Creation APIs accept `Idempotency-Key`. List APIs support pagination and documen
     `risk_category`, and `summary`
   - Preserves original classifier output while recording reviewer edits.
 
+## Financial Claims
+
+- `POST /api/v1/filings/{filing_id}/financial-claims/extract`
+  - Queues deterministic/hybrid financial claim extraction for one filing.
+  - Returns `202` with a worker job ID.
+- `GET /api/v1/filings/{filing_id}/financial-claims`
+  - Filters: `canonical_metric`, `limit`, `offset`
+  - Returns extracted claims, normalized values, metric resolution, extractor
+    metadata, original output, and review fields.
+- `GET /api/v1/financial-claims/{claim_id}`
+  - Returns one extracted financial claim.
+- `GET /api/v1/financial-claims/{claim_id}/fact-candidates`
+  - Returns preserved XBRL candidate facts and component scores.
+- `PATCH /api/v1/financial-claims/{claim_id}/fact-candidates/{candidate_id}/review`
+  - Body: optional `reviewer_id`, `comment`
+  - Marks the chosen candidate as selected for its role and rejects competing
+    candidates for the same claim/role.
+- `POST /api/v1/financial-claims/{claim_id}/verify`
+  - Queues deterministic verification for one claim.
+  - Returns `202`.
+- `GET /api/v1/financial-claims/{claim_id}/verification`
+  - Returns the latest versioned verification row, formula, inputs, outputs,
+    tolerance, confidence, and selected fact IDs.
+- `PATCH /api/v1/financial-claims/{claim_id}/review`
+  - Body: `review_status`, optional `comment`, `reviewer_id`,
+    `canonical_metric_name`, `reported_value`, `reported_unit`, and
+    `comparison_basis`
+  - Preserves original extractor output while recording reviewer edits.
+- `POST /api/v1/comparisons/{comparison_id}/financial-verification`
+  - Queues financial claim extraction and verification for comparison evidence.
+  - Returns `202`.
+- `GET /api/v1/comparisons/{comparison_id}/financial-claims`
+  - Filters: `filing_id`, `canonical_metric`, `limit`, `offset`
+- `GET /api/v1/comparisons/{comparison_id}/financial-verifications`
+  - Filters: `verification_status`, `min_confidence`
+
 ## Analyses
 
 - `POST /api/v1/analyses`
@@ -186,3 +222,9 @@ Run:
 ```bash
 RUN_INTEGRATION_TESTS=1 RUN_POSTGRES_TESTS=1 python -m pytest -m "integration and postgres" -q
 ```
+
+Phase 4 adds marker-gated PostgreSQL API coverage in
+`tests/test_financial_postgres_integration.py`. It verifies claim extraction,
+XBRL fact candidate persistence, versioned verification idempotency, derived
+gross margin calculation, and financial-claim API reads/review against real
+database rows.

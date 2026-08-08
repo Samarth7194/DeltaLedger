@@ -401,6 +401,143 @@ Key fields:
 Reviewer edits intentionally do not overwrite `original_model_output`; the
 system keeps classifier output and human changes separately for auditability.
 
+## Phase 4 Financial Claim Verification Tables
+
+Phase 4 adds deterministic financial-claim verification without creating a
+second XBRL store. All fact matching references existing `xbrl_facts`.
+
+### financial_metric_definitions
+
+Canonical metric registry for metrics the system can resolve and verify.
+
+Key fields:
+
+- `canonical_name`
+- `display_name`
+- `metric_type`: monetary, percentage, ratio, per_share, or count
+- `period_behavior`: duration, instant, or derived
+- `preferred_unit_category`
+- `description`
+- `aliases`
+- `is_active`
+
+`canonical_name` is unique.
+
+### financial_metric_concepts
+
+Maps one canonical metric to ranked XBRL concept candidates.
+
+Key fields:
+
+- `metric_definition_id`
+- `taxonomy`
+- `concept`
+- `priority`
+- `period_behavior`
+- `unit_category`
+- `is_preferred`
+- `is_active`
+- `notes`
+
+The resolver scores all serious concept candidates and does not assume one XBRL
+concept works for every issuer.
+
+### financial_claims
+
+Stores structured claims extracted from narrative passages.
+
+Key fields:
+
+- `filing_id`
+- `comparison_id`
+- `disclosure_change_id`
+- `source_section_id`
+- `source_passage_id`
+- `claim_text`
+- `canonical_metric_name`
+- `metric_definition_id`
+- `claim_type`
+- `direction`
+- `reported_value`
+- `reported_unit`
+- `reported_change`
+- `reported_change_unit`
+- `comparison_basis`
+- `comparison_text`
+- `qualifiers`
+- `extraction_confidence`
+- `extraction_method`
+- `original_model_output`
+- `review_status`
+- `reviewer_edits`
+
+Indexes support `(filing_id, canonical_metric_name)`, `comparison_id`, and
+`source_passage_id`.
+
+### claim_fact_candidates
+
+Preserves every serious fact considered by the resolver.
+
+Key fields:
+
+- `financial_claim_id`
+- `xbrl_fact_id`
+- `candidate_role`: current or comparison
+- concept, period, unit, accession, frame, and combined scores
+- `selection_status`: candidate, selected, rejected, or ambiguous
+- `rejection_reason`
+
+Candidates are replaced idempotently for a claim and role.
+
+### claim_verifications
+
+Stores authoritative Decimal-based verification output.
+
+Key fields:
+
+- `financial_claim_id`
+- `current_xbrl_fact_id`
+- `comparison_xbrl_fact_id`
+- `verification_status`
+- current/comparison values
+- absolute, percentage, and percentage-point changes
+- reported-vs-calculated difference
+- `calculation_type`
+- `formula`
+- `calculation_inputs`
+- `calculation_output`
+- `tolerance_used`
+- `verification_reason`
+- `confidence`
+- `verification_version`
+
+`(financial_claim_id, verification_version)` is unique so processing can rerun
+without duplicating results.
+
+### derived_financial_metrics
+
+Stores deterministic derived metrics such as gross margin.
+
+Key fields:
+
+- `metric_definition_id`
+- `filing_id`
+- `calculation_status`
+- `formula`
+- `input_fact_ids`
+- `calculation_inputs_snapshot`
+- `calculated_value`
+- `unit`
+- `period_type`
+- `period_start`
+- `period_end`
+- `calculation_version`
+- `assumptions`
+
+Phase 4 implements gross margin as `GrossProfit / Revenue * 100` only when
+facts have compatible units, matching accession numbers, matching periods, and
+non-zero revenue.
+
 ### analysis_runs
 
 Tracks a comparison workflow.

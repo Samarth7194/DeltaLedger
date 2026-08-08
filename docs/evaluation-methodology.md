@@ -63,6 +63,24 @@ Annotation rules:
 - Risk category is assigned from the dominant topic: liquidity/financing,
   revenue/demand/guidance, litigation/legal proceedings, or other.
 
+## Phase 4 Seed Fixture
+
+Phase 4 adds `backend/tests/fixtures/financial_claims/phase4_examples.json`, a
+60-example curated fixture for financial claim extraction and verification. It
+is deterministic and CI-safe; it does not call external LLMs, live SEC services,
+or hosted model endpoints.
+
+The seed fixture contains:
+
+- 15 absolute-value examples.
+- 15 percentage-change examples.
+- 10 percentage-point or basis-point examples.
+- 10 period-resolution examples.
+- 10 ambiguous, unsupported, mismatch, or calculation-error examples.
+
+Coverage includes revenue, gross profit, gross margin, operating income, net
+income, cash and cash equivalents, long-term debt, basic EPS, and diluted EPS.
+
 ## Metrics
 
 Retrieval:
@@ -85,6 +103,9 @@ Phase 3 includes deterministic metric helpers in
 `app.services.evaluation_metrics` for per-label precision, recall, F1, macro-F1,
 and aggregate change-type/risk-category reporting. These helpers do not call
 live models.
+
+Phase 4 includes `app.services.financial_evaluation_metrics` for exact-match
+accuracy and status-count reporting over labeled verification examples.
 
 Numerical extraction:
 

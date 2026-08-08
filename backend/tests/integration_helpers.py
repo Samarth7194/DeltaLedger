@@ -1,12 +1,22 @@
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Company, Filing, FilingChunk, FilingSection
+from app.db.models import (
+    Company,
+    Filing,
+    FilingChunk,
+    FilingComparison,
+    FilingSection,
+    PassageUnit,
+    SectionMatch,
+    XbrlFact,
+)
 
 
 def unit_vector(index: int, dimension: int = 1024) -> list[float]:
@@ -364,6 +374,221 @@ async def create_comparison_corpus(session: AsyncSession) -> dict[str, object]:
         "comparison_filing_id": previous_filing.id,
         "current_section_id": current_section.id,
         "previous_section_id": previous_section.id,
+    }
+
+
+async def create_financial_verification_corpus(session: AsyncSession) -> dict[str, object]:
+    await reset_corpus(session)
+    company = Company(cik="0000000200", ticker="FIN", legal_name="Financial Test Inc.")
+    session.add(company)
+    await session.flush()
+
+    previous_filing = Filing(
+        company_id=company.id,
+        accession_number="0000000200-25-000001",
+        form_type="10-Q",
+        filing_date=date(2025, 8, 1),
+        report_period=date(2025, 6, 30),
+        primary_document="previous.htm",
+        source_url="https://www.sec.gov/Archives/edgar/data/200/1/previous.htm",
+        ingestion_status="processed",
+        raw_metadata={},
+    )
+    current_filing = Filing(
+        company_id=company.id,
+        accession_number="0000000200-26-000002",
+        form_type="10-Q",
+        filing_date=date(2026, 8, 1),
+        report_period=date(2026, 6, 30),
+        primary_document="current.htm",
+        source_url="https://www.sec.gov/Archives/edgar/data/200/2/current.htm",
+        ingestion_status="processed",
+        raw_metadata={},
+    )
+    session.add_all([previous_filing, current_filing])
+    await session.flush()
+
+    previous_text = "Revenue was $100 million for the quarter."
+    current_text = (
+        "Revenue increased 12% compared with the same period last year. "
+        "Revenue was $112 million for the quarter. "
+        "Gross profit was $44.8 million for the quarter."
+    )
+    previous_section = FilingSection(
+        filing_id=previous_filing.id,
+        section_type="mda",
+        canonical_section_type="mda",
+        part_number="I",
+        item_number="2",
+        section_title="Item 2. Management Discussion and Analysis",
+        section_order=0,
+        raw_text=previous_text,
+        normalized_text=previous_text.lower(),
+        text_hash="financial-previous-mda",
+        token_count=len(previous_text.split()),
+        source_anchor="#previous-mda",
+        metadata_={},
+    )
+    current_section = FilingSection(
+        filing_id=current_filing.id,
+        section_type="mda",
+        canonical_section_type="mda",
+        part_number="I",
+        item_number="2",
+        section_title="Item 2. Management Discussion and Analysis",
+        section_order=0,
+        raw_text=current_text,
+        normalized_text=current_text.lower(),
+        text_hash="financial-current-mda",
+        token_count=len(current_text.split()),
+        source_anchor="#current-mda",
+        metadata_={},
+    )
+    session.add_all([previous_section, current_section])
+    await session.flush()
+
+    current_passage = PassageUnit(
+        filing_section_id=current_section.id,
+        unit_type="paragraph",
+        unit_index=0,
+        text=current_text,
+        normalized_text=current_text.lower(),
+        raw_char_start=0,
+        raw_char_end=len(current_text),
+        normalized_char_start=0,
+        normalized_char_end=len(current_text),
+        source_anchor="#current-p0",
+        content_hash="financial-current-p0",
+        segmentation_version="test-v1",
+        metadata_={},
+    )
+    previous_passage = PassageUnit(
+        filing_section_id=previous_section.id,
+        unit_type="paragraph",
+        unit_index=0,
+        text=previous_text,
+        normalized_text=previous_text.lower(),
+        raw_char_start=0,
+        raw_char_end=len(previous_text),
+        normalized_char_start=0,
+        normalized_char_end=len(previous_text),
+        source_anchor="#previous-p0",
+        content_hash="financial-previous-p0",
+        segmentation_version="test-v1",
+        metadata_={},
+    )
+    session.add_all([current_passage, previous_passage])
+    await session.flush()
+
+    comparison = FilingComparison(
+        company_id=company.id,
+        current_filing_id=current_filing.id,
+        comparison_filing_id=previous_filing.id,
+        status="completed",
+        comparison_version="phase3-v1",
+        processing_metrics={},
+    )
+    session.add(comparison)
+    await session.flush()
+    section_match = SectionMatch(
+        comparison_id=comparison.id,
+        current_section_id=current_section.id,
+        previous_section_id=previous_section.id,
+        match_type="exact_structural",
+        combined_score=1.0,
+        confidence=1.0,
+        match_reason={"fixture": True},
+    )
+    session.add(section_match)
+
+    current_revenue = XbrlFact(
+        company_id=company.id,
+        filing_id=current_filing.id,
+        taxonomy="us-gaap",
+        concept="RevenueFromContractWithCustomerExcludingAssessedTax",
+        label="Revenue",
+        unit="USD",
+        value_numeric=Decimal("112000000"),
+        start_date=date(2026, 4, 1),
+        end_date=date(2026, 6, 30),
+        fiscal_year=2026,
+        fiscal_period="Q2",
+        form_type="10-Q",
+        accession_number=current_filing.accession_number,
+        frame="CY2026Q2",
+        raw_fact={"fixture": "current_revenue"},
+    )
+    previous_revenue = XbrlFact(
+        company_id=company.id,
+        filing_id=previous_filing.id,
+        taxonomy="us-gaap",
+        concept="RevenueFromContractWithCustomerExcludingAssessedTax",
+        label="Revenue",
+        unit="USD",
+        value_numeric=Decimal("100000000"),
+        start_date=date(2025, 4, 1),
+        end_date=date(2025, 6, 30),
+        fiscal_year=2025,
+        fiscal_period="Q2",
+        form_type="10-Q",
+        accession_number=previous_filing.accession_number,
+        frame="CY2025Q2",
+        raw_fact={"fixture": "previous_revenue"},
+    )
+    lower_priority_current_revenue = XbrlFact(
+        company_id=company.id,
+        filing_id=current_filing.id,
+        taxonomy="us-gaap",
+        concept="Revenues",
+        label="Revenue fallback",
+        unit="USD",
+        value_numeric=Decimal("111000000"),
+        start_date=date(2026, 4, 1),
+        end_date=date(2026, 6, 30),
+        fiscal_year=2026,
+        fiscal_period="Q2",
+        form_type="10-Q",
+        accession_number="0000000200-26-999999",
+        frame="CY2026Q2",
+        raw_fact={"fixture": "fallback_revenue"},
+    )
+    current_gross_profit = XbrlFact(
+        company_id=company.id,
+        filing_id=current_filing.id,
+        taxonomy="us-gaap",
+        concept="GrossProfit",
+        label="Gross profit",
+        unit="USD",
+        value_numeric=Decimal("44800000"),
+        start_date=date(2026, 4, 1),
+        end_date=date(2026, 6, 30),
+        fiscal_year=2026,
+        fiscal_period="Q2",
+        form_type="10-Q",
+        accession_number=current_filing.accession_number,
+        frame="CY2026Q2",
+        raw_fact={"fixture": "gross_profit"},
+    )
+    session.add_all(
+        [
+            current_revenue,
+            previous_revenue,
+            lower_priority_current_revenue,
+            current_gross_profit,
+        ]
+    )
+    await session.commit()
+    return {
+        "company_id": company.id,
+        "current_filing_id": current_filing.id,
+        "previous_filing_id": previous_filing.id,
+        "comparison_id": comparison.id,
+        "current_section_id": current_section.id,
+        "current_passage_id": current_passage.id,
+        "previous_passage_id": previous_passage.id,
+        "current_revenue_fact_id": current_revenue.id,
+        "previous_revenue_fact_id": previous_revenue.id,
+        "current_gross_profit_fact_id": current_gross_profit.id,
     }
 
 

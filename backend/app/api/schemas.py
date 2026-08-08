@@ -210,3 +210,92 @@ class ChangeReviewRequest(BaseModel):
     change_type: str | None = None
     risk_category: str | None = None
     summary: str | None = None
+
+
+class FinancialJobResponse(BaseModel):
+    entity_id: uuid.UUID
+    job_id: str
+    status: str
+
+
+class FinancialClaimResponse(BaseModel):
+    id: uuid.UUID
+    filing_id: uuid.UUID
+    comparison_id: uuid.UUID | None
+    disclosure_change_id: uuid.UUID | None
+    source_section_id: uuid.UUID
+    source_passage_id: uuid.UUID | None
+    claim_text: str
+    canonical_metric_name: str | None
+    claim_type: str
+    direction: str | None
+    reported_value: Any | None
+    reported_unit: str | None
+    reported_change: Any | None
+    reported_change_unit: str | None
+    comparison_basis: str | None
+    comparison_text: str | None
+    qualifiers: dict[str, Any]
+    extraction_confidence: Any
+    extraction_method: str
+    original_model_output: dict[str, Any]
+    model_name: str | None
+    model_version: str | None
+    prompt_version: str | None
+    review_status: str
+    review_comment: str | None
+    reviewer_edits: dict[str, Any]
+
+
+class ClaimFactCandidateResponse(BaseModel):
+    id: uuid.UUID
+    financial_claim_id: uuid.UUID
+    xbrl_fact_id: uuid.UUID
+    candidate_role: str
+    concept_priority: int
+    concept_match_score: Any
+    period_match_score: Any
+    unit_match_score: Any
+    accession_match_score: Any
+    frame_match_score: Any
+    combined_score: Any
+    selection_status: str
+    rejection_reason: str | None
+
+
+class ClaimVerificationResponse(BaseModel):
+    id: uuid.UUID
+    financial_claim_id: uuid.UUID
+    current_xbrl_fact_id: uuid.UUID | None
+    comparison_xbrl_fact_id: uuid.UUID | None
+    verification_status: str
+    current_value: Any | None
+    comparison_value: Any | None
+    absolute_change: Any | None
+    percentage_change: Any | None
+    percentage_point_change: Any | None
+    reported_change: Any | None
+    reported_vs_calculated_difference: Any | None
+    calculation_type: str
+    formula: str
+    calculation_inputs: dict[str, Any]
+    calculation_output: dict[str, Any]
+    tolerance_used: Any | None
+    verification_reason: str
+    confidence: Any
+    verification_version: str
+
+
+class FinancialClaimReviewRequest(BaseModel):
+    review_status: str
+    comment: str | None = None
+    reviewer_id: str | None = None
+    canonical_metric_name: str | None = None
+    reported_value: Any | None = None
+    reported_unit: str | None = None
+    comparison_basis: str | None = None
+
+
+class ClaimFactCandidateReviewRequest(BaseModel):
+    reviewer_id: str | None = None
+    comment: str | None = None

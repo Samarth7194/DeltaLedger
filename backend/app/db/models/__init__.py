@@ -14,11 +14,22 @@ from app.db.models.filing import (
     FilingSection,
     FilingTable,
 )
+from app.db.models.financial import (
+    ClaimFactCandidate,
+    ClaimVerification,
+    DerivedFinancialMetric,
+    FinancialClaim,
+    FinancialMetricConcept,
+    FinancialMetricDefinition,
+)
 from app.db.models.xbrl import XbrlFact
 
 __all__ = [
     "AuditEvent",
+    "ClaimFactCandidate",
+    "ClaimVerification",
     "Company",
+    "DerivedFinancialMetric",
     "DisclosureChange",
     "Filing",
     "FilingChunk",
@@ -26,6 +37,9 @@ __all__ = [
     "FilingProcessingStage",
     "FilingSection",
     "FilingTable",
+    "FinancialClaim",
+    "FinancialMetricConcept",
+    "FinancialMetricDefinition",
     "PassageMatch",
     "PassageUnit",
     "SectionMatch",
