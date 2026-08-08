@@ -66,6 +66,7 @@ async def test_phase4_financial_claims_verify_against_real_xbrl_and_api(
             ClaimVerification.financial_claim_id == percentage_claim.id
         )
     )
+    original_reported_value = str(percentage_claim.reported_value)
     assert first_verification.id == second_verification.id
     assert verification_count == 1
     assert first_verification.verification_status == "verified"
@@ -199,6 +200,4 @@ async def test_phase4_financial_claims_verify_against_real_xbrl_and_api(
     assert reviewed["review_status"] == "edited"
     assert reviewed["review_comment"] == "Reviewed reported percentage."
     assert reviewed["original_model_output"]["claim_text"] == percentage_claim.claim_text
-    assert reviewed["reviewer_edits"]["reported_value"] == str(
-        percentage_claim.reported_value
-    )
+    assert reviewed["reviewer_edits"]["reported_value"] == original_reported_value
