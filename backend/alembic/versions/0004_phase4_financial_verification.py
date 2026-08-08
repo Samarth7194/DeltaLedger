@@ -325,7 +325,7 @@ def _seed_metric_registry() -> None:
     metric_ids = {canonical: metric_id for metric_id, canonical, *_ in METRICS}
     metric_rows = [
         "("
-        f"{_sql(metric_id)}::uuid, {_sql(canonical)}, {_sql(display)}, "
+        f"{_cast(_sql(metric_id), 'UUID')}, {_sql(canonical)}, {_sql(display)}, "
         f"{_sql(metric_type)}, {_sql(period_behavior)}, {_sql(unit_category)}, "
         f"{_sql(description)}, {_jsonb(aliases)}, true"
         ")"
@@ -342,8 +342,9 @@ def _seed_metric_registry() -> None:
 
     concept_rows = [
         "("
-        f"{_sql(f'aaaaaaaa-aaaa-4aaa-8aaa-{index:012d}')}::uuid, "
-        f"{_sql(metric_ids[canonical])}::uuid, 'us-gaap', {_sql(concept)}, {priority}, "
+        f"{_cast(_sql(f'aaaaaaaa-aaaa-4aaa-8aaa-{index:012d}'), 'UUID')}, "
+        f"{_cast(_sql(metric_ids[canonical]), 'UUID')}, "
+        f"'us-gaap', {_sql(concept)}, {priority}, "
         f"{_sql(_period_behavior(canonical))}, {_sql(_unit_category(canonical))}, "
         f"{str(is_preferred).lower()}, true, 'Seeded Phase 4 MVP concept mapping.'"
         ")"
@@ -366,7 +367,11 @@ def _sql(value: str | None) -> str:
 
 
 def _jsonb(value: object) -> str:
-    return _sql(json.dumps(value, separators=(",", ":"))) + "::jsonb"
+    return _cast(_sql(json.dumps(value, separators=(",", ":"))), "JSONB")
+
+
+def _cast(value: str, sql_type: str) -> str:
+    return f"CAST({value} AS {sql_type})"
 
 
 def _period_behavior(canonical: str) -> str:
