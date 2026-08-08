@@ -29,7 +29,7 @@ def test_clean_database_migrates_to_head_and_schema_objects_exist(test_database_
         capture_output=True,
     )
 
-    assert "0004_phase4_financial_verification" in current.stdout
+    assert "0004_phase4_financial" in current.stdout
 
     engine = create_engine(sync_url)
     with engine.connect() as connection:

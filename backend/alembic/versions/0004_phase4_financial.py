@@ -6,7 +6,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-revision = "0004_phase4_financial_verification"
+revision = "0004_phase4_financial"
 down_revision = "0003_phase3_comparisons"
 branch_labels = None
 depends_on = None
