@@ -21,14 +21,30 @@ class FilingRepository:
         return await self.session.scalar(stmt)
 
     async def list_company_filings(
-        self, company_id: uuid.UUID, *, form_type: str = "10-Q", limit: int = 20
+        self,
+        company_id: uuid.UUID,
+        *,
+        form_type: str | None = "10-Q",
+        ingestion_status: str | None = None,
+        report_period_from: date | None = None,
+        report_period_to: date | None = None,
+        limit: int = 20,
+        offset: int = 0,
     ) -> list[Filing]:
         stmt = (
             select(Filing)
-            .where(Filing.company_id == company_id, Filing.form_type == form_type)
+            .where(Filing.company_id == company_id)
             .order_by(Filing.report_period.desc().nullslast(), Filing.filing_date.desc())
-            .limit(limit)
         )
+        if form_type:
+            stmt = stmt.where(Filing.form_type == form_type)
+        if ingestion_status:
+            stmt = stmt.where(Filing.ingestion_status == ingestion_status)
+        if report_period_from:
+            stmt = stmt.where(Filing.report_period >= report_period_from)
+        if report_period_to:
+            stmt = stmt.where(Filing.report_period <= report_period_to)
+        stmt = stmt.limit(limit).offset(offset)
         return list((await self.session.scalars(stmt)).all())
 
     async def create_or_update_filing(
