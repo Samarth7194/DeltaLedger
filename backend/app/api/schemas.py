@@ -43,6 +43,41 @@ class ProcessingStatusResponse(BaseModel):
     stages: list[ProcessingStageResponse]
 
 
+class CompanySummaryResponse(BaseModel):
+    id: uuid.UUID
+    cik: str
+    ticker: str | None
+    legal_name: str
+    exchange: str | None
+    industry: str | None
+    fiscal_year_end: str | None
+    is_active: bool
+    filing_count: int
+    latest_filing_date: date | None
+    latest_report_period: date | None
+    latest_ingestion_status: str | None
+
+
+class CompanyDetailResponse(CompanySummaryResponse):
+    recent_status_counts: dict[str, int]
+
+
+class FilingSummaryResponse(BaseModel):
+    id: uuid.UUID
+    company_id: uuid.UUID
+    accession_number: str
+    form_type: str
+    filing_date: date
+    report_period: date | None
+    primary_document: str
+    source_url: str
+    storage_key: str | None
+    content_hash: str | None
+    ingestion_status: str
+    parser_version: str | None
+    raw_metadata: dict[str, Any]
+
+
 class SectionSummaryResponse(BaseModel):
     id: uuid.UUID
     filing_id: uuid.UUID
@@ -299,3 +334,167 @@ class FinancialClaimReviewRequest(BaseModel):
 class ClaimFactCandidateReviewRequest(BaseModel):
     reviewer_id: str | None = None
     comment: str | None = None
+
+
+class ContradictionJobResponse(BaseModel):
+    comparison_id: uuid.UUID
+    job_id: str
+    status: str
+
+
+class ContradictionFindingResponse(BaseModel):
+    id: uuid.UUID
+    company_id: uuid.UUID
+    comparison_id: uuid.UUID | None
+    financial_claim_id: uuid.UUID | None
+    claim_verification_id: uuid.UUID | None
+    disclosure_change_id: uuid.UUID | None
+    contradiction_type: str
+    status: str
+    risk_category: str | None
+    severity: str
+    confidence: Any
+    narrative_claim: str | None
+    narrative_direction: str | None
+    measured_direction: str | None
+    reported_value: Any | None
+    calculated_value: Any | None
+    calculated_change: Any | None
+    difference: Any | None
+    qualifier: str | None
+    finding_title: str
+    finding_summary: str
+    finding_explanation: str
+    limitations: list[Any]
+    deterministic_evidence: dict[str, Any]
+    supporting_evidence: dict[str, Any]
+    severity_components: dict[str, Any]
+    confidence_components: dict[str, Any]
+    detection_method: str
+    rule_ids: list[str]
+    model_name: str | None
+    model_version: str | None
+    prompt_version: str | None
+    original_model_output: dict[str, Any] | None
+    review_status: str
+    review_comment: str | None
+    reviewed_by: str | None
+    reviewer_edits: dict[str, Any]
+
+
+class ContradictionEvidenceResponse(BaseModel):
+    id: uuid.UUID
+    contradiction_finding_id: uuid.UUID
+    evidence_type: str
+    filing_id: uuid.UUID | None
+    section_id: uuid.UUID | None
+    passage_id: uuid.UUID | None
+    xbrl_fact_id: uuid.UUID | None
+    financial_claim_id: uuid.UUID | None
+    claim_verification_id: uuid.UUID | None
+    disclosure_change_id: uuid.UUID | None
+    derived_metric_id: uuid.UUID | None
+    source_text: str | None
+    source_hash: str | None
+    source_anchor: str | None
+    evidence_role: str
+    metadata: dict[str, Any]
+
+
+class ContradictionReviewRequest(BaseModel):
+    review_status: str
+    comment: str | None = None
+    reviewer_id: str | None = None
+    contradiction_type: str | None = None
+    severity: str | None = None
+    risk_category: str | None = None
+    summary: str | None = None
+    explanation: str | None = None
+
+
+class AnalysisCreateRequest(BaseModel):
+    current_filing_id: uuid.UUID
+    comparison_filing_id: uuid.UUID
+
+
+class AnalysisCreateResponse(BaseModel):
+    analysis_run_id: uuid.UUID
+    status: str
+    job_id: str
+
+
+class AnalysisProgressResponse(BaseModel):
+    status: str
+    current_node: str | None
+    completed_nodes: list[str]
+    progress_percent: int
+
+
+class AnalysisRunResponse(BaseModel):
+    id: uuid.UUID
+    company_id: uuid.UUID
+    current_filing_id: uuid.UUID
+    comparison_filing_id: uuid.UUID
+    comparison_id: uuid.UUID | None
+    status: str
+    current_node: str | None
+    workflow_version: str
+    graph_version: str
+    requires_human_review: bool
+    review_gate_reason: dict[str, Any] | None
+    review_request_id: uuid.UUID | None
+    report_id: uuid.UUID | None
+    progress: AnalysisProgressResponse
+    counts: dict[str, Any]
+    warnings: list[str]
+    failure_code: str | None
+    failure_message: str | None
+    failure_node: str | None
+
+
+class AnalysisWorkflowEventResponse(BaseModel):
+    id: uuid.UUID
+    analysis_run_id: uuid.UUID
+    event_type: str
+    node_name: str | None
+    attempt_number: int | None
+    event_payload: dict[str, Any]
+    duration_ms: int | None
+
+
+class AnalysisReviewRequestResponse(BaseModel):
+    id: uuid.UUID
+    analysis_run_id: uuid.UUID
+    review_type: str
+    status: str
+    reason: str
+    finding_ids: list[str]
+    claim_ids: list[str]
+    verification_ids: list[str]
+    reviewed_by: str | None
+    review_comment: str | None
+    review_payload: dict[str, Any] | None
+
+
+class AnalysisReviewSubmitRequest(BaseModel):
+    status: str
+    reviewed_by: str | None = None
+    comment: str | None = None
+    review_payload: dict[str, Any] | None = None
+
+
+class AnalysisReportResponse(BaseModel):
+    id: uuid.UUID
+    analysis_run_id: uuid.UUID
+    report_version: str
+    status: str
+    executive_summary: str
+    comparison_summary: dict[str, Any]
+    disclosure_change_summary: dict[str, Any]
+    financial_verification_summary: dict[str, Any]
+    contradiction_summary: dict[str, Any]
+    high_priority_findings: list[dict[str, Any]]
+    limitations: list[str]
+    evidence_manifest: dict[str, Any]
+    report_payload: dict[str, Any]
+    content_hash: str

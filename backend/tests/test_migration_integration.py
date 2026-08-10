@@ -29,7 +29,7 @@ def test_clean_database_migrates_to_head_and_schema_objects_exist(test_database_
         capture_output=True,
     )
 
-    assert "0004_phase4_financial" in current.stdout
+    assert "0006_phase6_workflow" in current.stdout
 
     engine = create_engine(sync_url)
     with engine.connect() as connection:
@@ -76,6 +76,24 @@ def test_clean_database_migrates_to_head_and_schema_objects_exist(test_database_
                 )
             )
         }
+        contradiction_columns = {
+            row[0]
+            for row in connection.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'contradiction_findings'"
+                )
+            )
+        }
+        analysis_run_columns = {
+            row[0]
+            for row in connection.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'analysis_runs'"
+                )
+            )
+        }
         metric_count = connection.execute(
             text("SELECT count(*) FROM financial_metric_definitions")
         ).scalar_one()
@@ -101,6 +119,12 @@ def test_clean_database_migrates_to_head_and_schema_objects_exist(test_database_
         "claim_fact_candidates",
         "claim_verifications",
         "derived_financial_metrics",
+        "contradiction_findings",
+        "contradiction_evidence",
+        "analysis_runs",
+        "analysis_workflow_events",
+        "analysis_review_requests",
+        "analysis_reports",
     } <= tables
     assert {"original_model_output", "reviewer_edits", "reviewed_by", "reviewed_at"} <= (
         disclosure_columns
@@ -112,5 +136,19 @@ def test_clean_database_migrates_to_head_and_schema_objects_exist(test_database_
         "reported_change",
         "comparison_basis",
     } <= financial_claim_columns
+    assert {
+        "finding_fingerprint",
+        "severity_components",
+        "confidence_components",
+        "reviewer_edits",
+        "original_system_finding",
+    } <= contradiction_columns
+    assert {
+        "checkpoint_thread_id",
+        "requires_human_review",
+        "review_gate_reason",
+        "processing_metrics",
+        "input_snapshot",
+    } <= analysis_run_columns
     assert metric_count == 9
     assert concept_count == 12

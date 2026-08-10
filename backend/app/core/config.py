@@ -11,17 +11,24 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    app_profile: Literal["local-cloud", "ci", "docker"] = "local-cloud"
+    app_profile: Literal["local-cloud", "ci", "docker", "production"] = "local-cloud"
     app_name: str = "DeltaLedger AI"
     app_version: str = "0.1.0"
     environment: Literal["local", "test", "staging", "production"] = "local"
     log_level: str = "INFO"
+    log_json: bool = True
+    cors_allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+    frontend_url: str | None = None
+    readiness_dependency_checks_enabled: bool = False
 
     database_url: str = "postgresql+asyncpg://deltaledger@localhost:5433/deltaledger"
     alembic_database_url: str | None = None
     test_database_url: str = (
         "postgresql+asyncpg://deltaledger@localhost:5433/deltaledger_test"
     )
+    database_pool_size: int = 5
+    database_max_overflow: int = 10
+    database_pool_timeout_seconds: float = 30.0
     redis_url: str = "redis://localhost:6379/0"
     redis_connect_timeout_seconds: float = 5.0
     redis_socket_timeout_seconds: float = 5.0
@@ -63,6 +70,7 @@ class Settings(BaseSettings):
     embedding_timeout_seconds: float = 60.0
     hf_token: str | None = None
     hf_inference_base_url: str = "https://api-inference.huggingface.co"
+    allow_fake_models_in_production: bool = False
 
     reranker_enabled: bool = False
     reranker_provider: str = "fake"
@@ -104,6 +112,23 @@ class Settings(BaseSettings):
     claim_percent_tolerance: float = 0.25
     claim_percentage_point_tolerance: float = 0.10
     financial_verification_version: str = "phase4-v1"
+    contradiction_policy_version: str = "phase5-v1"
+    contradiction_classifier_provider: str = "fake"
+    contradiction_classifier_model: str = "deterministic-contradiction-classifier-v1"
+    contradiction_classifier_timeout: float = 30.0
+    contradiction_small_percent_threshold: float = 1.0
+    contradiction_large_percent_threshold: float = 15.0
+    contradiction_small_percentage_point_threshold: float = 0.5
+    contradiction_large_percentage_point_threshold: float = 5.0
+    analysis_workflow_version: str = "phase6-v1"
+    analysis_graph_version: str = "phase6-langgraph-v1"
+    analysis_report_version: str = "phase6-report-v1"
+    workflow_checkpoint_provider: str = "memory"
+    workflow_require_review_for_all_contradictions: bool = False
+    workflow_review_min_severity: str = "high"
+    workflow_review_low_confidence_threshold: float = 0.70
+    workflow_review_ambiguous_financial_claims: bool = True
+    workflow_max_node_attempts: int = 3
 
     @field_validator("sec_user_agent")
     @classmethod
@@ -136,15 +161,19 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_profile_and_aliases(self) -> Settings:
         if self.alembic_database_url is None:
-            self.alembic_database_url = self.database_url.replace(
-                "postgresql+asyncpg://", "postgresql+psycopg://", 1
-            )
+            self.alembic_database_url = _sync_database_url(self.database_url)
         if self.embedding_dimension != self.embedding_dimensions:
             raise ValueError("EMBEDDING_DIMENSION and EMBEDDING_DIMENSIONS must match.")
         if self.embedding_model_name != self.embedding_model:
             raise ValueError("EMBEDDING_MODEL and EMBEDDING_MODEL_NAME must match.")
         if self.chunk_overlap_tokens >= self.chunk_max_tokens:
             raise ValueError("CHUNK_OVERLAP_TOKENS must be less than CHUNK_MAX_TOKENS.")
+        _require_positive_int("DATABASE_POOL_SIZE", self.database_pool_size)
+        _require_non_negative("DATABASE_MAX_OVERFLOW", self.database_max_overflow)
+        _require_non_negative(
+            "DATABASE_POOL_TIMEOUT_SECONDS",
+            self.database_pool_timeout_seconds,
+        )
         _require_unit_interval("SECTION_MATCH_MIN_SCORE", self.section_match_min_score)
         _require_unit_interval("PASSAGE_ALIGNMENT_MIN_SCORE", self.passage_alignment_min_score)
         _require_weight_sum(
@@ -190,6 +219,43 @@ class Settings(BaseSettings):
             "CLAIM_PERCENTAGE_POINT_TOLERANCE",
             self.claim_percentage_point_tolerance,
         )
+        _require_non_negative(
+            "CONTRADICTION_CLASSIFIER_TIMEOUT",
+            self.contradiction_classifier_timeout,
+        )
+        _require_non_negative(
+            "CONTRADICTION_SMALL_PERCENT_THRESHOLD",
+            self.contradiction_small_percent_threshold,
+        )
+        _require_non_negative(
+            "CONTRADICTION_LARGE_PERCENT_THRESHOLD",
+            self.contradiction_large_percent_threshold,
+        )
+        _require_non_negative(
+            "CONTRADICTION_SMALL_PERCENTAGE_POINT_THRESHOLD",
+            self.contradiction_small_percentage_point_threshold,
+        )
+        _require_non_negative(
+            "CONTRADICTION_LARGE_PERCENTAGE_POINT_THRESHOLD",
+            self.contradiction_large_percentage_point_threshold,
+        )
+        _require_unit_interval(
+            "WORKFLOW_REVIEW_LOW_CONFIDENCE_THRESHOLD",
+            self.workflow_review_low_confidence_threshold,
+        )
+        _require_positive_int("WORKFLOW_MAX_NODE_ATTEMPTS", self.workflow_max_node_attempts)
+        if self.workflow_review_min_severity not in {"low", "medium", "high", "critical"}:
+            raise ValueError("WORKFLOW_REVIEW_MIN_SEVERITY must be low, medium, high, or critical.")
+        if self.workflow_checkpoint_provider not in {"memory", "postgres"}:
+            raise ValueError("WORKFLOW_CHECKPOINT_PROVIDER must be memory or postgres.")
+        if "*" in self.cors_origins and self.is_production:
+            raise ValueError("Production CORS origins must be explicit.")
+        if self.is_production:
+            self._validate_production_profile()
+        if self.environment == "production" and self.app_profile != "production":
+            raise ValueError("ENVIRONMENT=production requires APP_PROFILE=production.")
+        if self.is_production and self.workflow_checkpoint_provider != "postgres":
+            raise ValueError("Production workflow checkpointing must use PostgreSQL.")
         if self.app_profile == "docker":
             _require_host(self.database_url, "postgres", "DATABASE_URL")
             _require_host(self.redis_url, "redis", "REDIS_URL")
@@ -216,6 +282,48 @@ class Settings(BaseSettings):
                 "Refusing destructive integration tests: app and test database names match."
             )
 
+    @property
+    def cors_origins(self) -> list[str]:
+        return [
+            origin.strip().rstrip("/")
+            for origin in self.cors_allowed_origins.split(",")
+            if origin.strip()
+        ]
+
+    @property
+    def is_production(self) -> bool:
+        return self.environment == "production" or self.app_profile == "production"
+
+    def _validate_production_profile(self) -> None:
+        if self.object_storage_provider == "filesystem":
+            raise ValueError("Production must use S3-compatible object storage.")
+        if not self.readiness_dependency_checks_enabled:
+            raise ValueError("Production must enable readiness dependency checks.")
+        for origin in self.cors_origins:
+            parsed = urlparse(origin)
+            if parsed.scheme != "https":
+                raise ValueError("Production CORS origins must use HTTPS.")
+            if parsed.hostname in {"localhost", "127.0.0.1"}:
+                raise ValueError("Production CORS origins must not point at localhost.")
+        if _is_placeholder_contact(self.sec_user_agent):
+            raise ValueError("Production SEC_USER_AGENT must include a real contact address.")
+        if self.minio_access_key == "minioadmin" or self.minio_secret_key == "minioadmin":
+            raise ValueError("Production object-storage credentials must not use demo defaults.")
+        if not self.allow_fake_models_in_production:
+            fake_fields = {
+                "EMBEDDING_PROVIDER": self.embedding_provider,
+                "CHANGE_CLASSIFIER_PROVIDER": self.change_classifier_provider,
+                "CLAIM_EXTRACTOR_PROVIDER": self.claim_extractor_provider,
+                "CONTRADICTION_CLASSIFIER_PROVIDER": self.contradiction_classifier_provider,
+            }
+            if self.reranker_enabled:
+                fake_fields["RERANKER_PROVIDER"] = self.reranker_provider
+            fake = [name for name, value in fake_fields.items() if value == "fake"]
+            if fake:
+                raise ValueError(
+                    "Production fake model providers are disabled: " + ", ".join(sorted(fake))
+                )
+
 
 @lru_cache
 def get_settings() -> Settings:
@@ -226,10 +334,21 @@ def _database_name(url: str) -> str:
     return urlparse(url).path.lstrip("/")
 
 
+def _sync_database_url(url: str) -> str:
+    parsed = urlparse(url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1))
+    query = parsed.query.replace("ssl=require", "sslmode=require")
+    return parsed._replace(query=query).geturl()
+
+
 def _require_host(url: str, expected: str, name: str) -> None:
     actual = urlparse(url).hostname
     if actual != expected:
         raise ValueError(f"{name} must use host '{expected}' for APP_PROFILE=docker.")
+
+
+def _is_placeholder_contact(value: str) -> bool:
+    lowered = value.lower()
+    return "example.com" in lowered or "your-email" in lowered
 
 
 def _require_unit_interval(name: str, value: float) -> None:
@@ -240,6 +359,11 @@ def _require_unit_interval(name: str, value: float) -> None:
 def _require_non_negative(name: str, value: float) -> None:
     if value < 0:
         raise ValueError(f"{name} must be greater than or equal to 0.")
+
+
+def _require_positive_int(name: str, value: int) -> None:
+    if value <= 0:
+        raise ValueError(f"{name} must be greater than 0.")
 
 
 def _require_weight_sum(name: str, values: list[float]) -> None:
