@@ -156,6 +156,14 @@ async def resume_analysis(
     session: SessionDep,
 ) -> ResponseEnvelope:
     repo = WorkflowRepository(session)
+    run = await repo.get_run(analysis_run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Analysis run not found.")
+    if run.status != "awaiting_human_review":
+        raise HTTPException(
+            status_code=422,
+            detail="Analysis can only resume from awaiting human review.",
+        )
     review = await repo.get_latest_review(analysis_run_id)
     if review is None:
         raise HTTPException(status_code=404, detail="Review request not found.")

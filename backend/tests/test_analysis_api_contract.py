@@ -112,6 +112,15 @@ class FakeRepo:
         return FakeReport()
 
 
+class FakeCompletedRepo(FakeRepo):
+    def __init__(self, _session) -> None:
+        self.run = FakeRun(
+            status="completed",
+            current_node=None,
+            requires_human_review=False,
+        )
+
+
 class FakeService:
     def __init__(self, _session, _settings) -> None:
         self.run = FakeRun(status="queued", current_node=None, requires_human_review=False)
@@ -172,6 +181,25 @@ def test_analysis_api_contract_matches_frontend_consumed_shape(monkeypatch) -> N
     assert resume_response.status_code == 202
     assert resume_response.json()["data"]["review_request_id"] == str(REVIEW_ID)
     assert report_response.json()["data"]["evidence_manifest"]["evidence_ids"] == ["e1"]
+
+
+def test_resume_rejects_non_waiting_run_before_enqueue(monkeypatch) -> None:
+    enqueued = False
+
+    def fake_enqueue(_run_id, _review_id):
+        nonlocal enqueued
+        enqueued = True
+        return "job-resume"
+
+    monkeypatch.setattr("app.api.routes.analyses.WorkflowRepository", FakeCompletedRepo)
+    monkeypatch.setattr("app.api.routes.analyses.enqueue_resume_analysis_workflow", fake_enqueue)
+
+    with _client() as client:
+        response = client.post(f"/api/v1/analyses/{RUN_ID}/resume")
+
+    assert response.status_code == 422
+    assert "awaiting human review" in response.json()["detail"]
+    assert enqueued is False
 
 
 def _client() -> TestClient:
