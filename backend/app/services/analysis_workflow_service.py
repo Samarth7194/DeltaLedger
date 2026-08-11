@@ -754,9 +754,7 @@ async def create_workflow_checkpointer(settings: Settings):
                 "PostgreSQL LangGraph checkpointing requires "
                 "langgraph-checkpoint-postgres."
             ) from exc
-        checkpoint_url = _checkpoint_conninfo(
-            settings.alembic_database_url or settings.database_url
-        )
+        checkpoint_url = _checkpoint_database_url(settings)
         if checkpoint_url not in _POSTGRES_CHECKPOINTERS:
             pool = AsyncConnectionPool(
                 checkpoint_url,
@@ -784,6 +782,10 @@ def _checkpoint_conninfo(url: str) -> str:
         .replace("postgresql+asyncpg://", "postgresql://", 1)
         .replace("ssl=require", "sslmode=require")
     )
+
+
+def _checkpoint_database_url(settings: Settings) -> str:
+    return _checkpoint_conninfo(settings.database_url)
 
 
 def _review_route(state: AnalysisState) -> Literal["generate_report", "end"]:

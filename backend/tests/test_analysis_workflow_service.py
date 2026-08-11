@@ -13,6 +13,7 @@ from app.services.analysis_workflow_service import (
     AnalysisWorkflowService,
     WorkflowError,
     _checkpoint_conninfo,
+    _checkpoint_database_url,
     create_workflow_checkpointer,
 )
 
@@ -71,6 +72,15 @@ def test_checkpoint_conninfo_normalizes_sqlalchemy_driver_urls() -> None:
     assert _checkpoint_conninfo("postgresql+asyncpg://user@host/db?ssl=require") == (
         "postgresql://user@host/db?sslmode=require"
     )
+
+
+def test_checkpoint_database_url_uses_runtime_database_not_alembic_url() -> None:
+    settings = Settings(
+        database_url="postgresql+asyncpg://user@host/runtime_db",
+        alembic_database_url="postgresql+psycopg://user@host/migration_db",
+    )
+
+    assert _checkpoint_database_url(settings) == "postgresql://user@host/runtime_db"
 
 
 @pytest.mark.asyncio
