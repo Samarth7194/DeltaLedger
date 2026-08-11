@@ -1,0 +1,15 @@
+{
+  "dataset_name": "phase4_financial_verification_v1",
+  "dataset_version": "phase4-v1",
+  "task": "phase4_financial_verification",
+  "description": "Adapter over the curated 60-example Phase 4 financial-claim fixture.",
+  "source_type": "test_fixture_adapter",
+  "example_count": 60,
+  "annotation_method": "curated seed fixture",
+  "review_status": "curated",
+  "created_at": "2026-08-09T00:00:00Z",
+  "labels": ["verified", "approximately_verified", "contradicted", "insufficient_data", "ambiguous_metric", "ambiguous_fact", "unsupported_metric", "period_mismatch", "unit_mismatch", "zero_denominator"],
+  "supported_metrics": ["status_accuracy", "period_safety", "unit_safety", "calculation_reproducibility"],
+  "limitations": ["Fixture has expected labels but no persisted offline verifier predictions.", "Fact-selection accuracy requires prediction artifacts."],
+  "adapter": "phase4_fixture"
+}

@@ -1,0 +1,15 @@
+{
+  "dataset_name": "evidence_quality_v1",
+  "dataset_version": "phase8-v1",
+  "task": "evidence_quality",
+  "description": "Compact evidence validation dataset for citation, source hash, calculation, and unsupported finding semantics.",
+  "source_type": "hand_authored_edge_cases",
+  "example_count": 6,
+  "annotation_method": "curated",
+  "review_status": "curated",
+  "created_at": "2026-08-09T00:00:00Z",
+  "labels": ["supported", "unsupported", "insufficient_evidence"],
+  "supported_metrics": ["evidence_completeness_rate", "citation_resolution_rate", "source_hash_validity_rate", "calculation_evidence_rate", "evidence_backed_finding_rate", "unsupported_finding_rate"],
+  "limitations": ["Small fixture; does not cover every production evidence object shape."],
+  "examples_path": "evidence/examples.json"
+}

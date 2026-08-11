@@ -1,0 +1,12 @@
+[
+  {"id": "num-norm-001", "text": "$1.2B", "expected_value": "1200000000", "expected_unit": "USD"},
+  {"id": "num-norm-002", "text": "$1.2 billion", "expected_value": "1200000000", "expected_unit": "USD"},
+  {"id": "num-norm-003", "text": "1,200 million", "expected_value": "1200000000", "expected_unit": "absolute"},
+  {"id": "num-norm-004", "text": "$(1,200)", "expected_value": "-1200", "expected_unit": "USD"},
+  {"id": "num-norm-005", "text": "-1,200", "expected_value": "-1200", "expected_unit": "absolute"},
+  {"id": "num-norm-006", "text": "12%", "expected_value": "12", "expected_unit": "percent"},
+  {"id": "num-norm-007", "text": "120 bps", "expected_value": "1.2", "expected_unit": "percentage_points"},
+  {"id": "num-norm-008", "text": "1.2 percentage points", "expected_value": "1.2", "expected_unit": "percentage_points"},
+  {"id": "num-norm-009", "text": "USD 1.20 per share", "expected_value": "1.20", "expected_unit": "USD/share"},
+  {"id": "num-norm-010", "text": "$0.3 billion", "expected_value": "300000000.0", "expected_unit": "USD"}
+]

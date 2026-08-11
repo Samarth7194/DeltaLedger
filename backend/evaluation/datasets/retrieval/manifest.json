@@ -1,0 +1,15 @@
+{
+  "dataset_name": "retrieval_evidence_v1",
+  "dataset_version": "phase8-v1",
+  "task": "retrieval",
+  "description": "Compact offline retrieval ranking dataset for dense, lexical, hybrid, and hybrid-plus-reranker ablations.",
+  "source_type": "hand_authored_edge_cases",
+  "example_count": 6,
+  "annotation_method": "curated",
+  "review_status": "curated",
+  "created_at": "2026-08-09T00:00:00Z",
+  "labels": ["binary_relevance", "graded_relevance"],
+  "supported_metrics": ["recall@1", "recall@5", "recall@10", "precision@5", "precision@10", "mrr", "ndcg@5", "ndcg@10", "hit_rate"],
+  "limitations": ["Small offline ranking fixture; not a live PGVector service benchmark."],
+  "examples_path": "retrieval/examples.json"
+}

@@ -1,0 +1,69 @@
+[
+  {
+    "id": "ev-001",
+    "eligible": true,
+    "expected_supported": true,
+    "requires_calculation": false,
+    "evidence": {
+      "primary_source_text": "Revenue increased 12% year over year while official XBRL facts show revenue declined.",
+      "source_hash": "9abaac5e2c4ec9a6b96aaf082a007de43997b7a8f20afbf7a974c99d270a7320",
+      "citation": {"filing_id": "filing-a", "section_id": "section-mda"}
+    }
+  },
+  {
+    "id": "ev-002",
+    "eligible": true,
+    "expected_supported": true,
+    "requires_calculation": true,
+    "evidence": {
+      "primary_source_text": "Gross margin calculation uses gross profit of 44800000 and revenue of 112000000.",
+      "source_hash": "54657e36116b488b13598057437c386a9f128c52e31ca62ccc2d88ee4f34f41e",
+      "citation": {"filing_id": "filing-a", "section_id": "section-financials"},
+      "calculation": {"left": "44800000", "right": "112000000", "operator": "/", "expected": "0.4"}
+    }
+  },
+  {
+    "id": "ev-003",
+    "eligible": true,
+    "expected_supported": true,
+    "requires_calculation": false,
+    "evidence": {
+      "primary_source_text": "Liquidity language is cited from Part I Item 2.",
+      "source_hash": "de4f02b8f2420201fd30e912177e2ca506f13c32c9337e5df5bff15f0d9126b9",
+      "citation": {"filing_id": "filing-a", "section_id": "section-mda"}
+    }
+  },
+  {
+    "id": "ev-004",
+    "eligible": true,
+    "expected_supported": true,
+    "requires_calculation": false,
+    "evidence": {
+      "primary_source_text": "Finding lacks a resolvable primary passage.",
+      "source_hash": "bad_hash",
+      "citation": null
+    }
+  },
+  {
+    "id": "ev-005",
+    "eligible": true,
+    "expected_supported": false,
+    "requires_calculation": false,
+    "evidence": {
+      "primary_source_text": null,
+      "source_hash": null,
+      "citation": null
+    }
+  },
+  {
+    "id": "ev-006",
+    "eligible": true,
+    "expected_supported": true,
+    "requires_calculation": false,
+    "evidence": {
+      "primary_source_text": "Fact selection uses the same accession as the narrative filing.",
+      "source_hash": "8a1f062964ea6f9262d419d0b0a36ea0bdf220ddee082de511bb24f9ad820ae3",
+      "citation": {"filing_id": "filing-a", "xbrl_fact_id": "fact-a"}
+    }
+  }
+]

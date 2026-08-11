@@ -1,0 +1,15 @@
+{
+  "dataset_name": "phase3_change_detection_v1",
+  "dataset_version": "phase3-v1",
+  "task": "phase3_disclosure_change",
+  "description": "Adapter over the curated 40-example Phase 3 disclosure-change fixture.",
+  "source_type": "test_fixture_adapter",
+  "example_count": 40,
+  "annotation_method": "curated seed fixture",
+  "review_status": "curated",
+  "created_at": "2026-08-09T00:00:00Z",
+  "labels": ["added", "removed", "strengthened", "weakened", "no_material_change", "liquidity", "revenue_guidance", "litigation", "other"],
+  "supported_metrics": ["per_class_precision", "per_class_recall", "per_class_f1", "macro_f1", "weighted_f1", "confusion_matrix", "confidence_ece"],
+  "limitations": ["No section-match labels.", "No passage-alignment labels.", "No trusted numeric materiality labels."],
+  "adapter": "phase3_fixture"
+}

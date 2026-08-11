@@ -1,0 +1,15 @@
+{
+  "dataset_name": "phase4_number_normalization_v1",
+  "dataset_version": "phase8-v1",
+  "task": "phase4_number_normalization",
+  "description": "Hand-authored difficult financial number normalization examples.",
+  "source_type": "hand_authored_edge_cases",
+  "example_count": 10,
+  "annotation_method": "curated",
+  "review_status": "curated",
+  "created_at": "2026-08-09T00:00:00Z",
+  "labels": ["USD", "percent", "percentage_points", "USD/share", "absolute"],
+  "supported_metrics": ["exact_normalized_value_accuracy", "unit_accuracy"],
+  "limitations": ["Small edge-case dataset; not a broad issuer benchmark."],
+  "examples_path": "phase4_number_normalization/examples.json"
+}

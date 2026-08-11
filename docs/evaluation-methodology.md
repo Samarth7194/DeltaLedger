@@ -131,6 +131,20 @@ Human review:
 
 - Approval rate, rejection rate, edit rate, confidence calibration, reviewer agreement.
 
+## Phase 8 Offline Runner
+
+Phase 8 adds `python -m app.cli.evaluate --suite all --offline`. The runner
+validates dataset manifests, adapts existing Phase 3/4/5 fixtures, evaluates
+compact retrieval and evidence datasets, and writes JSON plus Markdown candidate
+reports under `backend/evaluation/reports`.
+
+The runner never fills placeholder scores. If a labelled dataset or prediction
+artifact is missing, it returns `not_evaluated` or `no_data` with a reason.
+
+See [evaluation-suite.md](evaluation-suite.md),
+[quality-gates.md](quality-gates.md), and
+[confidence-calibration.md](confidence-calibration.md).
+
 ## CI Gates
 
 The build should fail when:
@@ -144,7 +158,7 @@ The build should fail when:
 - Database migrations fail.
 - Security tests fail.
 
-Initial thresholds should be conservative until the human-labeled dataset is mature. Threshold changes require a documented reason and dataset version reference.
+Initial thresholds should be conservative until the human-labeled dataset is mature. Threshold changes require a documented reason and dataset version reference. Phase 8 makes deterministic safety checks hard gates and leaves semantic metrics as reporting-only unless an approved baseline is supplied.
 
 ## Evaluation Artifacts
 
@@ -163,3 +177,16 @@ Each run generates:
 ## RAGAS Usage
 
 RAGAS can evaluate retrieval and answer faithfulness where report prose is generated from evidence. Custom deterministic evaluators remain authoritative for section matching, XBRL verification, calculations, and citation existence checks.
+
+## Portfolio Presentation
+
+Evaluation results should be described as development benchmark results unless
+they come from a broader approved validation program. Always show dataset name,
+dataset version, sample count, annotation provenance, candidate/baseline status,
+and metrics that could not be evaluated.
+
+Do not cherry-pick only favorable metrics. Present
+`evidence_backed_finding_rate` and `unsupported_finding_rate` together because
+they describe evidence grounding from opposite directions. Avoid production
+accuracy claims until CI, infrastructure jobs, and approved baselines validate
+the same release.

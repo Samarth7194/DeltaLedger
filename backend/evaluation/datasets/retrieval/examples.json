@@ -1,0 +1,68 @@
+[
+  {
+    "query_id": "ret-001",
+    "query": "access to external financing liquidity",
+    "relevant_documents": {"passage_liquidity_financing": 3, "passage_credit_facility": 2},
+    "rankings": {
+      "dense": ["passage_credit_facility", "passage_supply_chain", "passage_liquidity_financing", "passage_litigation", "passage_revenue"],
+      "lexical": ["passage_liquidity_financing", "passage_credit_facility", "passage_revenue", "passage_customer"],
+      "hybrid": ["passage_liquidity_financing", "passage_credit_facility", "passage_supply_chain", "passage_revenue"],
+      "hybrid_reranker": ["passage_liquidity_financing", "passage_credit_facility", "passage_supply_chain"]
+    }
+  },
+  {
+    "query_id": "ret-002",
+    "query": "customer budgets tighten backlog conversion",
+    "relevant_documents": {"passage_backlog_budget": 3},
+    "rankings": {
+      "dense": ["passage_revenue", "passage_backlog_budget", "passage_liquidity_financing"],
+      "lexical": ["passage_backlog_budget", "passage_customer", "passage_orders"],
+      "hybrid": ["passage_backlog_budget", "passage_revenue", "passage_orders"],
+      "hybrid_reranker": ["passage_backlog_budget", "passage_orders"]
+    }
+  },
+  {
+    "query_id": "ret-003",
+    "query": "state regulator investigation ongoing",
+    "relevant_documents": {"passage_regulator_investigation": 3, "passage_legal_proceeding": 2},
+    "rankings": {
+      "dense": ["passage_legal_proceeding", "passage_regulator_investigation", "passage_liquidity_financing"],
+      "lexical": ["passage_regulator_investigation", "passage_legal_proceeding"],
+      "hybrid": ["passage_regulator_investigation", "passage_legal_proceeding", "passage_other"],
+      "hybrid_reranker": ["passage_regulator_investigation", "passage_legal_proceeding"]
+    }
+  },
+  {
+    "query_id": "ret-004",
+    "query": "gross margin expanded basis points",
+    "relevant_documents": {"passage_gross_margin_bps": 3},
+    "rankings": {
+      "dense": ["passage_gross_margin_bps", "passage_eps", "passage_revenue"],
+      "lexical": ["passage_basis_points", "passage_gross_margin_bps", "passage_cash"],
+      "hybrid": ["passage_gross_margin_bps", "passage_basis_points", "passage_revenue"],
+      "hybrid_reranker": ["passage_gross_margin_bps", "passage_basis_points"]
+    }
+  },
+  {
+    "query_id": "ret-005",
+    "query": "lawsuit settlement payments material",
+    "relevant_documents": {"passage_settlement_payments": 3},
+    "rankings": {
+      "dense": ["passage_litigation", "passage_settlement_payments", "passage_regulator_investigation"],
+      "lexical": ["passage_settlement_payments", "passage_litigation"],
+      "hybrid": ["passage_settlement_payments", "passage_litigation"],
+      "hybrid_reranker": ["passage_settlement_payments", "passage_litigation"]
+    }
+  },
+  {
+    "query_id": "ret-006",
+    "query": "supplier concentration risk key components",
+    "relevant_documents": {"passage_supplier_concentration": 3},
+    "rankings": {
+      "dense": ["passage_customer_concentration", "passage_supplier_concentration", "passage_supply_chain"],
+      "lexical": ["passage_supplier_concentration", "passage_supply_chain"],
+      "hybrid": ["passage_supplier_concentration", "passage_customer_concentration", "passage_supply_chain"],
+      "hybrid_reranker": ["passage_supplier_concentration", "passage_supply_chain"]
+    }
+  }
+]

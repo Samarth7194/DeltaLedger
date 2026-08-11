@@ -1,0 +1,15 @@
+{
+  "dataset_name": "phase5_contradiction_v1",
+  "dataset_version": "phase5-v1",
+  "task": "phase5_contradiction",
+  "description": "Adapter over the curated 80-example Phase 5 contradiction fixture.",
+  "source_type": "test_fixture_adapter",
+  "example_count": 80,
+  "annotation_method": "curated seed fixture",
+  "review_status": "curated",
+  "created_at": "2026-08-09T00:00:00Z",
+  "labels": ["numerical_claim_contradiction", "magnitude_overstatement", "magnitude_understatement", "unsupported_qualitative_claim", "narrative_cross_section_inconsistency", "temporal_narrative_inconsistency"],
+  "supported_metrics": ["precision", "recall", "f1", "macro_f1", "per_type_f1", "false_positive_rate"],
+  "limitations": ["Current fixture has no non-contradiction negative controls, so false-positive rate is not evaluated."],
+  "adapter": "phase5_fixture"
+}
