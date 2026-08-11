@@ -68,3 +68,47 @@ DeltaLedger AI does not provide investment advice, buy/sell/hold recommendations
   candidates.
 - Phase 4 does not produce contradiction or misleadingness scores. It only
   verifies extracted numerical claims against XBRL facts.
+
+## Phase 7.5 Known Limits
+
+- Playwright E2E uses deterministic mocked FastAPI responses at the HTTP
+  boundary. It verifies frontend contract behavior, not a live browser-to-real
+  database run.
+- Postgres LangGraph checkpoint acceptance is marker-gated and requires a real
+  migrated PostgreSQL test database with the checkpoint tables initialized.
+- Frontend JSON export is implemented. Server-side PDF generation remains later
+  hardening.
+- Dependency audit findings are reviewed locally; forced major upgrades are not
+  applied during Phase 7.5.
+
+## Phase 8 Known Limits
+
+- Retrieval and evidence datasets are compact offline fixtures, not a full live
+  PGVector benchmark.
+- The existing Phase 4 fixture preserves expected labels but does not yet store
+  offline verifier predictions, so several XBRL-resolution metrics are
+  `not_evaluated`.
+- The existing Phase 5 fixture does not include true non-contradiction negative
+  controls, so false-positive rate is `not_evaluated` for that suite.
+- Human-review analytics and workflow operational metrics return `no_data`
+  until labelled review and workflow event benchmark datasets exist.
+- Generated Phase 8 reports are candidate artifacts; no baseline is approved
+  automatically.
+
+## Phase 9 Known Limits
+
+- Phase 9 makes the project deployment-ready but does not perform a remote
+  production deployment.
+- Production model-provider behavior depends on real provider configuration and
+  should be evaluated separately from deterministic CI fakes.
+- The deterministic demo dataset is synthetic/reduced-real and designed for
+  walkthrough stability, not issuer coverage.
+- Evaluation datasets remain small and should not be described as production
+  validation across all public companies.
+- XBRL issuer extensions, non-GAAP metrics, and table-heavy disclosures can
+  still require analyst review or future resolver improvements.
+- Potential inconsistency candidates are not misconduct determinations.
+- Human-review/resume flows need authentication and authorization before public
+  multi-user deployment.
+- Current dependency audit results may include unresolved vulnerabilities that
+  require deliberate package upgrade decisions.

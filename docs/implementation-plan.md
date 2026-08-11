@@ -42,10 +42,11 @@
 
 ## Week 6: Contradiction Intelligence And Workflow
 
-- Implement rule-based contradiction candidate generation.
-- Add LLM-assisted classification and explanation constrained to evidence.
-- Implement LangGraph state, nodes, routing, checkpointing, human interrupt, resume, node timing, and token usage.
-- Tests: node behavior, routing, resumption, malformed LLM output, missing evidence abstention.
+- Implement rule-based contradiction candidate generation. Status: complete in Phase 5 backend.
+- Add model-assisted classification abstraction constrained to evidence. Status: fake/CI-safe provider complete in Phase 5 backend.
+- Implement LangGraph state, nodes, routing, checkpointing, human interrupt, resume, node timing, and workflow events. Status: Phase 6 backend orchestration implemented locally.
+- Add workflow-level review requests, evidence validation, analyst-review prioritization, cancellation, and deterministic structured report generation. Status: Phase 6 backend implemented locally.
+- Tests: deterministic detector behavior, fixture distribution, workflow review policy, progress model, migration schema, standard backend suite. Status: added locally; real Postgres workflow validation requires local PostgreSQL availability.
 
 ## Week 7: Reports And Frontend
 
@@ -54,6 +55,18 @@
 - Implement JSON and PDF export with citation validation.
 - Tests: component, query-state, finding review, analysis flow, Playwright E2E.
 
+Status: Phase 7 analyst frontend is implemented as a Next.js workspace for
+dashboard, company browsing, filing pair analysis creation, workflow progress,
+events, disclosure comparison, financial verification, potential inconsistency
+inspection, evidence viewing, workflow review, resume, and structured report
+rendering. The MVP supports print-friendly reports and JSON download; server PDF
+generation remains a later hardening item.
+
+Phase 7.5 adds end-to-end acceptance hardening before Phase 8: real API
+contract tests for analysis endpoints, Playwright browser coverage, development
+CORS configuration, Postgres LangGraph checkpoint proof, dependency audit
+commands, and a frontend E2E GitHub Actions workflow.
+
 ## Week 8: Evaluation, CI, And Hardening
 
 - Build 150-example versioned benchmark dataset with human annotations.
@@ -61,3 +74,22 @@
 - Add GitHub Actions for backend, frontend, evaluation regression, and Docker build.
 - Add security tests, load tests with Locust or k6, deployment docs, model card, limitations, and demo script.
 - Run full test suite and record measured benchmark results in README.
+
+Status: Phase 8 offline evaluation is implemented with versioned dataset
+manifests, adapters for the existing Phase 3/4/5 fixtures, retrieval and
+evidence seed datasets, deterministic metric functions, confidence calibration,
+JSON/Markdown report generation, baseline comparison support, and an offline
+evaluation CI workflow. It does not approve a baseline automatically.
+
+## Phase 9: Production And Portfolio Readiness
+
+- Harden production configuration and reject unsafe fallbacks.
+- Add readiness checks, CLI dependency checks, security headers, and request IDs.
+- Document migration-first deployment, separate API/worker startup, production
+  checkpointing, Redis, object storage, and frontend configuration.
+- Add deterministic demo setup and a concise interview walkthrough.
+- Refresh README, portfolio case study, resume bullets, interview guide, and
+  production checklist.
+
+Status: Phase 9 prepares the project for deployment review and portfolio
+presentation. It does not claim a completed remote deployment.

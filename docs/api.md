@@ -34,20 +34,16 @@ Creation APIs accept `Idempotency-Key`. List APIs support pagination and documen
 ## Companies
 
 - `GET /api/v1/companies`
-  - Filters: `ticker`, `is_active`, `industry`
-  - Returns company summaries.
+  - Filters: `search`, `ticker`, `is_active`, `industry`, `limit`, `offset`
+  - Returns company summaries with filing count and latest filing status.
 - `GET /api/v1/companies/{company_id}`
-  - Returns company detail with ingestion summary.
-- `POST /api/v1/companies/{company_id}/sync`
-  - Starts SEC metadata and latest 10-Q sync through a worker job.
-  - Requires `Idempotency-Key`.
+  - Returns company detail with ingestion status counts.
 
 ## Filings
 
 - `GET /api/v1/companies/{company_id}/filings`
-  - Filters: `form_type=10-Q`, `report_period_from`, `report_period_to`, `ingestion_status`
-- `GET /api/v1/filings/{filing_id}`
-  - Returns filing metadata, source URL, storage state, parser version, and processing status.
+  - Filters: `form_type=10-Q`, `report_period_from`, `report_period_to`,
+    `ingestion_status`, `limit`, `offset`
 - `GET /api/v1/filings/{filing_id}/sections`
   - Returns section hierarchy and source references.
 - `POST /api/v1/filings/{filing_id}/process`
@@ -61,8 +57,6 @@ Creation APIs accept `Idempotency-Key`. List APIs support pagination and documen
   - Returns extracted table summaries and normalized JSON.
 - `GET /api/v1/filings/{filing_id}/chunks`
   - Returns paginated chunks without raw embedding arrays.
-- `GET /api/v1/filings/{filing_id}/xbrl-facts`
-  - Filters: `concept`, `taxonomy`, `unit`, `fiscal_period`, `frame`
 
 ## Retrieval
 
@@ -139,58 +133,67 @@ Creation APIs accept `Idempotency-Key`. List APIs support pagination and documen
 - `GET /api/v1/comparisons/{comparison_id}/financial-verifications`
   - Filters: `verification_status`, `min_confidence`
 
+## Contradictions
+
+- `POST /api/v1/comparisons/{comparison_id}/contradictions/analyze`
+  - Queues deterministic narrative-data contradiction detection for one comparison.
+  - Returns `202`.
+- `GET /api/v1/comparisons/{comparison_id}/contradictions`
+  - Filters: `contradiction_type`, `severity`, `risk_category`,
+    `min_confidence`, `review_status`, `status`, `limit`, `offset`
+  - Returns contradiction candidates with confidence, severity, evidence pointers,
+    limitations, model metadata, and review fields.
+- `GET /api/v1/comparisons/{comparison_id}/contradiction-summary`
+  - Returns aggregate contradiction counts and severity distribution.
+- `GET /api/v1/contradictions/{finding_id}`
+  - Returns one contradiction finding with evidence and calculation output.
+- `GET /api/v1/contradictions/{finding_id}/evidence`
+  - Returns source passages, facts, derived metrics, and related evidence links.
+- `PATCH /api/v1/contradictions/{finding_id}/review`
+  - Body: `review_status`, optional `comment`, `reviewer_id`,
+    `contradiction_type`, `severity`, `risk_category`, `summary`, and
+    `explanation`.
+
 ## Analyses
 
 - `POST /api/v1/analyses`
-  - Body: `company_id`, `current_filing_id`, `comparison_filing_id`, optional requested categories.
+  - Body: `current_filing_id`, `comparison_filing_id`.
   - Creates or resumes an idempotent analysis.
 - `GET /api/v1/analyses`
-  - Filters: `company_id`, `status`, `created_from`, `created_to`
-- `GET /api/v1/analyses/{analysis_id}`
+  - Filters: `company_id`, `status`, `current_filing_id`,
+    `comparison_filing_id`, `limit`, `offset`
+- `GET /api/v1/analyses/{analysis_run_id}`
   - Returns run metadata, workflow versions, status, and summary counts.
-- `GET /api/v1/analyses/{analysis_id}/progress`
-  - Returns node-level status, timing, retry count, partial outputs, and human-review interrupt state.
-- `GET /api/v1/analyses/{analysis_id}/findings`
-  - Filters: `risk_category`, `finding_type`, `severity`, `reviewer_status`
-  - Sorts: `severity`, `confidence`, `created_at`
-- `GET /api/v1/analyses/{analysis_id}/findings/{finding_id}`
-  - Returns finding detail, source passages, XBRL facts, calculation, confidence, limitations, and audit history.
-- `POST /api/v1/analyses/{analysis_id}/resume`
+- `GET /api/v1/analyses/{analysis_run_id}/events`
+  - Returns node-level workflow events, durations, attempts, and event payloads.
+- `GET /api/v1/analyses/{analysis_run_id}/review`
+  - Returns the latest pending or completed human review request for the run.
+- `PATCH /api/v1/analyses/{analysis_run_id}/review`
+- `POST /api/v1/analyses/{analysis_run_id}/review`
+  - Body: `status`, optional `reviewed_by`, `comment`, and `review_payload`.
+- `POST /api/v1/analyses/{analysis_run_id}/resume`
   - Resumes after human review or retryable failure.
-  - Requires `Idempotency-Key`.
-
-## Review
-
-- `PATCH /api/v1/findings/{finding_id}/review`
-  - Body: `reviewer_status`, optional edited title/summary/severity/comment.
-  - Valid statuses: `approved`, `rejected`, `edited`, `uncertain`.
-  - Creates audit event.
-
-## Export
-
-- `POST /api/v1/analyses/{analysis_id}/export`
-  - Body: `format=json|pdf`
-  - Requires all published findings to pass citation validation.
-  - Requires `Idempotency-Key`.
-
-## Evaluations
-
-- `POST /api/v1/evaluations/run`
-  - Body: dataset version, evaluators, thresholds.
-  - Starts worker execution.
-- `GET /api/v1/evaluations/runs`
-  - Filters by dataset version, status, branch/commit when available.
-- `GET /api/v1/evaluations/runs/{run_id}`
-  - Returns metrics, threshold decisions, artifacts, and failed examples.
+- `GET /api/v1/analyses/{analysis_run_id}/report`
+  - Returns the versioned generated analysis report, summaries, limitations, and
+    evidence manifest.
+- `POST /api/v1/analyses/{analysis_run_id}/cancel`
+  - Cancels a cancellable workflow run.
 
 ## System
 
 - `GET /api/v1/health`
+  - Lightweight liveness check with service metadata.
 - `GET /api/v1/ready`
-- `GET /api/v1/traces`
-  - Restricted endpoint for dashboard-ready workflow and model traces.
-- `GET /api/v1/audit-events`
-  - Restricted endpoint for user/system audit history.
+  - Structured readiness check.
+  - Returns `503` when configured dependency checks are degraded.
+  - Does not expose credentials or full service URLs.
+
+Deep health CLI:
+
+```bash
+cd backend
+python -m app.cli.health all
+```
 
 ## Status Codes
 

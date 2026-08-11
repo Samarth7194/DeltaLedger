@@ -1,175 +1,237 @@
 # Deployment
 
-## Local MVP
+DeltaLedger is deployment-ready when the API, worker, PostgreSQL/PGVector,
+Redis, object storage, frontend, migrations, and evaluation checks are all
+configured explicitly. This document is provider-neutral; Vercel, Render,
+Railway, Fly.io, AWS, GCP, Azure, Supabase, Neon, Upstash, and S3-compatible
+storage can all fit the same shape.
 
-The MVP supports Docker-free local development and Docker Compose deployment.
-On laptops that cannot run Docker, use `APP_PROFILE=local-cloud`:
+## Architecture
 
-- FastAPI backend.
-- PostgreSQL/PGVector via a managed connection.
-- Redis via a managed `redis://` or `rediss://` URL.
-- Filesystem object storage at `OBJECT_STORAGE_LOCAL_ROOT`.
-- Direct PowerShell API and Dramatiq worker processes.
-
-## Docker-Free Local Startup
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-Set-Location backend
-pip install -e ".[dev]"
-Copy-Item ..\.env.example ..\.env
-python -m alembic upgrade head
-uvicorn app.main:app --reload
+```mermaid
+flowchart LR
+  Browser --> Frontend[Next.js]
+  Frontend --> API[FastAPI API]
+  API --> Postgres[(PostgreSQL + PGVector)]
+  API --> Redis[(Redis)]
+  API --> Storage[(S3-compatible object storage)]
+  Worker[Dramatiq worker] --> Redis
+  Worker --> Postgres
+  Worker --> Storage
+  Worker --> Providers[Model providers]
+  API --> Providers
 ```
 
-Worker terminal:
+## Required Services
 
-```powershell
-Set-Location backend
-.\..\.venv\Scripts\Activate.ps1
+- PostgreSQL with the `vector` extension available.
+- Redis reachable through `redis://` or `rediss://`.
+- S3-compatible object storage for filing/report artifacts.
+- A separately deployed FastAPI API process.
+- A separately deployed Dramatiq worker process.
+- Next.js hosting for the frontend.
+- Optional model-provider credentials for real model-backed production runs.
+
+## Environment Variables
+
+Core:
+
+```text
+APP_PROFILE=production
+ENVIRONMENT=production
+LOG_LEVEL=INFO
+LOG_JSON=true
+CORS_ALLOWED_ORIGINS=https://your-frontend.example.com
+FRONTEND_URL=https://your-frontend.example.com
+READINESS_DEPENDENCY_CHECKS_ENABLED=true
+```
+
+Database:
+
+```text
+DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@HOST:5432/DB?ssl=require
+ALEMBIC_DATABASE_URL=postgresql+psycopg://USER:PASSWORD@HOST:5432/DB?sslmode=require
+DATABASE_POOL_SIZE=5
+DATABASE_MAX_OVERFLOW=10
+DATABASE_POOL_TIMEOUT_SECONDS=30
+```
+
+Redis and worker:
+
+```text
+REDIS_URL=rediss://USER:PASSWORD@HOST:PORT/0
+REDIS_CONNECT_TIMEOUT_SECONDS=5
+REDIS_SOCKET_TIMEOUT_SECONDS=5
+```
+
+Object storage:
+
+```text
+OBJECT_STORAGE_PROVIDER=minio
+MINIO_ENDPOINT=https://s3-compatible-endpoint.example.com
+MINIO_ACCESS_KEY=...
+MINIO_SECRET_KEY=...
+MINIO_BUCKET_FILINGS=filings
+MINIO_BUCKET_REPORTS=reports
+```
+
+Workflow and models:
+
+```text
+WORKFLOW_CHECKPOINT_PROVIDER=postgres
+EMBEDDING_PROVIDER=...
+RERANKER_ENABLED=true
+RERANKER_PROVIDER=...
+CHANGE_CLASSIFIER_PROVIDER=...
+CLAIM_EXTRACTOR_PROVIDER=...
+CONTRADICTION_CLASSIFIER_PROVIDER=...
+ALLOW_FAKE_MODELS_IN_PRODUCTION=false
+HF_TOKEN=...
+```
+
+SEC:
+
+```text
+SEC_USER_AGENT=DeltaLedgerAI/0.1 maintainer@example.com
+SEC_REQUEST_TIMEOUT_SECONDS=20
+SEC_MAX_ATTEMPTS=3
+SEC_REQUESTS_PER_SECOND=5
+```
+
+Frontend:
+
+```text
+NEXT_PUBLIC_API_BASE_URL=https://your-api.example.com/api/v1
+```
+
+Do not store real credentials in tracked files. Use deployment platform secrets
+or environment-variable managers.
+
+## Database Preparation
+
+PostgreSQL is the authoritative database. Application code must not create the
+schema automatically in production; migrations are the source of truth.
+
+Deployment order:
+
+1. Install backend dependencies.
+2. Validate environment variables.
+3. Run `python -m alembic upgrade head` once.
+4. Start the API service.
+5. Start the worker service.
+
+The API and workers should not all race to run migrations. Use one migration
+job or release step.
+
+## PGVector
+
+The initial migration includes `CREATE EXTENSION IF NOT EXISTS vector`. Managed
+providers may require enabling the extension manually or granting extension
+permissions before migrations run.
+
+Validate:
+
+```bash
+cd backend
+python -m alembic upgrade head --sql
+python -m app.cli.health pgvector
+```
+
+## Redis
+
+Redis backs Dramatiq queues. Production must use a reachable managed Redis or
+self-hosted Redis endpoint. `rediss://` is supported for TLS-backed providers.
+Do not silently switch to in-memory queues in production.
+
+## Object Storage
+
+Local development can use filesystem storage. Production requires
+S3-compatible storage through the `minio` client configuration. Bucket names are
+configured separately for filings and reports. Avoid logging presigned URLs.
+
+## Backend Deployment
+
+API command:
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+Container default:
+
+```bash
+docker build -t deltaledger-api backend
+docker run --env-file .env -p 8000:8000 deltaledger-api
+```
+
+Liveness health check:
+
+```text
+/api/v1/health
+```
+
+Readiness health check:
+
+```text
+/api/v1/ready
+```
+
+## Worker Deployment
+
+Worker command:
+
+```bash
 dramatiq app.workers.tasks
 ```
 
-Redis health check:
+Run workers as a separate service from the API. Tune worker process count at the
+platform level. Each task creates its own SQLAlchemy async session and uses
+PostgreSQL advisory locks for duplicate workflow prevention.
 
-```powershell
-python -m app.cli.health redis
-```
+## Frontend Deployment
 
-Managed PostgreSQL configuration uses separate URLs:
+Use Node `20.20.x`, `npm ci`, and `npm run build`. The frontend is configured
+for Next.js `16.3.0` standalone output. Set `NEXT_PUBLIC_API_BASE_URL` to the
+public API URL before building.
 
-```text
-DATABASE_URL=postgresql+asyncpg://USER@HOST/DB?ssl=require
-ALEMBIC_DATABASE_URL=postgresql+psycopg://USER@HOST/DB?sslmode=require
-TEST_DATABASE_URL=postgresql+asyncpg://USER@HOST/DB_TEST?ssl=require
-```
+## Health Checks
 
-Destructive migration tests refuse to run unless the test database is separate
-and its name contains `test`.
+- `/api/v1/health` is lightweight liveness and returns service metadata.
+- `/api/v1/ready` returns structured dependency status and 503 when degraded.
+- `python -m app.cli.health all` checks config, database, PGVector, Redis,
+  storage configuration, and checkpoint configuration.
 
-## Docker Startup
+## Smoke Tests
 
-From the repository root:
-
-```bash
-docker compose config
-docker compose up -d postgres redis minio minio-init
-docker compose ps
-```
-
-The services use named volumes:
-
-- `postgres_data`
-- `redis_data`
-- `minio_data`
-
-Inside containers, backend and worker use service hostnames such as `postgres`,
-`redis`, and `minio`. Host-side `.env.example` uses `localhost` ports for local
-CLI and test execution.
-
-For Docker Compose, set `DOCKER_DATABASE_URL` and `DOCKER_ALEMBIC_DATABASE_URL`
-in the ignored `.env` file with the internal `postgres` hostname.
-
-Run migrations and start the API:
+After deploying:
 
 ```bash
 cd backend
-python -m alembic upgrade head
-python -m uvicorn app.main:create_app --factory --host 0.0.0.0 --port 8000
+python -m app.cli.health all
+python -m app.cli.evaluate --suite all --offline
 ```
 
-Run the worker:
+Then verify:
 
-```bash
-cd backend
-python -m dramatiq app.workers.tasks
-```
+- API docs load at `/api/docs`.
+- Frontend can call `/api/v1/health`.
+- Worker imports with `dramatiq app.workers.tasks`.
+- A deterministic demo manifest prints with
+  `python -m app.cli.seed_demo_data --manifest-only`.
 
-The worker uses Redis-backed Dramatiq and creates its own SQLAlchemy async
-session for each job.
+## Rollback Considerations
 
-## Database Reset
+- Do not downgrade migrations automatically.
+- Keep database backups before applying schema changes.
+- Roll back API and worker images together when model/config contracts change.
+- Keep evaluation reports and logs for failed releases.
 
-For a destructive local reset:
+## Troubleshooting
 
-```bash
-docker compose down
-docker volume rm dk_postgres_data
-docker compose up -d postgres
-cd backend
-python -m alembic upgrade head
-```
-
-Use the test database for integration tests:
-
-```bash
-DATABASE_URL=postgresql+asyncpg://deltaledger@localhost:5433/deltaledger_test python -m alembic upgrade head
-```
-
-## MinIO
-
-MinIO API endpoint:
-
-```text
-http://localhost:9000
-```
-
-MinIO console:
-
-```text
-http://localhost:9001
-```
-
-Default local credentials are `minioadmin` / `minioadmin`. The `minio-init`
-compose service creates the `filings` and `reports` buckets.
-
-## Validation Commands
-
-```bash
-cd backend
-python -m pytest -q
-python -m pytest -m unit -q
-RUN_INTEGRATION_TESTS=1 RUN_POSTGRES_TESTS=1 python -m pytest -m "integration and postgres" -q
-RUN_INTEGRATION_TESTS=1 RUN_REDIS_TESTS=1 python -m pytest -m "integration and redis" -q
-RUN_INTEGRATION_TESTS=1 RUN_MINIO_TESTS=1 python -m pytest -m "integration and minio" -q
-python -m ruff check app tests --no-cache
-python -m alembic upgrade head
-python -m alembic current
-```
-
-Manual smoke tests:
-
-```bash
-RUN_LIVE_TESTS=1 python -m pytest -m live -q
-RUN_MODEL_SMOKE=1 python -m pytest -m model_smoke -q
-```
-
-Live SEC and model smoke tests are intentionally excluded from standard CI.
-`RUN_MODEL_SMOKE_TESTS=1` is accepted as an alias for manual model smoke runs.
-
-## Configuration
-
-Configuration is environment-based. Required categories:
-
-- Database URL.
-- Redis URL.
-- Object storage endpoint and credentials.
-- SEC User-Agent.
-- Hosted LLM provider credentials.
-- Local/Hugging Face model configuration.
-- Tracing backend configuration.
-- Rate-limit and retry settings.
-
-## Cloud Option
-
-Cloud deployment documentation can later map local services to:
-
-- Managed PostgreSQL with PGVector.
-- Managed Redis.
-- S3-compatible object storage.
-- Container service for API and workers.
-- Static/edge hosting for the Next.js frontend.
-- OpenTelemetry-compatible tracing.
-
-No production deployment should be claimed until migrations, tests, evaluation gates, security checks, and Docker builds pass.
+- 503 readiness: inspect the named check in the response.
+- Migration failure: verify `ALEMBIC_DATABASE_URL` uses a synchronous driver.
+- PGVector failure: enable `vector` extension privileges.
+- Redis failure: verify `redis://` vs `rediss://`, TLS settings, and firewall rules.
+- Worker idle: verify `REDIS_URL` matches API/worker configuration.
+- Frontend API errors: verify `NEXT_PUBLIC_API_BASE_URL` and CORS origins.
+- SEC errors: verify `SEC_USER_AGENT` includes real contact information.

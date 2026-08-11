@@ -538,9 +538,216 @@ Phase 4 implements gross margin as `GrossProfit / Revenue * 100` only when
 facts have compatible units, matching accession numbers, matching periods, and
 non-zero revenue.
 
+## Phase 5 Contradiction Intelligence Tables
+
+Phase 5 stores evidence-backed review candidates. These records are not
+automated accusations of fraud, deception, misconduct, or manipulation. Finding
+language is intentionally framed as potential inconsistency, possible
+contradiction, unsupported by available evidence, or requiring analyst review.
+
+Magnitude policies are system heuristics for routing review candidates. They
+are metric-aware where possible, versioned, and not legal materiality
+conclusions.
+
+### contradiction_findings
+
+Stores one deduplicated contradiction review candidate.
+
+Key fields:
+
+- `company_id`
+- nullable `comparison_id`
+- nullable `financial_claim_id`
+- nullable `claim_verification_id`
+- nullable `disclosure_change_id`
+- `contradiction_type`: direction contradiction, magnitude overstatement,
+  magnitude understatement, unsupported qualitative claim, cross-section
+  narrative inconsistency, temporal narrative inconsistency, or numerical claim
+  contradiction
+- `status`: candidate, confirmed for review, insufficient evidence, or dismissed
+- nullable `risk_category`
+- `severity`
+- `confidence`
+- `narrative_claim`
+- `narrative_direction`
+- `measured_direction`
+- reported and calculated values, calculated change, and difference
+- `qualifier`
+- title, summary, and explanation fields
+- `limitations`
+- `deterministic_evidence`
+- `supporting_evidence`
+- `severity_components`
+- `confidence_components`
+- `detection_method`: deterministic, rule based, model, or hybrid
+- `rule_ids`
+- model metadata and original model output, when model assistance is used
+- `original_system_finding`
+- `finding_fingerprint`
+- human review fields and reviewer edits
+
+Important constraints and indexes:
+
+- `FOREIGN KEY (company_id) REFERENCES companies(id)`
+- Nullable foreign keys to Phase 3 and Phase 4 evidence tables.
+- Unique index on `finding_fingerprint` for idempotent reprocessing.
+- Index on `(company_id, contradiction_type)`.
+- Index on `(comparison_id, severity)`.
+- Index on `review_status`.
+- Index on `confidence`.
+
+Primary queries:
+
+- List contradiction candidates for a comparison.
+- Inspect deterministic calculation and evidence.
+- Route findings through human review.
+- Re-run analysis without duplicate finding records.
+
+### contradiction_evidence
+
+Stores normalized evidence references for every finding. Every contradiction
+candidate must have at least one primary evidence row.
+
+Key fields:
+
+- `contradiction_finding_id`
+- `evidence_type`: narrative passage, previous passage, current passage, XBRL
+  fact, financial claim, claim verification, disclosure change, filing table, or
+  derived metric
+- nullable references to filings, sections, passages, facts, claims,
+  verifications, disclosure changes, and derived metrics
+- `source_text`
+- `source_hash`
+- `source_anchor`
+- `evidence_role`: primary, supporting, comparison, or conflicting
+- `metadata`
+
+Important constraints and indexes:
+
+- `FOREIGN KEY (contradiction_finding_id) REFERENCES contradiction_findings(id)`
+- Nullable foreign keys preserve links to source evidence.
+- Index on `contradiction_finding_id`.
+
+Primary queries:
+
+- Render evidence inspectors.
+- Reproduce numerical contradiction calculations.
+- Validate source passages, facts, and disclosure-change references.
+
+## Phase 6 Analysis Workflow Tables
+
+Phase 6 adds application-owned workflow metadata around the independently tested
+Phase 1 through Phase 5 services. LangGraph checkpoints store execution state;
+these business tables store user-visible workflow metadata, audit events,
+review requests, and deterministic reports.
+
+Lock ordering for long-running analysis is:
+
+1. analysis-run advisory lock
+2. filing-processing lock when a filing must be processed
+3. comparison lock
+4. financial-verification lock
+5. contradiction-analysis lock
+
+Workers do not hold lower-level locks before acquiring the analysis-run lock.
+
 ### analysis_runs
 
-Tracks a comparison workflow.
+Stores one versioned end-to-end analysis workflow for a current/comparison
+filing pair.
+
+Key fields:
+
+- `company_id`
+- `current_filing_id`
+- `comparison_filing_id`
+- nullable `comparison_id`
+- `status`
+- `current_node`
+- `workflow_version`
+- `graph_version`
+- unique `checkpoint_thread_id`
+- `requires_human_review`
+- `review_gate_reason`
+- start/completion timestamps
+- safe failure code, message, and node
+- `retry_count`
+- `processing_metrics`
+- `input_snapshot`
+
+Important constraints and indexes:
+
+- `CHECK (current_filing_id <> comparison_filing_id)`
+- `UNIQUE (current_filing_id, comparison_filing_id, workflow_version)`
+- `UNIQUE (checkpoint_thread_id)`
+- Indexes on `(company_id, created_at)`, `status`, filing pair, and checkpoint
+  thread.
+
+### analysis_workflow_events
+
+Stores application-level workflow audit events. It records structured outcomes,
+IDs, counts, validation failures, retry metadata, and timing. It does not store
+hidden model reasoning or chain-of-thought.
+
+Key fields:
+
+- `analysis_run_id`
+- `event_type`
+- nullable `node_name`
+- nullable `attempt_number`
+- `event_payload`
+- nullable `duration_ms`
+- `created_at`
+
+### analysis_review_requests
+
+Stores workflow-level review gates. This aggregates Phase 3/4/5 objects that
+need a workflow decision; it does not replace individual finding review states.
+
+Key fields:
+
+- `analysis_run_id`
+- `review_type`
+- `status`
+- `reason`
+- `finding_ids`
+- `claim_ids`
+- `verification_ids`
+- request/review timestamps
+- reviewer/comment/payload fields
+- nullable `resume_token_hash`
+
+### analysis_reports
+
+Stores the authoritative structured final report for an analysis run.
+
+Key fields:
+
+- unique `analysis_run_id`
+- `report_version`
+- `status`
+- `executive_summary`
+- `comparison_summary`
+- `disclosure_change_summary`
+- `financial_verification_summary`
+- `contradiction_summary`
+- `high_priority_findings`
+- `limitations`
+- `evidence_manifest`
+- `report_payload`
+- generator metadata
+- generated/finalized timestamps
+- `content_hash`
+
+The structured `report_payload` is authoritative. Natural-language summaries
+cannot add findings, recalculate numbers, change severity, or create investment
+recommendations.
+
+### legacy analysis_runs planning note
+
+Superseded by the Phase 6 `analysis_runs` schema above. This older planning
+shape is retained only as historical context for future workflow/report
+extensions.
 
 Fields:
 
@@ -711,9 +918,11 @@ Primary queries:
 - Show support, contradiction, ambiguity, unit mismatch, and period mismatch.
 - Feed contradiction candidate generation.
 
-### contradiction_findings
+### legacy contradiction_findings planning note
 
-Stores evidence-backed potential inconsistencies.
+Superseded by the Phase 5 `contradiction_findings` schema above. This older
+planning shape is retained only as historical context for future report
+orchestration work.
 
 Fields:
 
@@ -744,9 +953,11 @@ Primary queries:
 - Show flagship contradiction results.
 - Route to human review.
 
-### evidence_items
+### legacy evidence_items planning note
 
-Stores reusable evidence records for passages, facts, calculations, and tables.
+Superseded for Phase 5 contradiction evidence by `contradiction_evidence`.
+This older planning shape is retained only as historical context for future
+report orchestration work.
 
 Fields:
 

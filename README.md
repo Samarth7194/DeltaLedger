@@ -1,219 +1,207 @@
 # DeltaLedger AI
 
-Financial Disclosure Change and Contradiction Intelligence Platform
+DeltaLedger compares financial disclosures across reporting periods, verifies
+financial claims against SEC XBRL facts, identifies potential inconsistencies,
+and produces evidence-backed analyst reports.
 
-DeltaLedger AI is a portfolio-grade research tool for comparing SEC 10-Q disclosures across reporting periods. The system is designed to detect meaningful narrative and numerical changes, verify management claims against structured XBRL facts, identify potential contradictions between language and reported figures, and preserve exact evidence for every conclusion.
+## Problem
 
-Portfolio message:
+Quarterly filings are long, repetitive, and easy to misread across periods.
+Simple filing chat tools can retrieve passages, but they usually do not verify
+reported numerical claims, preserve deterministic evidence lineage, or separate
+potential inconsistencies from reviewed conclusions.
 
-> I built a system that detects what changed between financial reporting periods, verifies whether management's numerical claims are supported by reported XBRL facts, identifies potential contradictions between narrative and data, and provides exact evidence for every conclusion.
+## What It Does
 
-## Current Status
+- Ingests SEC 10-Q filing HTML and company-facts/XBRL data.
+- Parses filings into sections, tables, passages, chunks, hashes, and citations.
+- Retrieves evidence with PostgreSQL full-text search, PGVector, RRF, and optional reranking.
+- Compares disclosure language across quarters.
+- Extracts financial claims and verifies them against XBRL facts with Decimal arithmetic.
+- Flags potential narrative-data inconsistencies for analyst review.
+- Orchestrates analysis with LangGraph, PostgreSQL checkpointing, Redis, and Dramatiq.
+- Produces structured evidence-backed reports and offline evaluation artifacts.
 
-Phase 4 backend foundation is implemented: SEC filing parsing, table extraction,
-section-aware chunking, embedding/reranker abstractions, PGVector and PostgreSQL
-full-text retrieval repositories, hybrid retrieval, processing worker integration,
-cross-quarter 10-Q comparison, section matching, passage alignment, semantic
-disclosure-change classification, financial claim extraction, XBRL fact
-verification, derived gross margin calculation, reviewable findings, and
-versioned APIs. Phase 5 contradiction scoring has not started.
-
-## MVP Scope
-
-- 5 publicly listed US companies
-- 4 quarterly 10-Q periods per company
-- SEC filing HTML documents and SEC XBRL company facts
-- 3 initial disclosure change categories: added, removed, strengthened/weakened language
-- 3 initial risk categories: revenue and margin, liquidity and debt, customer concentration
-- Evidence-grounded analysis report
-- Human review workflow
-- PostgreSQL with PGVector, Redis, filesystem or MinIO object storage, and optional Docker Compose
-
-DeltaLedger AI is not a generic RAG chatbot, filing summarizer, stock-price predictor, trading recommender, or portfolio management system.
-
-## Proposed Repository Structure
-
-See [docs/repository-structure.md](docs/repository-structure.md).
+DeltaLedger is not a stock forecaster, trading system, investment advisor, or
+fraud detector.
 
 ## Architecture
 
-See [docs/architecture.md](docs/architecture.md).
-
-High-level flow:
-
-```text
-SEC APIs
-  -> ingestion worker
-  -> object storage and PostgreSQL
-  -> parser, sectioning, chunking, embeddings
-  -> hybrid retrieval and section matching
-  -> passage alignment and disclosure diff
-  -> claim extraction, XBRL verification, contradiction candidates, evidence assembly
-  -> human review interrupt
-  -> citation-validated report export
+```mermaid
+flowchart LR
+  FE[Next.js analyst workspace] --> API[FastAPI API]
+  API --> WF[LangGraph workflow]
+  API --> DB[(PostgreSQL + PGVector + FTS)]
+  WF --> P3[Disclosure comparison]
+  WF --> P4[XBRL claim verification]
+  WF --> P5[Potential inconsistency analysis]
+  WF --> Review[Human review gate]
+  WF --> Report[Evidence-backed report]
+  Worker[Dramatiq worker] --> WF
+  Redis[(Redis)] --> Worker
+  Storage[(S3-compatible or local object storage)] --> API
+  SEC[SEC EDGAR + company facts] --> API
+  Eval[Offline evaluation suite] --> DB
 ```
 
-## Local Commands
+## Workflow
+
+```mermaid
+flowchart TD
+  A[Analysis request] --> B[Validate filing pair]
+  B --> C[Ensure filings are parsed]
+  C --> D[Match sections and passages]
+  D --> E[Classify disclosure changes]
+  E --> F[Extract financial claims]
+  F --> G[Resolve XBRL facts]
+  G --> H[Verify calculations]
+  H --> I[Generate potential inconsistencies]
+  I --> J[Validate evidence]
+  J --> K{Human review required?}
+  K -- yes --> L[Interrupt for review]
+  L --> M[Resume workflow]
+  K -- no --> N[Generate report]
+  M --> N
+```
+
+## AI, ML, And Financial Reasoning
+
+- NLP: filing sectioning, semantic comparison, claim extraction, risk/change classification.
+- Deep learning: transformer embeddings and optional cross-encoder reranking.
+- Retrieval: dense + lexical hybrid retrieval with reciprocal rank fusion.
+- Orchestration: LangGraph state machine with interrupt/resume.
+- Financial reasoning: deterministic XBRL fact resolution and Decimal calculations.
+- Evaluation: retrieval metrics, classification F1, calibration, false-positive-rate paths, and evidence metrics.
+
+The project uses model providers and deterministic CI-safe fakes; it does not
+claim models were trained from scratch.
+
+## Evaluation
+
+Run the offline benchmark from `backend`:
+
+```bash
+python -m app.cli.evaluate --suite all --offline --output-dir evaluation/reports
+```
+
+Phase 8 reports candidate development metrics only when labelled data exists,
+the evaluator actually ran, and the denominator is non-zero. Missing metrics are
+reported as `not_evaluated` or `no_data`. Current compact benchmarks include
+Phase 3, Phase 4, Phase 5, retrieval, evidence, and calibration utilities. See
+[docs/evaluation-suite.md](docs/evaluation-suite.md) and
+[docs/quality-gates.md](docs/quality-gates.md).
+
+## Local Setup
+
+Backend:
 
 ```bash
 cd backend
 python -m pip install -e ".[dev]"
-python -m pytest -q
-python -m ruff check app tests --no-cache
-python -m alembic upgrade head --sql
-```
-
-Docker-free local development:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-Set-Location backend
-pip install -e ".[dev]"
-Copy-Item ..\.env.example ..\.env
 python -m alembic upgrade head
-uvicorn app.main:app --reload
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
-Run the worker in a second PowerShell terminal:
-
-```powershell
-Set-Location backend
-.\..\.venv\Scripts\Activate.ps1
-dramatiq app.workers.tasks
-```
-
-For `APP_PROFILE=local-cloud`, set managed PostgreSQL/PGVector and Redis URLs
-in `.env`, use `OBJECT_STORAGE_PROVIDER=filesystem`, and keep
-`EMBEDDING_PROVIDER=fake` unless using hosted Hugging Face inference:
-
-```text
-DATABASE_URL=postgresql+asyncpg://USER@HOST/DB?ssl=require
-ALEMBIC_DATABASE_URL=postgresql+psycopg://USER@HOST/DB?sslmode=require
-TEST_DATABASE_URL=postgresql+asyncpg://USER@HOST/DB_TEST?ssl=require
-REDIS_URL=rediss://HOST:PORT
-OBJECT_STORAGE_PROVIDER=filesystem
-OBJECT_STORAGE_LOCAL_ROOT=./data/object-storage
-```
-
-For optional local Hugging Face model downloads:
-
-```bash
-python -m pip install -e ".[ai]"
-```
-
-Docker Compose remains supported for machines and deployment environments that
-can run Docker, but it is not required for local laptop development.
-
-## Phase 2.5 Infrastructure Validation
-
-On Docker-capable machines, start local infrastructure from the repository root:
-
-```bash
-docker compose up -d postgres redis minio minio-init
-docker compose ps
-```
-
-Run the API and worker in separate terminals:
-
-```bash
-cd backend
-python -m alembic upgrade head
-python -m uvicorn app.main:create_app --factory --reload --port 8000
-```
+Worker:
 
 ```bash
 cd backend
 python -m dramatiq app.workers.tasks
 ```
 
-Reset the local test database volume when a clean migration test is needed:
+Frontend:
 
 ```bash
-docker compose down
-docker volume rm dk_postgres_data
-docker compose up -d postgres
+cd frontend
+nvm use
+npm ci
+npm run dev
+```
+
+The frontend targets Node `20.20.x` and Next.js `16.3.0`.
+Set `NEXT_PUBLIC_API_BASE_URL` when the API is not at
+`http://localhost:8000/api/v1`.
+
+## Demo
+
+Create deterministic offline demo data in a migrated local database:
+
+```bash
+cd backend
+python -m app.cli.seed_demo_data --offline
+```
+
+Preview the demo scenario without database writes:
+
+```bash
+python -m app.cli.seed_demo_data --manifest-only
+```
+
+See [docs/demo-script.md](docs/demo-script.md) for a 5-10 minute walkthrough.
+
+## Production Readiness
+
+Production uses explicit environment configuration and fails fast for unsafe
+fallbacks such as filesystem storage, memory checkpointing, wildcard/local CORS,
+demo object-storage credentials, placeholder SEC contact details, or fake model
+providers unless explicitly overridden.
+
+Recommended commands:
+
+```bash
 cd backend
 python -m alembic upgrade head
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
+dramatiq app.workers.tasks
 ```
 
-MinIO runs at `http://localhost:9001` with the default local credentials from
-`.env.example`. The compose init service creates `filings` and `reports` buckets.
+Health checks:
 
-Pytest markers:
+- Liveness: `GET /api/v1/health`
+- Readiness: `GET /api/v1/ready`
+- Deep CLI: `python -m app.cli.health all`
+
+See [docs/deployment.md](docs/deployment.md) and
+[docs/production-checklist.md](docs/production-checklist.md).
+
+## Validation
+
+Backend:
 
 ```bash
 cd backend
-python -m pytest -m unit -q
-RUN_INTEGRATION_TESTS=1 RUN_POSTGRES_TESTS=1 python -m pytest -m "integration and postgres" -q
-RUN_INTEGRATION_TESTS=1 RUN_REDIS_TESTS=1 python -m pytest -m "integration and redis" -q
-RUN_INTEGRATION_TESTS=1 RUN_MINIO_TESTS=1 python -m pytest -m "integration and minio" -q
-RUN_LIVE_TESTS=1 python -m pytest -m live -q
-RUN_MODEL_SMOKE=1 python -m pytest -m model_smoke -q
+python -m pytest -q
+python -m ruff check app tests --no-cache --output-format=github
+python -m alembic upgrade head --sql
+python -m app.cli.evaluate --suite all --offline
 ```
 
-Standard tests stay offline and deterministic. The Hugging Face smoke tests are
-manual because they download/load `BAAI/bge-m3` and `BAAI/bge-reranker-base`.
-`RUN_MODEL_SMOKE_TESTS=1` is also accepted as an alias.
+Frontend:
 
-Current local validation note: the Phase 2.5 test suites and compose wiring have
-been added, but this workstation did not have Docker available on `PATH`; local
-PostgreSQL/PGVector and MinIO integration commands can only pass after those
-services are running. Redis was available locally during validation.
+```bash
+cd frontend
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npm run test:e2e
+npm audit
+npm audit --omit=dev
+```
 
-## Phase 3 Comparison APIs
+## Documentation
 
-Phase 3 compares two parsed 10-Q filings from the same company and different
-periods. `POST /api/v1/comparisons` creates or reuses a comparison, queues a
-Dramatiq worker job, and returns `202`. The worker uses PostgreSQL advisory
-locks to avoid duplicate comparison processing.
-
-Read APIs expose comparison summaries, section matches, passage matches, and
-reviewable disclosure changes:
-
-- `GET /api/v1/comparisons`
-- `GET /api/v1/comparisons/{comparison_id}`
-- `GET /api/v1/comparisons/{comparison_id}/section-matches`
-- `GET /api/v1/comparisons/{comparison_id}/passage-matches`
-- `GET /api/v1/comparisons/{comparison_id}/changes`
-- `PATCH /api/v1/comparisons/{comparison_id}/changes/{change_id}/review`
-
-See [docs/semantic-diff.md](docs/semantic-diff.md) and
-[docs/section-matching.md](docs/section-matching.md).
-
-## Phase 4 Financial Claim Verification
-
-Phase 4 extracts financial claims from filing prose, resolves them to a seeded
-canonical metric registry, ranks candidate facts from the existing
-`xbrl_facts` table, and stores deterministic verification records. Standard CI
-uses fake extraction/model providers and does not call live SEC endpoints,
-external LLMs, or hosted model downloads.
-
-See [docs/financial-claims.md](docs/financial-claims.md) and
-[docs/xbrl-verification.md](docs/xbrl-verification.md).
-
-## Phase 0 Review Packet
-
-- [Architecture design](docs/architecture.md)
-- [Database design](docs/database-design.md)
-- [API contract](docs/api.md)
-- [LangGraph workflow](docs/langgraph-workflow.md)
-- [Evaluation methodology](docs/evaluation-methodology.md)
-- [Ingestion pipeline](docs/ingestion-pipeline.md)
-- [Retrieval design](docs/retrieval-design.md)
-- [Section matching](docs/section-matching.md)
-- [Semantic disclosure diff](docs/semantic-diff.md)
-- [Financial claim verification](docs/financial-claims.md)
-- [XBRL verification](docs/xbrl-verification.md)
-- [Contradiction detection](docs/contradiction-detection.md)
-- [Security](docs/security.md)
+- [Architecture](docs/architecture.md)
 - [Deployment](docs/deployment.md)
-- [Model card](docs/model-card.md)
+- [Security](docs/security.md)
 - [Limitations](docs/limitations.md)
-- [Repository structure](docs/repository-structure.md)
-- [Eight-week implementation plan](docs/implementation-plan.md)
-- [Risks and mitigations](docs/risks.md)
+- [Demo script](docs/demo-script.md)
+- [Portfolio case study](docs/portfolio-case-study.md)
+- [Interview guide](docs/interview-guide.md)
+- [Resume bullets](docs/resume-bullets.md)
 
 ## Responsible Use
 
-DeltaLedger AI is a research and financial-disclosure analysis tool. It does not provide investment advice, buy/sell/hold recommendations, or allegations of misconduct. Findings may be incomplete or incorrect, contradiction flags are potential inconsistencies, and human review is required. Original SEC filings remain the authoritative source.
+DeltaLedger surfaces potential inconsistencies and evidence for analyst review.
+It does not determine misconduct, provide investment advice, or replace original
+SEC filings as the authoritative source.

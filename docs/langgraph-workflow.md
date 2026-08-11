@@ -1,168 +1,160 @@
-# LangGraph State And Node Design
+# LangGraph Production Workflow
 
-## State Model
+Phase 6 connects the independently tested ingestion, processing, comparison,
+financial verification, and contradiction services into one durable end-to-end
+analysis workflow.
 
-The graph state is typed and persisted at checkpoints.
+## Dependency Versions
+
+The backend pins:
+
+- `langgraph==1.1.3`
+- `langgraph-checkpoint==4.0.1`
+- `langgraph-checkpoint-postgres>=3.0.0,<4.0.0`
+
+The Postgres checkpoint package is required for production durability. Local and
+CI unit tests may use the installed memory checkpointer; production
+configuration rejects memory-only checkpointing.
+
+## Responsibilities
+
+Dramatiq:
+
+- starts and resumes long-running workflow execution
+- isolates worker processes
+- wraps catastrophic worker-level retries with bounded attempts
+
+LangGraph:
+
+- owns workflow state-machine routing
+- persists compact execution state through checkpoints
+- handles human interrupt and resume
+- runs node-level orchestration
+
+PostgreSQL business tables:
+
+- `analysis_runs` stores user-visible workflow metadata
+- `analysis_workflow_events` stores audit events
+- `analysis_review_requests` stores workflow-level review gates
+- `analysis_reports` stores authoritative structured reports
+
+## State
+
+`AnalysisState` contains IDs, status flags, counts, warnings, and routing
+metadata:
+
+- analysis, company, filing, comparison, review, and report IDs
+- disclosure change, claim, verification, and contradiction finding IDs
+- readiness flags
+- evidence validation result
+- review requirement/result
+- warnings and safe error objects
+- completed node list and compact counts
+
+It does not store filings, sections, chunks, embeddings, large XBRL payloads, or
+hidden model reasoning.
+
+## Graph
 
 ```text
-AnalysisState
-  analysis_run_id
-  company_id
-  current_filing_id
-  comparison_filing_id
-  workflow_version
-  prompt_version
-  model_configuration
-  requested_risk_categories
-  node_statuses
-  section_match_ids
-  disclosure_change_ids
-  financial_claim_ids
-  claim_verification_ids
-  contradiction_finding_ids
-  evidence_item_ids
-  report_finding_ids
-  human_review_required
-  human_review_decisions
-  error_code
-  error_message
-  processing_metrics
+START
+  -> validate_analysis_request
+  -> ensure_filings_available
+  -> ensure_filings_processed
+  -> run_disclosure_comparison
+  -> extract_financial_claims
+  -> verify_financial_claims
+  -> analyze_contradictions
+  -> validate_evidence
+  -> prioritize_findings
+  -> review_gate
+       -> generate_report
+       -> finalize_analysis
+       -> END
 ```
 
-State stores identifiers and compact metadata, not large documents or hidden chain-of-thought. Full artifacts are retrieved through repositories.
+When review is required, `review_gate` persists an
+`analysis_review_requests` row, records `workflow_interrupted`, sets the run to
+`awaiting_human_review`, and calls LangGraph `interrupt`. Resume uses the same
+checkpoint thread ID and a `Command(resume=...)` payload after review is
+submitted.
 
-## Required Nodes
+`checkpoint_thread_id` is stored on `analysis_runs` and is unique per filing
+pair plus workflow version. It is never included in public API response schemas.
+The Postgres integration suite includes a focused interrupt/resume proof that
+recreates the graph runtime and confirms work completed before the interrupt is
+not rerun after resume.
 
-### validate_analysis_request
+## Node Contracts
 
-- Inputs: filing IDs, company ID, requested categories.
-- Outputs: normalized request and initial run status.
-- Failure behavior: invalid company/filing relation, unsupported form type, same filing comparison.
-- Retry behavior: not retryable for validation failures.
-- Idempotency: keyed by analysis request and idempotency key.
+Each node logs `node_started` and `node_completed` or `node_failed`, updates
+`analysis_runs.current_node`, and writes compact metrics.
 
-### verify_filings_available
+- `validate_analysis_request`: validates filing existence, same-company pair,
+  newer current period, 10-Q support, and workflow version.
+- `ensure_filings_available`: checks source availability and recoverable
+  ingestion state without duplicating SEC ingestion logic.
+- `ensure_filings_processed`: checks parsed sections and chunks, invoking
+  `FilingProcessingService` only when storage exists and processing is missing.
+- `run_disclosure_comparison`: calls `FilingComparisonService`; reuses existing
+  version-compatible comparisons.
+- `extract_financial_claims`: records currently persisted comparison claim IDs.
+  The verification node invokes Phase 4 comparison verification, which performs
+  version-compatible extraction where needed.
+- `verify_financial_claims`: calls `FinancialVerificationService` and returns
+  verification IDs and counts by status.
+- `analyze_contradictions`: calls `ContradictionAnalysisService` and returns
+  finding IDs and type counts.
+- `validate_evidence`: checks source text, formulas, and primary contradiction
+  evidence before review/reporting.
+- `prioritize_findings`: assigns analyst-review priority only. It does not
+  create investment scores.
+- `review_gate`: applies configurable workflow review policy and interrupts
+  when needed.
+- `generate_report`: calls deterministic `AnalysisReportService`.
+- `finalize_analysis`: marks completion or completion with warnings.
 
-- Inputs: current and comparison filing IDs.
-- Outputs: ingestion readiness.
-- Failure behavior: routes to ingestion or failed state if filing cannot be retrieved.
-- Retry behavior: retry SEC/storage transient failures.
-- Idempotency: checks existing filing ingestion status.
+## Review Policy
 
-### retrieve_comparable_sections
+Configurable settings:
 
-- Inputs: filing IDs and risk/section filters.
-- Outputs: candidate section IDs and retrieval traces.
-- Failure behavior: insufficient section coverage.
-- Retry behavior: retry embedding/vector-store dependency failures.
-- Idempotency: retrieval traces are versioned by retriever config.
+- `WORKFLOW_REQUIRE_REVIEW_FOR_ALL_CONTRADICTIONS`
+- `WORKFLOW_REVIEW_MIN_SEVERITY`
+- `WORKFLOW_REVIEW_LOW_CONFIDENCE_THRESHOLD`
+- `WORKFLOW_REVIEW_AMBIGUOUS_FINANCIAL_CLAIMS`
 
-### match_sections
+Review priority is for analyst workflow only:
 
-- Inputs: candidate sections.
-- Outputs: `section_matches`.
-- Failure behavior: records low-confidence unmatched sections.
-- Retry behavior: deterministic and reranker retries only.
-- Idempotency: unique match keys prevent duplicates.
+- urgent
+- high
+- normal
+- informational
 
-### detect_disclosure_changes
+It is separate from severity, confidence, and any investment meaning.
 
-- Inputs: section matches.
-- Outputs: `disclosure_changes`.
-- Failure behavior: malformed model output is rejected and retried; deterministic no-change candidates are skipped.
-- Retry behavior: retry structured LLM calls; deterministic diff is stable.
-- Idempotency: stable section-match/change hash.
+## Failure And Retry
 
-### extract_financial_claims
+Workflow failures are classified into safe categories such as validation error,
+missing dependency, evidence validation error, recoverable database error, and
+fatal internal error. Public API responses expose safe code/message/node fields
+only.
 
-- Inputs: relevant current and previous sections.
-- Outputs: `financial_claims`.
-- Failure behavior: invalid structured outputs are dropped or retried.
-- Retry behavior: retry model/provider failures.
-- Idempotency: claim text hash plus source reference.
+Node logic is idempotent:
 
-### verify_claims_against_xbrl
+- comparisons reuse versioned comparison rows
+- claims/verifications use Phase 4 idempotency
+- contradiction findings use fingerprints
+- reports upsert by analysis run
 
-- Inputs: financial claims.
-- Outputs: `claim_verifications`.
-- Failure behavior: returns statuses such as `insufficient_data`, `ambiguous_metric`, `period_mismatch`, or `unit_mismatch`.
-- Retry behavior: deterministic; only DB dependency failures retry.
-- Idempotency: unique claim/fact/calculation signature.
+## Cancellation
 
-### generate_contradiction_candidates
+Cancellation marks the run `cancelled`, records `workflow_cancelled`, preserves
+completed work, and prevents new workflow starts from treating the run as
+active. It does not hard-kill in-flight database transactions.
 
-- Inputs: disclosure changes, claim verifications, XBRL facts, matched sections.
-- Outputs: evidence-backed contradiction candidates.
-- Failure behavior: abstains when evidence is incomplete.
-- Retry behavior: deterministic candidate generation is stable.
-- Idempotency: stable evidence/calculation hash.
+## Production Checkpointing
 
-### classify_risk_and_materiality
-
-- Inputs: changes and candidates.
-- Outputs: risk category, severity, materiality score, confidence.
-- Failure behavior: structured output validation failure retries; unsupported categories rejected.
-- Retry behavior: retry LLM classification calls.
-- Idempotency: model/prompt version plus candidate hash.
-
-### assemble_evidence
-
-- Inputs: changes, claims, verifications, contradiction candidates.
-- Outputs: `evidence_items`.
-- Failure behavior: missing quote/fact/calculation blocks publication.
-- Retry behavior: deterministic; DB failures retry.
-- Idempotency: content hash and source reference.
-
-### generate_report
-
-- Inputs: evidence items and reviewed or pending findings.
-- Outputs: draft `report_findings` and generated report object metadata.
-- Failure behavior: abstains on unsupported claims.
-- Retry behavior: retry model/report generation failures.
-- Idempotency: report version and finding order.
-
-### validate_report_citations
-
-- Inputs: draft report findings.
-- Outputs: citation validation results.
-- Failure behavior: unsupported findings are withheld from final report.
-- Retry behavior: deterministic; DB/storage failures retry.
-- Idempotency: citation hash.
-
-### human_review_interrupt
-
-- Inputs: findings requiring review.
-- Outputs: human decisions.
-- Failure behavior: waits in interrupted state.
-- Retry behavior: resume after decision.
-- Idempotency: review action IDs and audit events.
-
-### finalize_analysis
-
-- Inputs: validated findings and review decisions.
-- Outputs: completed analysis status and final report availability.
-- Failure behavior: failed finalization retains draft and can retry.
-- Retry behavior: retry storage/export failures.
-- Idempotency: final report checksum and version.
-
-## Routing
-
-- Invalid requests route to terminal failure.
-- Missing filing ingestion routes to ingestion job wait state.
-- Low evidence routes to abstention rather than report generation.
-- Human review routes to interrupt.
-- Approved/edited findings route to citation validation and finalization.
-- Rejected findings are excluded from final report but retained in audit history.
-
-## Parallelism
-
-Safe parallel branches:
-
-- Section matching by section category.
-- Disclosure change detection across section matches.
-- Claim extraction across sections.
-- XBRL verification across claims.
-- Citation validation across findings.
-
-All parallel branches write through repositories with stable idempotency keys.
-
+Production must use `WORKFLOW_CHECKPOINT_PROVIDER=postgres`. Memory
+checkpointing is for local/unit tests only and is rejected by production
+configuration. API and worker processes should share the same PostgreSQL-backed
+checkpoint store so review interrupts can resume after process restarts.
