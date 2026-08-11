@@ -16,7 +16,7 @@ def test_local_cloud_profile_uses_filesystem_storage_and_sync_alembic_url() -> N
     )
 
     assert settings.alembic_database_url == (
-        "postgresql+psycopg://user@db.example.com/appdb?ssl=require"
+        "postgresql+psycopg://user@db.example.com/appdb?sslmode=require"
     )
     settings.require_safe_test_database()
 
@@ -76,3 +76,63 @@ def test_destructive_test_database_safety_rejects_app_database() -> None:
 
     with pytest.raises(ValueError, match="must not equal"):
         settings.require_safe_test_database()
+
+
+def test_local_cors_origins_are_explicit_for_frontend_development() -> None:
+    settings = Settings()
+
+    assert "http://localhost:3000" in settings.cors_origins
+    assert "*" not in settings.cors_origins
+
+
+def test_production_cors_rejects_wildcard_origin() -> None:
+    with pytest.raises(ValueError, match="Production CORS origins"):
+        Settings(environment="production", cors_allowed_origins="*")
+
+
+def test_production_profile_rejects_development_fallbacks() -> None:
+    with pytest.raises(ValueError, match="S3-compatible object storage"):
+        Settings(
+            app_profile="production",
+            environment="production",
+            cors_allowed_origins="https://app.example.com",
+            workflow_checkpoint_provider="postgres",
+            readiness_dependency_checks_enabled=True,
+            sec_user_agent="DeltaLedgerAI/0.1 ops@example.com",
+        )
+
+
+def test_production_profile_requires_real_model_provider_or_explicit_override() -> None:
+    base = {
+        "app_profile": "production",
+        "environment": "production",
+        "cors_allowed_origins": "https://app.example.com",
+        "workflow_checkpoint_provider": "postgres",
+        "object_storage_provider": "minio",
+        "minio_access_key": "prod-access",
+        "minio_secret_key": "prod-secret",
+        "sec_user_agent": "DeltaLedgerAI/0.1 ops@deltaledger.local",
+        "readiness_dependency_checks_enabled": True,
+    }
+    with pytest.raises(ValueError, match="Production fake model providers"):
+        Settings(**base)
+
+    settings = Settings(**base, allow_fake_models_in_production=True)
+
+    assert settings.is_production
+
+
+def test_production_profile_rejects_localhost_cors() -> None:
+    with pytest.raises(ValueError, match="HTTPS"):
+        Settings(
+            app_profile="production",
+            environment="production",
+            cors_allowed_origins="http://localhost:3000",
+            workflow_checkpoint_provider="postgres",
+            object_storage_provider="minio",
+            minio_access_key="prod-access",
+            minio_secret_key="prod-secret",
+            sec_user_agent="DeltaLedgerAI/0.1 ops@deltaledger.local",
+            readiness_dependency_checks_enabled=True,
+            allow_fake_models_in_production=True,
+        )

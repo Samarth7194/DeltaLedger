@@ -20,6 +20,8 @@ venv/
 # Node/frontend
 node_modules/
 .next/
+playwright-report/
+test-results/
 out/
 dist/
 build/
@@ -43,5 +45,6 @@ huggingface/
 *.log
 tmp/
 temp/
-reports/
+/reports/
+backend/evaluation/reports/
 artifacts/
