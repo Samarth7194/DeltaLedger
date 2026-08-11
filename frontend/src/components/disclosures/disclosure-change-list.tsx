@@ -8,7 +8,6 @@ import { formatConfidence, formatPercent } from "@/lib/formatters";
 import { labelFor } from "@/lib/status";
 
 import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
 import { EmptyState } from "../ui/state";
 
 export function DisclosureChangeList({ changes }: { changes: DisclosureChange[] }) {
@@ -79,13 +78,6 @@ export function DisclosureSideBySide({ change }: { change: DisclosureChange }) {
           {JSON.stringify(change.supporting_evidence, null, 2)}
         </pre>
       </details>
-      <div className="mt-4 flex flex-wrap gap-2 no-print">
-        {["approved", "rejected", "uncertain"].map((status) => (
-          <Button key={status} type="button" variant="secondary">
-            {labelFor(status)}
-          </Button>
-        ))}
-      </div>
     </article>
   );
 }

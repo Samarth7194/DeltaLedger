@@ -112,11 +112,6 @@ export function InconsistencyDetail({
           <FileSearch aria-hidden="true" className="h-4 w-4" />
           Open Evidence
         </Button>
-        {["approved", "rejected", "uncertain"].map((status) => (
-          <Button key={status} type="button" variant="secondary">
-            {labelFor(status)}
-          </Button>
-        ))}
       </div>
     </article>
   );

@@ -89,9 +89,10 @@ test("critical browser analysis flow reaches review, resumes, and renders report
   await expect(page.getByRole("heading", { name: "Limitations" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Evidence Manifest" })).toBeVisible();
 
-  const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "JSON" }).click();
-  const file = await download;
+  const [file] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "JSON" }).click()
+  ]);
   expect(file.suggestedFilename()).toContain(ids.analysisId);
   const downloadPath = testInfo.outputPath(file.suggestedFilename());
   await file.saveAs(downloadPath);

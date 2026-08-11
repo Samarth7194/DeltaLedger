@@ -25,7 +25,9 @@ export function ReportView({ report }: { report?: AnalysisReport }) {
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = `deltaledger-report-${report.analysis_run_id}.json`;
+    document.body.appendChild(anchor);
     anchor.click();
+    anchor.remove();
     URL.revokeObjectURL(url);
   };
 
