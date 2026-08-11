@@ -123,7 +123,12 @@ class FinancialClaimVerificationService:
                 else None
             )
             tolerance = Decimal(str(self.settings.claim_absolute_tolerance))
-            status = "verified" if diff is not None and diff <= tolerance else "contradicted"
+            if diff is None:
+                status = "insufficient_data"
+            elif diff <= tolerance:
+                status = "verified"
+            else:
+                status = "contradicted"
             return _verification(
                 self.settings,
                 claim,
@@ -169,7 +174,9 @@ class FinancialClaimVerificationService:
             )
             tolerance = Decimal(str(self.settings.claim_percentage_point_tolerance))
             direction_ok = _direction_ok(claim.direction, point_change)
-            if not direction_ok:
+            if difference is None:
+                status = "insufficient_data"
+            elif not direction_ok:
                 status = "contradicted"
             elif difference == 0:
                 status = "verified"
