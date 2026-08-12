@@ -71,7 +71,8 @@ Otherwise the metric value is `not_evaluated` or `no_data` with a reason.
 - Real SEC benchmark: candidate-label inventory, approved-label metrics when
   human-reviewed predictions exist, provisional automated-reviewed metrics
   clearly labelled as non-gold, contradiction false-positive rate where labels
-  support it, and task-level error-analysis output.
+  support it, task-level prediction error-analysis output, and automated-review
+  blocker analysis for candidates that are not provisional-ready.
 - Human review and workflow operations: return `no_data` until a labelled review
   or operational benchmark dataset exists.
 

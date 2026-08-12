@@ -248,6 +248,7 @@ def evaluate_real_sec_examples(examples: list[dict[str, Any]]) -> dict[str, obje
         "tasks": {},
         "provisional_tasks": {},
         "error_analysis": [],
+        "automated_review_error_analysis": _automated_review_error_analysis(examples),
     }
     for task_type in sorted(TASK_TYPES):
         task_examples = [example for example in approved if example.get("task_type") == task_type]
@@ -489,6 +490,45 @@ def _failure_cases(task_type: str, examples: list[dict[str, Any]]) -> list[dict[
             }
         )
     return failures
+
+
+def _automated_review_error_analysis(examples: list[dict[str, Any]]) -> list[dict[str, object]]:
+    rows = []
+    for example in examples:
+        automated_review = example.get("automated_review")
+        if not isinstance(automated_review, dict):
+            continue
+        if automated_review.get("status") == "AUTOMATED_READY":
+            continue
+        blockers = []
+        for item in automated_review.get("review_passes", []):
+            if isinstance(item, dict):
+                blockers.extend(str(blocker) for blocker in item.get("blockers", []))
+        rows.append(
+            {
+                "example_id": example.get("id"),
+                "company": str(example.get("pair_id", "")).split("-", 1)[0],
+                "task_type": example.get("task_type"),
+                "automated_status": automated_review.get("status"),
+                "blockers": sorted(set(blockers)),
+                "root_cause": _automated_review_root_cause(sorted(set(blockers))),
+                "hard_case_tags": example.get("hard_case_tags", []),
+                "negative_control": bool(example.get("negative_control")),
+            }
+        )
+    return rows
+
+
+def _automated_review_root_cause(blockers: list[str]) -> str:
+    if any("resolver" in blocker or "structured_facts" in blocker for blocker in blockers):
+        return "XBRL_CONCEPT"
+    if any("arithmetic" in blocker or "placeholder" in blocker for blocker in blockers):
+        return "VERIFICATION"
+    if any("before_after" in blocker or "passage" in blocker for blocker in blockers):
+        return "EVIDENCE"
+    if any("positive_contradiction" in blocker for blocker in blockers):
+        return "CONTRADICTION"
+    return "ANNOTATION"
 
 
 def _label_for(task_type: str, payload: dict[str, Any]) -> str:

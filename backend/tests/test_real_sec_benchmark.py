@@ -219,6 +219,11 @@ async def test_real_sec_evaluator_integrates_with_phase8_runner() -> None:
         result.metrics["provisional_tasks"]["disclosure_change"]["reason"]
         == "No provisional automated-ready real-sec labels for disclosure_change."
     )
+    assert len(result.metrics["automated_review_error_analysis"]) == 29
+    root_causes = {
+        row["root_cause"] for row in result.metrics["automated_review_error_analysis"]
+    }
+    assert {"EVIDENCE", "VERIFICATION", "XBRL_CONCEPT"} <= root_causes
 
 
 def test_real_sec_error_analysis_reports_failures_for_approved_predictions() -> None:
