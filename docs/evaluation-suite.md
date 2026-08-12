@@ -81,3 +81,9 @@ Real-model evaluation is intentionally not run by default. Any model-provider
 benchmark should be a manual workflow with secrets protected by GitHub Actions
 and should still emit the same dataset, evaluator, code version, and report
 metadata.
+
+Offline reports include a provider manifest that separates deterministic fake
+CI providers from configured local or managed providers. The current default
+configuration reports `NOT_EVALUATED_FAKE_ONLY_CONFIGURATION`; if Hugging Face
+inference embeddings are selected without `HF_TOKEN`, the manifest reports
+`BLOCKED_EXTERNAL_CREDENTIAL` instead of failing the whole offline benchmark.

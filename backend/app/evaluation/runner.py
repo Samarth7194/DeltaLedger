@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from app.core.config import get_settings
 from app.evaluation.datasets import (
     EVALUATION_ROOT,
     evaluation_manifests,
@@ -20,6 +21,7 @@ from app.evaluation.evaluators import (
     workflow_operational_metrics,
 )
 from app.evaluation.gates import evaluate_quality_gates
+from app.evaluation.providers import provider_manifest
 from app.evaluation.reports import write_json_report, write_markdown_report
 
 EVALUATOR_VERSION = "phase8-evaluator-v1"
@@ -64,6 +66,7 @@ async def run_benchmark(
         "suites": sorted(suite_results, key=lambda item: item["suite"]),
         "human_review": human_review_metrics([]),
         "workflow_operations": workflow_operational_metrics([]),
+        "provider_manifest": provider_manifest(get_settings()),
         "model_cost": {
             "status": "not_evaluated",
             "reason": "Offline fake-provider run has no model cost data.",
