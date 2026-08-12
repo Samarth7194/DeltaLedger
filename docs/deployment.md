@@ -45,15 +45,17 @@ CORS_ALLOWED_ORIGINS=https://your-frontend.example.com
 FRONTEND_URL=https://your-frontend.example.com
 READINESS_DEPENDENCY_CHECKS_ENABLED=true
 AUTH_ENABLED=true
-AUTH_SECRET_KEY=<32+ character secret from platform secret storage>
 AUTH_TOKEN_TTL_SECONDS=3600
 ```
+
+Set `AUTH_SECRET_KEY` through the deployment platform secret store. Use a
+random 32+ character value; never place it in tracked files.
 
 Database:
 
 ```text
-DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@HOST:5432/DB?ssl=require
-ALEMBIC_DATABASE_URL=postgresql+psycopg://USER:PASSWORD@HOST:5432/DB?sslmode=require
+DATABASE_URL=<async PostgreSQL URL from secret storage>
+ALEMBIC_DATABASE_URL=<sync PostgreSQL URL from secret storage>
 DATABASE_POOL_SIZE=5
 DATABASE_MAX_OVERFLOW=10
 DATABASE_POOL_TIMEOUT_SECONDS=30
@@ -62,7 +64,7 @@ DATABASE_POOL_TIMEOUT_SECONDS=30
 Redis and worker:
 
 ```text
-REDIS_URL=rediss://USER:PASSWORD@HOST:PORT/0
+REDIS_URL=<Redis or TLS Redis URL from secret storage>
 REDIS_CONNECT_TIMEOUT_SECONDS=5
 REDIS_SOCKET_TIMEOUT_SECONDS=5
 ```
@@ -89,8 +91,9 @@ CHANGE_CLASSIFIER_PROVIDER=...
 CLAIM_EXTRACTOR_PROVIDER=...
 CONTRADICTION_CLASSIFIER_PROVIDER=...
 ALLOW_FAKE_MODELS_IN_PRODUCTION=false
-HF_TOKEN=...
 ```
+
+Set `HF_TOKEN` through secret storage when using Hugging Face inference.
 
 SEC:
 
