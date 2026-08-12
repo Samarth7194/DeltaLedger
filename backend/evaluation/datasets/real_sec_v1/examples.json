@@ -1,0 +1,2019 @@
+{
+  "annotation_status": "candidate",
+  "annotation_version": "real-sec-annotation-v1",
+  "benchmark_version": "real-sec-v1",
+  "companies": [
+    {
+      "cik": "0000320193",
+      "industry": "technology",
+      "legal_name": "Apple Inc.",
+      "split": "development",
+      "ticker": "AAPL"
+    },
+    {
+      "cik": "0000789019",
+      "industry": "technology",
+      "legal_name": "MICROSOFT CORP",
+      "split": "development",
+      "ticker": "MSFT"
+    },
+    {
+      "cik": "0001018724",
+      "industry": "consumer_retail",
+      "legal_name": "AMAZON COM INC",
+      "split": "development",
+      "ticker": "AMZN"
+    },
+    {
+      "cik": "0000104169",
+      "industry": "consumer_retail",
+      "legal_name": "Walmart Inc.",
+      "split": "development",
+      "ticker": "WMT"
+    },
+    {
+      "cik": "0000019617",
+      "industry": "financial_services",
+      "legal_name": "JPMORGAN CHASE & CO",
+      "split": "validation",
+      "ticker": "JPM"
+    },
+    {
+      "cik": "0000731766",
+      "industry": "healthcare",
+      "legal_name": "UNITEDHEALTH GROUP INC",
+      "split": "validation",
+      "ticker": "UNH"
+    },
+    {
+      "cik": "0000018230",
+      "industry": "industrial_manufacturing",
+      "legal_name": "CATERPILLAR INC",
+      "split": "validation",
+      "ticker": "CAT"
+    },
+    {
+      "cik": "0000034088",
+      "industry": "energy",
+      "legal_name": "EXXON MOBIL CORP",
+      "split": "validation",
+      "ticker": "XOM"
+    },
+    {
+      "cik": "0000732712",
+      "industry": "telecommunications_media",
+      "legal_name": "VERIZON COMMUNICATIONS INC",
+      "split": "test",
+      "ticker": "VZ"
+    },
+    {
+      "cik": "0000027904",
+      "industry": "transport_logistics",
+      "legal_name": "DELTA AIR LINES, INC.",
+      "split": "test",
+      "ticker": "DAL"
+    },
+    {
+      "cik": "0001318605",
+      "industry": "automotive_manufacturing",
+      "legal_name": "Tesla, Inc.",
+      "split": "test",
+      "ticker": "TSLA"
+    },
+    {
+      "cik": "0001065280",
+      "industry": "telecommunications_media",
+      "legal_name": "NETFLIX INC",
+      "split": "test",
+      "ticker": "NFLX"
+    }
+  ],
+  "creation_date": "2026-08-11",
+  "examples": [
+    {
+      "annotation_status": "approved",
+      "annotation_version": "real-sec-annotation-v1",
+      "annotator": "Samarth Shinde",
+      "created_at": "2026-08-11T00:00:00Z",
+      "expected": {
+        "canonical_section_type": "mda",
+        "should_match": true
+      },
+      "hard_case_tags": [
+        "long_mdna_paragraphs"
+      ],
+      "id": "real-sec-v1-sm-001",
+      "input_references": {
+        "current_section_hint": "Part I Item 2 Management's Discussion and Analysis",
+        "previous_section_hint": "Part I Item 2 Management's Discussion and Analysis"
+      },
+      "negative_control": false,
+      "notes": "Candidate label based on standard 10-Q section structure; requires human review.",
+      "pair_id": "AAPL-2026Q3-vs-2026Q2",
+      "review": {
+        "decision": "approved",
+        "notes": "Human-reviewed body-level MD&A section match.",
+        "reviewed_at": "2026-08-11T19:03:33.911261+00:00",
+        "reviewed_by": "Samarth Shinde"
+      },
+      "source_review": {
+        "ambiguity": "Low. Body-level Item 2 headings match in both filings.",
+        "filings": {
+          "current": {
+            "accession": "0000320193-26-000020",
+            "cik": "0000320193",
+            "filing_date": "2026-07-31",
+            "form": "10-Q",
+            "primary_document": "aapl-20260627.htm",
+            "report_period": "2026-06-27",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019326000020/aapl-20260627.htm",
+            "ticker": "AAPL"
+          },
+          "previous": {
+            "accession": "0000320193-26-000013",
+            "cik": "0000320193",
+            "filing_date": "2026-05-01",
+            "form": "10-Q",
+            "primary_document": "aapl-20260328.htm",
+            "report_period": "2026-03-28",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019326000013/aapl-20260328.htm",
+            "ticker": "AAPL"
+          }
+        },
+        "label_confidence": "HIGH",
+        "recommended_human_action": "APPROVE",
+        "replacement_required_reason": null,
+        "review_difficulty": "A",
+        "reviewability_status": "READY_FOR_HUMAN_REVIEW",
+        "source_authority": "official_sec_archive_and_companyfacts",
+        "source_evidence": [
+          {
+            "locator": "body heading occurrence after TOC anchor i53116c9054ac4977acc299e9d5386f45_67",
+            "part_item": "Part I Item 2",
+            "side": "previous",
+            "text": "Item 2. Management's Discussion and Analysis of Financial Condition and Results of Operations"
+          },
+          {
+            "locator": "body heading occurrence after TOC anchor ib65f44d2415e4f40854b44fa987f6c2a_67",
+            "part_item": "Part I Item 2",
+            "side": "current",
+            "text": "Item 2. Management's Discussion and Analysis of Financial Condition and Results of Operations"
+          }
+        ],
+        "source_quality": "HIGH",
+        "source_reviewed": true,
+        "task_review": {
+          "canonical_section_type": "mda",
+          "part_item_match": true,
+          "same_logical_section": true,
+          "toc_only": false
+        }
+      },
+      "task_type": "section_matching",
+      "updated_at": "2026-08-11T19:03:33.911261+00:00"
+    },
+    {
+      "annotation_status": "approved",
+      "annotation_version": "real-sec-annotation-v1",
+      "annotator": "Samarth Shinde",
+      "created_at": "2026-08-11T00:00:00Z",
+      "expected": {
+        "canonical_section_type": "mda",
+        "should_match": false
+      },
+      "hard_case_tags": [
+        "section_non_match"
+      ],
+      "id": "real-sec-v1-sm-002",
+      "input_references": {
+        "current_section_hint": "Part I Item 2 Management's Discussion and Analysis",
+        "previous_section_hint": "Part II Item 1A Risk Factors"
+      },
+      "negative_control": true,
+      "notes": "Negative-control candidate; compare different canonical sections.",
+      "pair_id": "MSFT-2026Q3-vs-2026Q2",
+      "review": {
+        "decision": "approved",
+        "notes": "Human-reviewed section non-match between MD&A and Risk Factors.",
+        "reviewed_at": "2026-08-11T19:03:34.067214+00:00",
+        "reviewed_by": "Samarth Shinde"
+      },
+      "source_review": {
+        "ambiguity": "Low. Candidate deliberately compares MD&A to Risk Factors.",
+        "filings": {
+          "current": {
+            "accession": "0001193125-26-191507",
+            "cik": "0000789019",
+            "filing_date": "2026-04-29",
+            "form": "10-Q",
+            "primary_document": "msft-20260331.htm",
+            "report_period": "2026-03-31",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526191507/msft-20260331.htm",
+            "ticker": "MSFT"
+          },
+          "previous": {
+            "accession": "0001193125-26-027207",
+            "cik": "0000789019",
+            "filing_date": "2026-01-28",
+            "form": "10-Q",
+            "primary_document": "msft-20251231.htm",
+            "report_period": "2025-12-31",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526027207/msft-20251231.htm",
+            "ticker": "MSFT"
+          }
+        },
+        "label_confidence": "HIGH",
+        "negative_control_quality": "STRONG_NEGATIVE",
+        "recommended_human_action": "APPROVE",
+        "replacement_required_reason": null,
+        "review_difficulty": "A",
+        "reviewability_status": "READY_FOR_HUMAN_REVIEW",
+        "source_authority": "official_sec_archive_and_companyfacts",
+        "source_evidence": [
+          {
+            "locator": "Item 2 heading / page 31",
+            "part_item": "Part I Item 2",
+            "side": "current",
+            "text": "Item 2. Management's Discussion and Analysis of Financial Condition and Results of Operations"
+          },
+          {
+            "locator": "Risk Factors heading / page 47",
+            "part_item": "Part II Item 1A",
+            "side": "previous",
+            "text": "Item 1A. Risk Factors"
+          }
+        ],
+        "source_quality": "HIGH",
+        "source_reviewed": true,
+        "task_review": {
+          "component_tested": "section non-match rejection",
+          "expected_result": "NO_MATCH",
+          "part_item_match": false,
+          "same_logical_section": false
+        }
+      },
+      "task_type": "section_matching",
+      "updated_at": "2026-08-11T19:03:34.067214+00:00"
+    },
+    {
+      "annotation_status": "approved",
+      "annotation_version": "real-sec-annotation-v1",
+      "annotator": "Samarth Shinde",
+      "created_at": "2026-08-11T00:00:00Z",
+      "expected": {
+        "alignment": "aligned"
+      },
+      "hard_case_tags": [
+        "long_mdna_paragraphs",
+        "company_specific_terminology"
+      ],
+      "id": "real-sec-v1-pa-001",
+      "input_references": {
+        "current_passage_locator": "MD&A results-of-operations revenue paragraph",
+        "previous_passage_locator": "MD&A results-of-operations revenue paragraph"
+      },
+      "negative_control": false,
+      "notes": "Candidate queue item for human extraction of exact passages.",
+      "pair_id": "AMZN-2026Q2-vs-2026Q1",
+      "review": {
+        "decision": "approved",
+        "notes": "Human-reviewed aligned AMZN net-sales operating-results passages.",
+        "reviewed_at": "2026-08-11T19:03:34.217553+00:00",
+        "reviewed_by": "Samarth Shinde"
+      },
+      "source_review": {
+        "ambiguity": "Low. Both passages are the same statement-of-operations net-sales topic, with Q2 adding six-month columns.",
+        "filings": {
+          "current": {
+            "accession": "0001018724-26-000026",
+            "cik": "0001018724",
+            "filing_date": "2026-07-31",
+            "form": "10-Q",
+            "primary_document": "amzn-20260630.htm",
+            "report_period": "2026-06-30",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872426000026/amzn-20260630.htm",
+            "ticker": "AMZN"
+          },
+          "previous": {
+            "accession": "0001018724-26-000014",
+            "cik": "0001018724",
+            "filing_date": "2026-04-30",
+            "form": "10-Q",
+            "primary_document": "amzn-20260331.htm",
+            "report_period": "2026-03-31",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872426000014/amzn-20260331.htm",
+            "ticker": "AMZN"
+          }
+        },
+        "label_confidence": "HIGH",
+        "recommended_human_action": "APPROVE",
+        "replacement_required_reason": null,
+        "review_difficulty": "A",
+        "reviewability_status": "READY_FOR_HUMAN_REVIEW",
+        "source_authority": "official_sec_archive_and_companyfacts",
+        "source_evidence": [
+          {
+            "locator": "Consolidated Statements of Operations",
+            "part_item": "Part I Item 1",
+            "side": "previous",
+            "text": "Net product sales $63,970 $71,304; Net service sales 91,697 110,215; Total net sales 155,667 181,519"
+          },
+          {
+            "locator": "Consolidated Statements of Operations",
+            "part_item": "Part I Item 1",
+            "side": "current",
+            "text": "Net product sales $68,246 $77,602; Net service sales 99,456 123,004; Total net sales 167,702 200,606"
+          }
+        ],
+        "source_quality": "HIGH",
+        "source_reviewed": true,
+        "task_review": {
+          "alignment": "aligned",
+          "same_underlying_topic": true,
+          "table_contamination_checked": true,
+          "topic": "net sales / operating results"
+        }
+      },
+      "task_type": "passage_alignment",
+      "updated_at": "2026-08-11T19:03:34.217553+00:00"
+    },
+    {
+      "annotation_status": "approved",
+      "annotation_version": "real-sec-annotation-v1",
+      "annotator": "Samarth Shinde",
+      "created_at": "2026-08-11T00:00:00Z",
+      "expected": {
+        "alignment": "not_aligned"
+      },
+      "hard_case_tags": [
+        "wrong_passage_alignment"
+      ],
+      "id": "real-sec-v1-pa-002",
+      "input_references": {
+        "current_passage_locator": "MD&A revenue passage",
+        "previous_passage_locator": "Risk Factors cyber/privacy passage"
+      },
+      "negative_control": true,
+      "notes": "Negative-control candidate; exact snippets must be reviewed before approval.",
+      "pair_id": "WMT-2026Q1-vs-2025Q3",
+      "review": {
+        "decision": "approved",
+        "notes": "Human-reviewed non-aligned WMT revenue and cybersecurity-risk passages.",
+        "reviewed_at": "2026-08-11T19:03:34.570836+00:00",
+        "reviewed_by": "Samarth Shinde"
+      },
+      "source_review": {
+        "ambiguity": "Low after hardening. Current passage is a revenue table; previous passage is a cybersecurity risk statement.",
+        "filings": {
+          "current": {
+            "accession": "0000104169-26-000102",
+            "cik": "0000104169",
+            "filing_date": "2026-05-29",
+            "form": "10-Q",
+            "primary_document": "wmt-20260430.htm",
+            "report_period": "2026-04-30",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/104169/000010416926000102/wmt-20260430.htm",
+            "ticker": "WMT"
+          },
+          "previous": {
+            "accession": "0000104169-25-000191",
+            "cik": "0000104169",
+            "filing_date": "2025-12-03",
+            "form": "10-Q",
+            "primary_document": "wmt-20251031.htm",
+            "report_period": "2025-10-31",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/104169/000010416925000191/wmt-20251031.htm",
+            "ticker": "WMT"
+          }
+        },
+        "label_confidence": "HIGH",
+        "negative_control_quality": "STRONG_NEGATIVE",
+        "recommended_human_action": "APPROVE",
+        "replacement_required_reason": null,
+        "review_difficulty": "A",
+        "reviewability_status": "READY_FOR_HUMAN_REVIEW",
+        "source_authority": "official_sec_archive_and_companyfacts",
+        "source_evidence": [
+          {
+            "locator": "Consolidated Statements of Income",
+            "part_item": "Part I Item 1",
+            "side": "current",
+            "text": "Revenues: Net sales $175,684 $163,981; Membership and other income 2,067 1,628"
+          },
+          {
+            "locator": "risk-factor style cautionary list",
+            "part_item": "Part I Item 2 forward-looking/risk language",
+            "side": "previous",
+            "text": "cybersecurity events affecting Walmart and related costs and impact of any disruption in business"
+          }
+        ],
+        "source_quality": "HIGH",
+        "source_reviewed": true,
+        "task_review": {
+          "alignment": "not_aligned",
+          "current_topic": "net sales",
+          "previous_topic": "cybersecurity risk",
+          "same_underlying_topic": false
+        }
+      },
+      "task_type": "passage_alignment",
+      "updated_at": "2026-08-11T19:03:34.570836+00:00"
+    },
+    {
+      "annotation_status": "uncertain",
+      "annotation_version": "real-sec-annotation-v1",
+      "annotator": "Samarth Shinde",
+      "created_at": "2026-08-11T00:00:00Z",
+      "expected": {
+        "change_type": "no_material_change",
+        "materiality_label": "low",
+        "risk_category": "other"
+      },
+      "hard_case_tags": [
+        "similar_wording_no_contradiction"
+      ],
+      "id": "real-sec-v1-dc-001",
+      "input_references": {
+        "section_hint": "Risk Factors or Management's Discussion and Analysis"
+      },
+      "negative_control": true,
+      "notes": "Candidate negative control; approve only after exact passages are compared.",
+      "pair_id": "JPM-2026Q2-vs-2026Q1",
+      "review": {
+        "decision": "uncertain",
+        "notes": "Exact comparable previous/current disclosure wording is still missing.",
+        "reviewed_at": "2026-08-11T19:03:35.614055+00:00",
+        "reviewed_by": "Samarth Shinde"
+      },
+      "source_review": {
+        "ambiguity": "Exact comparable risk wording was not pinned. TOC confirms Risk Factors sections exist, but no_material_change is not defensible from TOC alone.",
+        "filings": {
+          "current": {
+            "accession": "0001628280-26-054343",
+            "cik": "0000019617",
+            "filing_date": "2026-08-06",
+            "form": "10-Q",
+            "primary_document": "jpm-20260630.htm",
+            "report_period": "2026-06-30",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/19617/000162828026054343/jpm-20260630.htm",
+            "ticker": "JPM"
+          },
+          "previous": {
+            "accession": "0001628280-26-029344",
+            "cik": "0000019617",
+            "filing_date": "2026-05-01",
+            "form": "10-Q",
+            "primary_document": "jpm-20260331.htm",
+            "report_period": "2026-03-31",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/19617/000162828026029344/jpm-20260331.htm",
+            "ticker": "JPM"
+          }
+        },
+        "label_confidence": "LOW",
+        "negative_control_quality": "WEAK_NEGATIVE",
+        "recommended_human_action": "UNCERTAIN",
+        "replacement_required_reason": null,
+        "review_difficulty": "C",
+        "reviewability_status": "AMBIGUOUS",
+        "source_authority": "official_sec_archive_and_companyfacts",
+        "source_evidence": [
+          {
+            "locator": "Risk Factors TOC / page 179",
+            "part_item": "Part II Item 1A",
+            "side": "previous",
+            "text": "Item 1A. Risk Factors"
+          },
+          {
+            "locator": "Risk Factors TOC / page 201",
+            "part_item": "Part II Item 1A",
+            "side": "current",
+            "text": "Item 1A. Risk Factors"
+          }
+        ],
+        "source_quality": "MEDIUM",
+        "source_reviewed": true,
+        "task_review": {
+          "candidate_change_type": "no_material_change",
+          "exact_wording_required": true,
+          "modal_language_reviewed": false
+        }
+      },
+      "task_type": "disclosure_change",
+      "updated_at": "2026-08-11T19:03:35.614055+00:00"
+    },
+    {
+      "annotation_status": "rejected",
+      "annotation_version": "real-sec-annotation-v1",
+      "annotator": "Samarth Shinde",
+      "created_at": "2026-08-11T00:00:00Z",
+      "expected": {
+        "change_type": "added",
+        "materiality_label": "review_required",
+        "risk_category": "litigation"
+      },
+      "hard_case_tags": [
+        "risk_factor_wording_changes"
+      ],
+      "id": "real-sec-v1-dc-002",
+      "input_references": {
+        "section_hint": "legal proceedings or risk disclosures"
+      },
+      "negative_control": false,
+      "notes": "Candidate hard-case slot; label must be confirmed from source filing text.",
+      "pair_id": "UNH-2026Q2-vs-2026Q1",
+      "review": {
+        "decision": "rejected",
+        "notes": "Candidate did not contain source-grounded added litigation wording.",
+        "reviewed_at": "2026-08-11T19:03:35.903394+00:00",
+        "reviewed_by": "Samarth Shinde"
+      },
+      "source_review": {
+        "ambiguity": "High. A different exact legal-proceedings passage may exist, but this candidate does not identify it.",
+        "filings": {
+          "current": {
+            "accession": "0000731766-26-000197",
+            "cik": "0000731766",
+            "filing_date": "2026-08-10",
+            "form": "10-Q",
+            "primary_document": "unh-20260630.htm",
+            "report_period": "2026-06-30",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/731766/000073176626000197/unh-20260630.htm",
+            "ticker": "UNH"
+          },
+          "previous": {
+            "accession": "0000731766-26-000127",
+            "cik": "0000731766",
+            "filing_date": "2026-05-05",
+            "form": "10-Q",
+            "primary_document": "unh-20260331.htm",
+            "report_period": "2026-03-31",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/731766/000073176626000127/unh-20260331.htm",
+            "ticker": "UNH"
+          }
+        },
+        "label_confidence": "LOW",
+        "recommended_human_action": "REJECT",
+        "replacement_required_reason": "The candidate ADDED litigation label was not proven. Searched source signals appear in both filings or only generic PSLRA language; no absent-before/present-now litigation wording was pinned.",
+        "review_difficulty": "C",
+        "reviewability_status": "REPLACEMENT_REQUIRED",
+        "source_authority": "official_sec_archive_and_companyfacts",
+        "source_evidence": [
+          {
+            "locator": "Legal Proceedings and Risk Factors TOC",
+            "part_item": "Part II Item 1 / Item 1A",
+            "side": "previous",
+            "text": "Item 1. Legal Proceedings; Item 1A. Risk Factors"
+          },
+          {
+            "locator": "Legal Proceedings and Risk Factors TOC",
+            "part_item": "Part II Item 1 / Item 1A",
+            "side": "current",
+            "text": "Item 1. Legal Proceedings; Item 1A. Risk Factors"
+          },
+          {
+            "locator": "forward-looking statement language",
+            "part_item": "Part I Item 2",
+            "side": "both",
+            "text": "Private Securities Litigation Reform Act of 1995"
+          }
+        ],
+        "source_quality": "MEDIUM",
+        "source_reviewed": true,
+        "task_review": {
+          "added_wording_proven": false,
+          "candidate_change_type": "added",
+          "hardened_result": "replacement_required"
+        }
+      },
+      "task_type": "disclosure_change",
+      "updated_at": "2026-08-11T19:03:35.903394+00:00"
+    },
+    {
+      "annotation_status": "approved",
+      "annotation_version": "real-sec-annotation-v1",
+      "annotator": "Samarth Shinde",
+      "created_at": "2026-08-11T00:00:00Z",
+      "expected": {
+        "canonical_metric": "revenue",
+        "claim_type": "percentage_change",
+        "comparison_basis": "prior_year_quarter",
+        "direction": "increase",
+        "period_basis": "prior_year_quarter",
+        "reported_change": "24",
+        "reported_value": null,
+        "scale": "millions",
+        "source_locator": "CAT 2026 Q2 Form 10-Q Part I Item 2",
+        "unit": "percent"
+      },
+      "hard_case_tags": [
+        "percentage_claims",
+        "large_scaled_numbers"
+      ],
+      "id": "real-sec-v1-fc-001",
+      "input_references": {
+        "section_hint": "MD&A sales/revenues paragraph"
+      },
+      "negative_control": false,
+      "notes": "Candidate schema example; exact claim text and value must be filled during review.",
+      "pair_id": "CAT-2026Q2-vs-2026Q1",
+      "review": {
+        "decision": "approved",
+        "notes": "Human-reviewed CAT financial claim text, arithmetic, and tolerance.",
+        "reviewed_at": "2026-08-11T19:03:34.717556+00:00",
+        "reviewed_by": "Samarth Shinde"
+      },
+      "source_review": {
+        "ambiguity": "Low. Exact claim sentence and table values reproduce within percent tolerance.",
+        "arithmetic": {
+          "calculated_value": "23.9845",
+          "comparison_value": "16569",
+          "current_value": "20543",
+          "difference": "0.0155",
+          "expected_status": "approximately_verified",
+          "formula": "((current - previous) / previous) * 100",
+          "reported_value": "24",
+          "tolerance": "0.25"
+        },
+        "filings": {
+          "current": {
+            "accession": "0000018230-26-000046",
+            "cik": "0000018230",
+            "filing_date": "2026-08-05",
+            "form": "10-Q",
+            "primary_document": "cat-20260630.htm",
+            "report_period": "2026-06-30",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/18230/000001823026000046/cat-20260630.htm",
+            "ticker": "CAT"
+          },
+          "previous": {
+            "accession": "0000018230-26-000021",
+            "cik": "0000018230",
+            "filing_date": "2026-05-06",
+            "form": "10-Q",
+            "primary_document": "cat-20260331.htm",
+            "report_period": "2026-03-31",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/18230/000001823026000021/cat-20260331.htm",
+            "ticker": "CAT"
+          }
+        },
+        "label_confidence": "HIGH",
+        "recommended_human_action": "APPROVE",
+        "replacement_required_reason": null,
+        "review_difficulty": "A",
+        "reviewability_status": "READY_FOR_HUMAN_REVIEW",
+        "source_authority": "official_sec_archive_and_companyfacts",
+        "source_evidence": [
+          {
+            "locator": "Results commentary, second quarter 2026",
+            "part_item": "Part I Item 2",
+            "side": "current",
+            "text": "Total sales and revenues were $20.543 billion, an increase of $3.974 billion, or 24 percent, compared with $16.569 billion in the second quarter of 2025."
+          },
+          {
+            "locator": "Consolidated Statement of Results of Operations",
+            "part_item": "Part I Item 1",
+            "side": "current",
+            "text": "Total sales and revenues 20,543 16,569"
+          }
+        ],
+        "source_quality": "HIGH",
+        "source_reviewed": true,
+        "structured_financial_evidence": {
+          "claim_type": "percentage_change",
+          "comparison_basis": "prior_year_quarter",
+          "direction": "increase",
+          "metric": "revenue",
+          "period_basis": "quarterly",
+          "reported_change": "24",
+          "scale": "millions",
+          "unit": "percent"
+        }
+      },
+      "task_type": "financial_claim",
+      "updated_at": "2026-08-11T19:03:34.717556+00:00"
+    },
+    {
+      "annotation_status": "rejected",
+      "annotation_version": "real-sec-annotation-v1",
+      "annotator": "Samarth Shinde",
+      "created_at": "2026-08-11T00:00:00Z",
+      "expected": {
+        "is_financial_claim": false
+      },
+      "hard_case_tags": [
+        "financial_text_not_a_claim"
+      ],
+      "id": "real-sec-v1-fc-002",
+      "input_references": {
+        "section_hint": "business overview sentence without numeric assertion"
+      },
+      "negative_control": true,
+      "notes": "Negative-control candidate for claim extractor false positives.",
+      "pair_id": "XOM-2026Q2-vs-2026Q1",
+      "review": {
+        "decision": "rejected",
+        "notes": "Candidate lacked a concrete financial-looking non-claim sentence.",
+        "reviewed_at": "2026-08-11T19:03:36.055451+00:00",
+        "reviewed_by": "Samarth Shinde"
+      },
+      "source_review": {
+        "ambiguity": "High; a valid negative may exist elsewhere in the filing, but this candidate is not reviewable as written.",
+        "filings": {
+          "current": {
+            "accession": "0000034088-26-000093",
+            "cik": "0000034088",
+            "filing_date": "2026-08-03",
+            "form": "10-Q",
+            "primary_document": "xom-20260630.htm",
+            "report_period": "2026-06-30",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/34088/000003408826000093/xom-20260630.htm",
+            "ticker": "XOM"
+          },
+          "previous": {
+            "accession": "0000034088-26-000067",
+            "cik": "0000034088",
+            "filing_date": "2026-05-04",
+            "form": "10-Q",
+            "primary_document": "xom-20260331.htm",
+            "report_period": "2026-03-31",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/34088/000003408826000067/xom-20260331.htm",
+            "ticker": "XOM"
+          }
+        },
+        "label_confidence": "LOW",
+        "negative_control_quality": "INVALID_NEGATIVE",
+        "recommended_human_action": "REJECT",
+        "replacement_required_reason": "No concrete sentence that looks financial-but-not-a-claim was pinned. Current source hits were XBRL/member strings rather than a human-readable non-claim sentence.",
+        "review_difficulty": "C",
+        "reviewability_status": "REPLACEMENT_REQUIRED",
+        "source_authority": "official_sec_archive_and_companyfacts",
+        "source_evidence": [
+          {
+            "locator": "search hit for Upstream/Chemical members",
+            "part_item": "Inline XBRL context",
+            "side": "current",
+            "text": "xom:SalesAndOtherOperatingRevenueMember xom:UpstreamMember"
+          }
+        ],
+        "source_quality": "LOW",
+        "source_reviewed": true,
+        "task_review": {
+          "candidate_label": "non_claim",
+          "legitimate_negative_found": false
+        }
+      },
+      "task_type": "financial_claim",
+      "updated_at": "2026-08-11T19:03:36.055451+00:00"
+    },
+    {
+      "annotation_status": "approved",
+      "annotation_version": "real-sec-annotation-v1",
+      "annotator": "Samarth Shinde",
+      "created_at": "2026-08-11T00:00:00Z",
+      "expected": {
+        "acceptable_alternatives": [],
+        "expected_accession": "0000732712-26-000046",
+        "expected_concept": "Revenues",
+        "expected_selection_status": "selected",
+        "expected_unit": "USD",
+        "fp": "Q2",
+        "frame": "CY2026Q2",
+        "fy": 2026,
+        "period_end": "2026-06-30",
+        "period_start": "2026-04-01",
+        "period_type": "quarterly_duration",
+        "taxonomy": "us-gaap",
+        "value": "34253000000"
+      },
+      "hard_case_tags": [
+        "revenue_concept_variation",
+        "multiple_plausible_xbrl_concepts"
+      ],
+      "id": "real-sec-v1-xbrl-001",
+      "input_references": {
+        "canonical_metric": "revenue",
+        "concept_candidates": [
+          "RevenueFromContractWithCustomerExcludingAssessedTax",
+          "Revenues",
+          "SalesRevenueNet"
+        ]
+      },
+      "negative_control": false,
+      "notes": "Candidate XBRL concept-resolution item; selected fact must be reviewed from Company Facts.",
+      "pair_id": "VZ-2026Q2-vs-2026Q1",
+      "review": {
+        "decision": "approved",
+        "notes": "Human-reviewed VZ XBRL fact selection and period/unit metadata.",
+        "reviewed_at": "2026-08-11T19:03:34.862237+00:00",
+        "reviewed_by": "Samarth Shinde"
+      },
+      "source_review": {
+        "ambiguity": "Low after Company Facts review. The listed alternatives are absent, while us-gaap:Revenues has valid USD facts for the selected accessions.",
+        "expected_selection_status": "selected",
+        "filings": {
+          "current": {
+            "accession": "0000732712-26-000046",
+            "cik": "0000732712",
+            "filing_date": "2026-07-31",
+            "form": "10-Q",
+            "primary_document": "vz-20260630.htm",
+            "report_period": "2026-06-30",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/732712/000073271226000046/vz-20260630.htm",
+            "ticker": "VZ"
+          },
+          "previous": {
+            "accession": "0000732712-26-000023",
+            "cik": "0000732712",
+            "filing_date": "2026-05-01",
+            "form": "10-Q",
+            "primary_document": "vz-20260331.htm",
+            "report_period": "2026-03-31",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/732712/000073271226000023/vz-20260331.htm",
+            "ticker": "VZ"
+          }
+        },
+        "label_confidence": "HIGH",
+        "recommended_human_action": "APPROVE",
+        "replacement_required_reason": null,
+        "review_difficulty": "B",
+        "reviewability_status": "READY_FOR_HUMAN_REVIEW",
+        "source_authority": "official_sec_archive_and_companyfacts",
+        "source_evidence": [
+          {
+            "locator": "CIK0000732712 us-gaap Revenues",
+            "part_item": "SEC Company Facts",
+            "side": "current",
+            "text": "Revenues USD accn 0000732712-26-000046, FY 2026 FP Q2, CY2026Q2 value 34,253,000,000"
+          }
+        ],
+        "source_quality": "HIGH",
+        "source_reviewed": true,
+        "structured_facts": [
+          {
+            "accession": "0000732712-26-000046",
+            "concept": "Revenues",
+            "end": "2026-06-30",
+            "fp": "Q2",
+            "frame": "CY2026Q2",
+            "fy": 2026,
+            "period_type": "quarterly_duration",
+            "role": "selected_current",
+            "start": "2026-04-01",
+            "taxonomy": "us-gaap",
+            "unit": "USD",
+            "value": "34253000000"
+          },
+          {
+            "accession": "0000732712-26-000046",
+            "concept": "Revenues",
+            "end": "2026-06-30",
+            "fp": "Q2",
+            "frame": null,
+            "fy": 2026,
+            "period_type": "year_to_date_duration",
+            "role": "rejected_ytd",
+            "start": "2026-01-01",
+            "taxonomy": "us-gaap",
+            "unit": "USD",
+            "value": "68693000000"
+          },
+          {
+            "accession": "0000732712-26-000023",
+            "concept": "Revenues",
+            "end": "2026-03-31",
+            "fp": "Q1",
+            "frame": "CY2026Q1",
+            "fy": 2026,
+            "period_type": "quarterly_duration",
+            "role": "comparison_candidate",
+            "start": "2026-01-01",
+            "taxonomy": "us-gaap",
+            "unit": "USD",
+            "value": "34440000000"
+          }
+        ],
+        "xbrl_candidate_scores": [
+          {
+            "accession_score": "1.0000",
+            "combined_score": "0.9900",
+            "concept": "Revenues",
+            "concept_score": "0.9600",
+            "frame_score": "1.0000",
+            "period_score": "1.0000",
+            "role": "selected_current",
+            "selection_status": "selected",
+            "unit_score": "1.0000"
+          },
+          {
+            "accession_score": "1.0000",
+            "combined_score": "0.6800",
+            "concept": "Revenues",
+            "concept_score": "0.9600",
+            "frame_score": "0.8000",
+            "period_score": "0.0000",
+            "role": "rejected_ytd",
+            "selection_status": "rejected_period_mismatch",
+            "unit_score": "1.0000"
+          }
+        ]
+      },
+      "task_type": "xbrl_resolution",
+      "updated_at": "2026-08-11T19:03:34.862237+00:00"
+    },
+    {
+      "annotation_status": "approved",
+      "annotation_version": "real-sec-annotation-v1",
+      "annotator": "Samarth Shinde",
+      "created_at": "2026-08-11T00:00:00Z",
+      "expected": {
+        "acceptable_alternatives": [],
+        "expected_accession": "0000027904-26-000031",
+        "expected_concept": "EarningsPerShareBasic",
+        "expected_selection_status": "selected",
+        "expected_unit": "USD/shares",
+        "fp": "Q2",
+        "frame": "CY2026Q2",
+        "fy": 2026,
+        "period_end": "2026-06-30",
+        "period_start": "2026-04-01",
+        "period_type": "quarterly_duration",
+        "taxonomy": "us-gaap",
+        "value": "2.45"
+      },
+      "hard_case_tags": [
+        "per_share_values",
+        "unit_matching"
+      ],
+      "id": "real-sec-v1-xbrl-002",
+      "input_references": {
+        "canonical_metric": "basic_eps",
+        "concept_candidates": [
+          "EarningsPerShareBasic"
+        ]
+      },
+      "negative_control": false,
+      "notes": "Candidate per-share XBRL item; fact ID and period need manual review.",
+      "pair_id": "DAL-2026Q2-vs-2026Q1",
+      "review": {
+        "decision": "approved",
+        "notes": "Human-reviewed DAL EPS XBRL fact selection and period/unit metadata.",
+        "reviewed_at": "2026-08-11T19:03:35.013242+00:00",
+        "reviewed_by": "Samarth Shinde"
+      },
+      "source_review": {
+        "ambiguity": "Low if the intended period is Q2 quarterly; YTD facts are also present and must be explicitly rejected for a quarterly claim.",
+        "expected_selection_status": "selected",
+        "filings": {
+          "current": {
+            "accession": "0000027904-26-000031",
+            "cik": "0000027904",
+            "filing_date": "2026-07-10",
+            "form": "10-Q",
+            "primary_document": "dal-20260630.htm",
+            "report_period": "2026-06-30",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/27904/000002790426000031/dal-20260630.htm",
+            "ticker": "DAL"
+          },
+          "previous": {
+            "accession": "0000027904-26-000022",
+            "cik": "0000027904",
+            "filing_date": "2026-04-08",
+            "form": "10-Q",
+            "primary_document": "dal-20260331.htm",
+            "report_period": "2026-03-31",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/27904/000002790426000022/dal-20260331.htm",
+            "ticker": "DAL"
+          }
+        },
+        "label_confidence": "HIGH",
+        "recommended_human_action": "APPROVE",
+        "replacement_required_reason": null,
+        "review_difficulty": "B",
+        "reviewability_status": "READY_FOR_HUMAN_REVIEW",
+        "source_authority": "official_sec_archive_and_companyfacts",
+        "source_evidence": [
+          {
+            "locator": "CIK0000027904 us-gaap EarningsPerShareBasic",
+            "part_item": "SEC Company Facts",
+            "side": "current",
+            "text": "EarningsPerShareBasic USD/shares accn 0000027904-26-000031, FY 2026 FP Q2, CY2026Q2 value 2.45"
+          }
+        ],
+        "source_quality": "HIGH",
+        "source_reviewed": true,
+        "structured_facts": [
+          {
+            "accession": "0000027904-26-000031",
+            "concept": "EarningsPerShareBasic",
+            "end": "2026-06-30",
+            "fp": "Q2",
+            "frame": "CY2026Q2",
+            "fy": 2026,
+            "period_type": "quarterly_duration",
+            "role": "selected_current",
+            "start": "2026-04-01",
+            "taxonomy": "us-gaap",
+            "unit": "USD/shares",
+            "value": "2.45"
+          },
+          {
+            "accession": "0000027904-26-000031",
+            "concept": "EarningsPerShareBasic",
+            "end": "2026-06-30",
+            "fp": "Q2",
+            "frame": null,
+            "fy": 2026,
+            "period_type": "year_to_date_duration",
+            "role": "rejected_ytd",
+            "start": "2026-01-01",
+            "taxonomy": "us-gaap",
+            "unit": "USD/shares",
+            "value": "2.01"
+          }
+        ],
+        "xbrl_candidate_scores": [
+          {
+            "accession_score": "1.0000",
+            "combined_score": "1.0000",
+            "concept": "EarningsPerShareBasic",
+            "concept_score": "1.0000",
+            "frame_score": "1.0000",
+            "period_score": "1.0000",
+            "role": "selected_current",
+            "selection_status": "selected",
+            "unit_score": "1.0000"
+          },
+          {
+            "accession_score": "1.0000",
+            "combined_score": "0.6900",
+            "concept": "EarningsPerShareBasic",
+            "concept_score": "1.0000",
+            "frame_score": "0.8000",
+            "period_score": "0.0000",
+            "role": "rejected_ytd",
+            "selection_status": "rejected_period_mismatch",
+            "unit_score": "1.0000"
+          }
+        ]
+      },
+      "task_type": "xbrl_resolution",
+      "updated_at": "2026-08-11T19:03:35.013242+00:00"
+    },
+    {
+      "annotation_status": "approved",
+      "annotation_version": "real-sec-annotation-v1",
+      "annotator": "Samarth Shinde",
+      "created_at": "2026-08-11T00:00:00Z",
+      "expected": {
+        "canonical_metric": "revenue",
+        "claim_type": "absolute_value",
+        "reported_value": "28236000000",
+        "verification_status": "verified"
+      },
+      "hard_case_tags": [
+        "correct_financial_claim",
+        "valid_xbrl_fact_no_mismatch"
+      ],
+      "id": "real-sec-v1-ver-001",
+      "input_references": {
+        "claim_locator": "MD&A revenue or automotive sales claim"
+      },
+      "negative_control": true,
+      "notes": "Negative-control candidate for contradiction false positives after fact review.",
+      "pair_id": "TSLA-2026Q2-vs-2026Q1",
+      "review": {
+        "decision": "approved",
+        "notes": "Human-reviewed TSLA verification arithmetic and tolerance.",
+        "reviewed_at": "2026-08-11T19:03:35.180129+00:00",
+        "reviewed_by": "Samarth Shinde"
+      },
+      "source_review": {
+        "ambiguity": "Low for absolute total-revenue verification. The original broad locator is now pinned to the table row.",
+        "arithmetic": {
+          "calculated_result": "0",
+          "claim": "Total revenues were $28.236 billion for the three months ended June 30, 2026.",
+          "claim_type": "absolute_value",
+          "comparison_fact": null,
+          "current_fact": "28236000000",
+          "difference": "0",
+          "expected_status": "verified",
+          "formula": "reported_value - current_fact",
+          "reported_value": "28236000000",
+          "tolerance": "1000000"
+        },
+        "filings": {
+          "current": {
+            "accession": "0001628280-26-049270",
+            "cik": "0001318605",
+            "filing_date": "2026-07-23",
+            "form": "10-Q",
+            "primary_document": "tsla-20260630.htm",
+            "report_period": "2026-06-30",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026049270/tsla-20260630.htm",
+            "ticker": "TSLA"
+          },
+          "previous": {
+            "accession": "0001628280-26-026673",
+            "cik": "0001318605",
+            "filing_date": "2026-04-23",
+            "form": "10-Q",
+            "primary_document": "tsla-20260331.htm",
+            "report_period": "2026-03-31",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026026673/tsla-20260331.htm",
+            "ticker": "TSLA"
+          }
+        },
+        "label_confidence": "HIGH",
+        "negative_control_quality": "ACCEPTABLE_NEGATIVE",
+        "recommended_human_action": "APPROVE",
+        "replacement_required_reason": null,
+        "review_difficulty": "B",
+        "reviewability_status": "READY_FOR_HUMAN_REVIEW",
+        "source_authority": "official_sec_archive_and_companyfacts",
+        "source_evidence": [
+          {
+            "locator": "Consolidated Statements of Operations, revenue table",
+            "part_item": "Part I Item 1",
+            "side": "current",
+            "text": "Total revenues 28,236 22,496 50,623 41,831"
+          }
+        ],
+        "source_quality": "HIGH",
+        "source_reviewed": true,
+        "structured_facts": [
+          {
+            "accession": "0001628280-26-049270",
+            "concept": "Revenues",
+            "end": "2026-06-30",
+            "fp": "Q2",
+            "frame": "CY2026Q2",
+            "fy": 2026,
+            "period_type": "quarterly_duration",
+            "role": "current_fact",
+            "start": "2026-04-01",
+            "taxonomy": "us-gaap",
+            "unit": "USD",
+            "value": "28236000000"
+          }
+        ]
+      },
+      "task_type": "verification",
+      "updated_at": "2026-08-11T19:03:35.180129+00:00"
+    },
+    {
+      "annotation_status": "uncertain",
+      "annotation_version": "real-sec-annotation-v1",
+      "annotator": "Samarth Shinde",
+      "created_at": "2026-08-11T00:00:00Z",
+      "expected": {
+        "verification_status": "ambiguous_fact"
+      },
+      "hard_case_tags": [
+        "ambiguous_fact",
+        "instant_vs_duration_metrics"
+      ],
+      "id": "real-sec-v1-ver-002",
+      "input_references": {
+        "claim_locator": "cash, debt, or margin statement"
+      },
+      "negative_control": false,
+      "notes": "Candidate ambiguity-rejection example; approve only if actual candidate facts support ambiguity.",
+      "pair_id": "NFLX-2026Q2-vs-2026Q1",
+      "review": {
+        "decision": "uncertain",
+        "notes": "Exact financial claim and intended metric are insufficient to resolve the fact deterministically.",
+        "reviewed_at": "2026-08-11T19:03:35.755385+00:00",
+        "reviewed_by": "Samarth Shinde"
+      },
+      "source_review": {
+        "ambiguity": "The source has clear cash and debt facts, but the candidate claim locator is broad. Ambiguity is only justified for the locator, not for an exact cash or debt claim.",
+        "deterministic_scores": [
+          {
+            "accession_score": "1.0000",
+            "combined_score": "1.0000",
+            "concept": "CashAndCashEquivalentsAtCarryingValue",
+            "concept_score": "1.0000",
+            "frame_score": "1.0000",
+            "metric": "cash_and_cash_equivalents",
+            "period_score": "1.0000",
+            "unit_score": "1.0000"
+          },
+          {
+            "accession_score": "1.0000",
+            "combined_score": "not_applicable",
+            "concept": "LongTermDebtNoncurrent",
+            "concept_score": "not_registered",
+            "frame_score": "1.0000",
+            "metric": "long_term_debt",
+            "period_score": "1.0000",
+            "unit_score": "1.0000"
+          }
+        ],
+        "filings": {
+          "current": {
+            "accession": "0001065280-26-000212",
+            "cik": "0001065280",
+            "filing_date": "2026-07-17",
+            "form": "10-Q",
+            "primary_document": "nflx-20260630.htm",
+            "report_period": "2026-06-30",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/1065280/000106528026000212/nflx-20260630.htm",
+            "ticker": "NFLX"
+          },
+          "previous": {
+            "accession": "0001065280-26-000138",
+            "cik": "0001065280",
+            "filing_date": "2026-04-17",
+            "form": "10-Q",
+            "primary_document": "nflx-20260331.htm",
+            "report_period": "2026-03-31",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/1065280/000106528026000138/nflx-20260331.htm",
+            "ticker": "NFLX"
+          }
+        },
+        "label_confidence": "MEDIUM",
+        "recommended_human_action": "UNCERTAIN",
+        "replacement_required_reason": null,
+        "review_difficulty": "C",
+        "reviewability_status": "AMBIGUOUS",
+        "source_authority": "official_sec_archive_and_companyfacts",
+        "source_evidence": [
+          {
+            "locator": "Condensed Consolidated Balance Sheets",
+            "part_item": "Part I Item 1",
+            "side": "current",
+            "text": "Cash and cash equivalents $9,099,232 $9,033,681"
+          },
+          {
+            "locator": "Condensed Consolidated Balance Sheets",
+            "part_item": "Part I Item 1",
+            "side": "current",
+            "text": "Long-term debt 11,825,548 13,463,971"
+          }
+        ],
+        "source_quality": "HIGH",
+        "source_reviewed": true,
+        "structured_facts": [
+          {
+            "accession": "0001065280-26-000212",
+            "concept": "CashAndCashEquivalentsAtCarryingValue",
+            "fp": "Q2",
+            "frame": "CY2026Q2I",
+            "fy": 2026,
+            "instant": "2026-06-30",
+            "period_type": "instant",
+            "role": "plausible_cash_fact",
+            "taxonomy": "us-gaap",
+            "unit": "USD",
+            "value": "9099232000"
+          },
+          {
+            "accession": "0001065280-26-000212",
+            "concept": "LongTermDebtNoncurrent",
+            "fp": "Q2",
+            "frame": "CY2026Q2I",
+            "fy": 2026,
+            "instant": "2026-06-30",
+            "period_type": "instant",
+            "role": "plausible_debt_fact",
+            "taxonomy": "us-gaap",
+            "unit": "USD",
+            "value": "11825548000"
+          }
+        ]
+      },
+      "task_type": "verification",
+      "updated_at": "2026-08-11T19:03:35.755385+00:00"
+    },
+    {
+      "annotation_status": "approved",
+      "annotation_version": "real-sec-annotation-v1",
+      "annotator": "Samarth Shinde",
+      "created_at": "2026-08-11T00:00:00Z",
+      "expected": {
+        "candidate_expected": false,
+        "contradiction_type": "non_candidate"
+      },
+      "hard_case_tags": [
+        "similar_wording_no_contradiction"
+      ],
+      "id": "real-sec-v1-ct-001",
+      "input_references": {
+        "finding_locator": "revenue or liquidity finding after full pipeline run"
+      },
+      "negative_control": true,
+      "notes": "Negative control for false-positive-rate evaluation.",
+      "pair_id": "AAPL-2026Q2-vs-2026Q1",
+      "review": {
+        "decision": "approved",
+        "notes": "Human-reviewed AAPL no-contradiction negative control.",
+        "reviewed_at": "2026-08-11T19:03:35.333907+00:00",
+        "reviewed_by": "Samarth Shinde"
+      },
+      "source_review": {
+        "ambiguity": "Low. This is a concrete no-contradiction control: ordinary net-sales increase is directionally consistent with the table.",
+        "filings": {
+          "current": {
+            "accession": "0000320193-26-000013",
+            "cik": "0000320193",
+            "filing_date": "2026-05-01",
+            "form": "10-Q",
+            "primary_document": "aapl-20260328.htm",
+            "report_period": "2026-03-28",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019326000013/aapl-20260328.htm",
+            "ticker": "AAPL"
+          },
+          "previous": {
+            "accession": "0000320193-26-000006",
+            "cik": "0000320193",
+            "filing_date": "2026-01-30",
+            "form": "10-Q",
+            "primary_document": "aapl-20251227.htm",
+            "report_period": "2025-12-27",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019326000006/aapl-20251227.htm",
+            "ticker": "AAPL"
+          }
+        },
+        "label_confidence": "HIGH",
+        "negative_control_quality": "STRONG_NEGATIVE",
+        "recommended_human_action": "APPROVE",
+        "replacement_required_reason": null,
+        "review_difficulty": "A",
+        "reviewability_status": "READY_FOR_HUMAN_REVIEW",
+        "source_authority": "official_sec_archive_and_companyfacts",
+        "source_evidence": [
+          {
+            "locator": "Condensed Consolidated Statements of Operations",
+            "part_item": "Part I Item 1",
+            "side": "previous",
+            "text": "Total net sales 143,756 124,300"
+          },
+          {
+            "locator": "Condensed Consolidated Statements of Operations",
+            "part_item": "Part I Item 1",
+            "side": "current",
+            "text": "Total net sales 111,184 95,359"
+          }
+        ],
+        "source_quality": "HIGH",
+        "source_reviewed": true,
+        "task_review": {
+          "expected_contradiction": false,
+          "why_it_might_fool_system": "large revenue numbers and changing periods can trigger spurious mismatch logic",
+          "why_negative": "the cited table values are internally consistent and no contrary narrative claim is supplied"
+        }
+      },
+      "task_type": "contradiction_candidate",
+      "updated_at": "2026-08-11T19:03:35.333907+00:00"
+    },
+    {
+      "annotation_status": "rejected",
+      "annotation_version": "real-sec-annotation-v1",
+      "annotator": "Samarth Shinde",
+      "created_at": "2026-08-11T00:00:00Z",
+      "expected": {
+        "candidate_expected": false,
+        "contradiction_type": "non_candidate",
+        "replacement_required": true
+      },
+      "hard_case_tags": [
+        "reported_vs_calculated_mismatch",
+        "number_normalization"
+      ],
+      "id": "real-sec-v1-ct-002",
+      "input_references": {
+        "finding_locator": "material narrative/data mismatch if observed"
+      },
+      "negative_control": false,
+      "notes": "Candidate positive slot; must be rejected if source review does not show mismatch.",
+      "pair_id": "AMZN-2026Q1-vs-2025Q3",
+      "review": {
+        "decision": "rejected",
+        "notes": "Proposed AMZN numerical contradiction could not be reproduced from a real narrative claim and official facts.",
+        "reviewed_at": "2026-08-11T19:03:36.212163+00:00",
+        "reviewed_by": "Samarth Shinde"
+      },
+      "source_review": {
+        "ambiguity": "Low about the hardening outcome: the evidence gathered does not support a positive contradiction label.",
+        "arithmetic": {
+          "calculated_result": "16.6072",
+          "claim": null,
+          "comparison_fact": "155667",
+          "current_fact": "181519",
+          "difference": null,
+          "expected_status": "not_reproducible_without_claim",
+          "formula": "((current - previous) / previous) * 100",
+          "reported_value": null,
+          "tolerance": "0.25"
+        },
+        "filings": {
+          "current": {
+            "accession": "0001018724-26-000014",
+            "cik": "0001018724",
+            "filing_date": "2026-04-30",
+            "form": "10-Q",
+            "primary_document": "amzn-20260331.htm",
+            "report_period": "2026-03-31",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872426000014/amzn-20260331.htm",
+            "ticker": "AMZN"
+          },
+          "previous": {
+            "accession": "0001018724-25-000123",
+            "cik": "0001018724",
+            "filing_date": "2025-10-31",
+            "form": "10-Q",
+            "primary_document": "amzn-20250930.htm",
+            "report_period": "2025-09-30",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/1018724/000101872425000123/amzn-20250930.htm",
+            "ticker": "AMZN"
+          }
+        },
+        "label_confidence": "HIGH",
+        "recommended_human_action": "REJECT",
+        "replacement_required_reason": "No real claim plus official facts produced a reproducible mismatch. The positive numerical-contradiction slot should be replaced rather than preserved.",
+        "review_difficulty": "C",
+        "reviewability_status": "REPLACEMENT_REQUIRED",
+        "source_authority": "official_sec_archive_and_companyfacts",
+        "source_evidence": [
+          {
+            "locator": "Consolidated Statements of Operations",
+            "part_item": "Part I Item 1",
+            "side": "previous",
+            "text": "Total net sales 158,877 180,169 450,167 503,538"
+          },
+          {
+            "locator": "Consolidated Statements of Operations",
+            "part_item": "Part I Item 1",
+            "side": "current",
+            "text": "Total net sales 155,667 181,519"
+          }
+        ],
+        "source_quality": "MEDIUM",
+        "source_reviewed": true,
+        "task_review": {
+          "hardened_result": "replacement_required",
+          "positive_contradiction_proven": false
+        }
+      },
+      "task_type": "contradiction_candidate",
+      "updated_at": "2026-08-11T19:03:36.212163+00:00"
+    },
+    {
+      "annotation_status": "approved",
+      "annotation_version": "real-sec-annotation-v1",
+      "annotator": "Samarth Shinde",
+      "created_at": "2026-08-11T00:00:00Z",
+      "expected": {
+        "requires_calculation": true,
+        "requires_primary_evidence": true
+      },
+      "hard_case_tags": [
+        "evidence_lineage",
+        "calculation_evidence"
+      ],
+      "id": "real-sec-v1-ev-001",
+      "input_references": {
+        "evidence_locator": "primary passage plus selected XBRL fact"
+      },
+      "negative_control": false,
+      "notes": "Candidate evidence-quality example; requires exact hash/citation during review.",
+      "pair_id": "JPM-2026Q1-vs-2025Q3",
+      "review": {
+        "decision": "approved",
+        "notes": "Human-reviewed JPM primary evidence and reproducible calculation.",
+        "reviewed_at": "2026-08-11T19:03:35.475642+00:00",
+        "reviewed_by": "Samarth Shinde"
+      },
+      "source_review": {
+        "ambiguity": "Medium. Source evidence and calculation are reproducible, but the exact downstream finding text still needs reviewer confirmation.",
+        "arithmetic": {
+          "calculated_result": "14.5974",
+          "comparison_value": "14393",
+          "current_value": "16494",
+          "expected_status": "calculation_reproducible",
+          "formula": "((current - comparison) / comparison) * 100",
+          "source_text_sha256_available": false
+        },
+        "filings": {
+          "current": {
+            "accession": "0001628280-26-029344",
+            "cik": "0000019617",
+            "filing_date": "2026-05-01",
+            "form": "10-Q",
+            "primary_document": "jpm-20260331.htm",
+            "report_period": "2026-03-31",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/19617/000162828026029344/jpm-20260331.htm",
+            "ticker": "JPM"
+          },
+          "previous": {
+            "accession": "0001628280-25-048859",
+            "cik": "0000019617",
+            "filing_date": "2025-11-04",
+            "form": "10-Q",
+            "primary_document": "jpm-20250930.htm",
+            "report_period": "2025-09-30",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/19617/000162828025048859/jpm-20250930.htm",
+            "ticker": "JPM"
+          }
+        },
+        "label_confidence": "MEDIUM",
+        "recommended_human_action": "APPROVE",
+        "replacement_required_reason": null,
+        "review_difficulty": "B",
+        "reviewability_status": "READY_FOR_HUMAN_REVIEW",
+        "source_authority": "official_sec_archive_and_companyfacts",
+        "source_evidence": [
+          {
+            "locator": "Consolidated income table",
+            "part_item": "Part I Item 1",
+            "side": "previous",
+            "text": "Net income $14,393 $14,987 $14,643"
+          },
+          {
+            "locator": "Consolidated income table",
+            "part_item": "Part I Item 1",
+            "side": "current",
+            "text": "Net income $16,494 $13,025 $14,393"
+          }
+        ],
+        "source_quality": "HIGH",
+        "source_reviewed": true,
+        "structured_facts": [
+          {
+            "comparison_value_millions": "14393",
+            "current_value_millions": "16494",
+            "metric": "net_income",
+            "unit": "USD millions"
+          }
+        ]
+      },
+      "task_type": "evidence_quality",
+      "updated_at": "2026-08-11T19:03:35.475642+00:00"
+    },
+    {
+      "annotation_status": "rejected",
+      "annotation_version": "real-sec-annotation-v1",
+      "annotator": "Samarth Shinde",
+      "created_at": "2026-08-11T00:00:00Z",
+      "expected": {
+        "expected_supported": false,
+        "requires_primary_evidence": true
+      },
+      "hard_case_tags": [
+        "evidence_failure"
+      ],
+      "id": "real-sec-v1-ev-002",
+      "input_references": {
+        "evidence_locator": "finding without sufficient primary source after review"
+      },
+      "negative_control": true,
+      "notes": "Negative-control candidate for unsupported-finding evaluation.",
+      "pair_id": "WMT-2025Q3-vs-2025Q2",
+      "review": {
+        "decision": "rejected",
+        "notes": "Candidate lacked a concrete unsupported finding.",
+        "reviewed_at": "2026-08-11T19:03:36.389741+00:00",
+        "reviewed_by": "Samarth Shinde"
+      },
+      "source_review": {
+        "ambiguity": "High. Unsupported-finding examples require a concrete claim and an explicit missing-evidence audit.",
+        "filings": {
+          "current": {
+            "accession": "0000104169-25-000191",
+            "cik": "0000104169",
+            "filing_date": "2025-12-03",
+            "form": "10-Q",
+            "primary_document": "wmt-20251031.htm",
+            "report_period": "2025-10-31",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/104169/000010416925000191/wmt-20251031.htm",
+            "ticker": "WMT"
+          },
+          "previous": {
+            "accession": "0000104169-25-000137",
+            "cik": "0000104169",
+            "filing_date": "2025-08-29",
+            "form": "10-Q",
+            "primary_document": "wmt-20250731.htm",
+            "report_period": "2025-07-31",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/104169/000010416925000137/wmt-20250731.htm",
+            "ticker": "WMT"
+          }
+        },
+        "label_confidence": "LOW",
+        "negative_control_quality": "INVALID_NEGATIVE",
+        "recommended_human_action": "REJECT",
+        "replacement_required_reason": "No concrete unsupported finding was supplied. Source tables are available, but the required absent evidence cannot be demonstrated without a specific finding.",
+        "review_difficulty": "C",
+        "reviewability_status": "REPLACEMENT_REQUIRED",
+        "source_authority": "official_sec_archive_and_companyfacts",
+        "source_evidence": [
+          {
+            "locator": "Consolidated Statements of Income",
+            "part_item": "Part I Item 1",
+            "side": "previous",
+            "text": "Net sales $175,750 $167,767 $339,731 $327,705"
+          },
+          {
+            "locator": "Consolidated Statements of Income",
+            "part_item": "Part I Item 1",
+            "side": "current",
+            "text": "Net sales $177,769 $168,003 $517,500 $495,708"
+          }
+        ],
+        "source_quality": "MEDIUM",
+        "source_reviewed": true,
+        "task_review": {
+          "required_evidence_absent": "not_demonstrable_without_exact_finding",
+          "unsupported_finding_supplied": false
+        }
+      },
+      "task_type": "evidence_quality",
+      "updated_at": "2026-08-11T19:03:36.389741+00:00"
+    }
+  ],
+  "filing_pairs": [
+    {
+      "cik": "0000320193",
+      "current_accession": "0000320193-26-000020",
+      "current_filing_date": "2026-07-31",
+      "current_primary_document": "aapl-20260627.htm",
+      "current_report_period": "2026-06-27",
+      "form": "10-Q",
+      "industry": "technology",
+      "pair_id": "AAPL-2026Q3-vs-2026Q2",
+      "previous_accession": "0000320193-26-000013",
+      "previous_filing_date": "2026-05-01",
+      "previous_primary_document": "aapl-20260328.htm",
+      "previous_report_period": "2026-03-28",
+      "ticker": "AAPL"
+    },
+    {
+      "cik": "0000320193",
+      "current_accession": "0000320193-26-000013",
+      "current_filing_date": "2026-05-01",
+      "current_primary_document": "aapl-20260328.htm",
+      "current_report_period": "2026-03-28",
+      "form": "10-Q",
+      "industry": "technology",
+      "pair_id": "AAPL-2026Q2-vs-2026Q1",
+      "previous_accession": "0000320193-26-000006",
+      "previous_filing_date": "2026-01-30",
+      "previous_primary_document": "aapl-20251227.htm",
+      "previous_report_period": "2025-12-27",
+      "ticker": "AAPL"
+    },
+    {
+      "cik": "0000789019",
+      "current_accession": "0001193125-26-191507",
+      "current_filing_date": "2026-04-29",
+      "current_primary_document": "msft-20260331.htm",
+      "current_report_period": "2026-03-31",
+      "form": "10-Q",
+      "industry": "technology",
+      "pair_id": "MSFT-2026Q3-vs-2026Q2",
+      "previous_accession": "0001193125-26-027207",
+      "previous_filing_date": "2026-01-28",
+      "previous_primary_document": "msft-20251231.htm",
+      "previous_report_period": "2025-12-31",
+      "ticker": "MSFT"
+    },
+    {
+      "cik": "0000789019",
+      "current_accession": "0001193125-26-027207",
+      "current_filing_date": "2026-01-28",
+      "current_primary_document": "msft-20251231.htm",
+      "current_report_period": "2025-12-31",
+      "form": "10-Q",
+      "industry": "technology",
+      "pair_id": "MSFT-2026Q2-vs-2026Q1",
+      "previous_accession": "0001193125-25-256321",
+      "previous_filing_date": "2025-10-29",
+      "previous_primary_document": "msft-20250930.htm",
+      "previous_report_period": "2025-09-30",
+      "ticker": "MSFT"
+    },
+    {
+      "cik": "0001018724",
+      "current_accession": "0001018724-26-000026",
+      "current_filing_date": "2026-07-31",
+      "current_primary_document": "amzn-20260630.htm",
+      "current_report_period": "2026-06-30",
+      "form": "10-Q",
+      "industry": "consumer_retail",
+      "pair_id": "AMZN-2026Q2-vs-2026Q1",
+      "previous_accession": "0001018724-26-000014",
+      "previous_filing_date": "2026-04-30",
+      "previous_primary_document": "amzn-20260331.htm",
+      "previous_report_period": "2026-03-31",
+      "ticker": "AMZN"
+    },
+    {
+      "cik": "0001018724",
+      "current_accession": "0001018724-26-000014",
+      "current_filing_date": "2026-04-30",
+      "current_primary_document": "amzn-20260331.htm",
+      "current_report_period": "2026-03-31",
+      "form": "10-Q",
+      "industry": "consumer_retail",
+      "pair_id": "AMZN-2026Q1-vs-2025Q3",
+      "previous_accession": "0001018724-25-000123",
+      "previous_filing_date": "2025-10-31",
+      "previous_primary_document": "amzn-20250930.htm",
+      "previous_report_period": "2025-09-30",
+      "ticker": "AMZN"
+    },
+    {
+      "cik": "0000104169",
+      "current_accession": "0000104169-26-000102",
+      "current_filing_date": "2026-05-29",
+      "current_primary_document": "wmt-20260430.htm",
+      "current_report_period": "2026-04-30",
+      "form": "10-Q",
+      "industry": "consumer_retail",
+      "pair_id": "WMT-2026Q1-vs-2025Q3",
+      "previous_accession": "0000104169-25-000191",
+      "previous_filing_date": "2025-12-03",
+      "previous_primary_document": "wmt-20251031.htm",
+      "previous_report_period": "2025-10-31",
+      "ticker": "WMT"
+    },
+    {
+      "cik": "0000104169",
+      "current_accession": "0000104169-25-000191",
+      "current_filing_date": "2025-12-03",
+      "current_primary_document": "wmt-20251031.htm",
+      "current_report_period": "2025-10-31",
+      "form": "10-Q",
+      "industry": "consumer_retail",
+      "pair_id": "WMT-2025Q3-vs-2025Q2",
+      "previous_accession": "0000104169-25-000137",
+      "previous_filing_date": "2025-08-29",
+      "previous_primary_document": "wmt-20250731.htm",
+      "previous_report_period": "2025-07-31",
+      "ticker": "WMT"
+    },
+    {
+      "cik": "0000019617",
+      "current_accession": "0001628280-26-054343",
+      "current_filing_date": "2026-08-06",
+      "current_primary_document": "jpm-20260630.htm",
+      "current_report_period": "2026-06-30",
+      "form": "10-Q",
+      "industry": "financial_services",
+      "pair_id": "JPM-2026Q2-vs-2026Q1",
+      "previous_accession": "0001628280-26-029344",
+      "previous_filing_date": "2026-05-01",
+      "previous_primary_document": "jpm-20260331.htm",
+      "previous_report_period": "2026-03-31",
+      "ticker": "JPM"
+    },
+    {
+      "cik": "0000019617",
+      "current_accession": "0001628280-26-029344",
+      "current_filing_date": "2026-05-01",
+      "current_primary_document": "jpm-20260331.htm",
+      "current_report_period": "2026-03-31",
+      "form": "10-Q",
+      "industry": "financial_services",
+      "pair_id": "JPM-2026Q1-vs-2025Q3",
+      "previous_accession": "0001628280-25-048859",
+      "previous_filing_date": "2025-11-04",
+      "previous_primary_document": "jpm-20250930.htm",
+      "previous_report_period": "2025-09-30",
+      "ticker": "JPM"
+    },
+    {
+      "cik": "0000731766",
+      "current_accession": "0000731766-26-000197",
+      "current_filing_date": "2026-08-10",
+      "current_primary_document": "unh-20260630.htm",
+      "current_report_period": "2026-06-30",
+      "form": "10-Q",
+      "industry": "healthcare",
+      "pair_id": "UNH-2026Q2-vs-2026Q1",
+      "previous_accession": "0000731766-26-000127",
+      "previous_filing_date": "2026-05-05",
+      "previous_primary_document": "unh-20260331.htm",
+      "previous_report_period": "2026-03-31",
+      "ticker": "UNH"
+    },
+    {
+      "cik": "0000731766",
+      "current_accession": "0000731766-26-000127",
+      "current_filing_date": "2026-05-05",
+      "current_primary_document": "unh-20260331.htm",
+      "current_report_period": "2026-03-31",
+      "form": "10-Q",
+      "industry": "healthcare",
+      "pair_id": "UNH-2026Q1-vs-2025Q3",
+      "previous_accession": "0000731766-25-000305",
+      "previous_filing_date": "2025-10-28",
+      "previous_primary_document": "unh-20250930.htm",
+      "previous_report_period": "2025-09-30",
+      "ticker": "UNH"
+    },
+    {
+      "cik": "0000018230",
+      "current_accession": "0000018230-26-000046",
+      "current_filing_date": "2026-08-05",
+      "current_primary_document": "cat-20260630.htm",
+      "current_report_period": "2026-06-30",
+      "form": "10-Q",
+      "industry": "industrial_manufacturing",
+      "pair_id": "CAT-2026Q2-vs-2026Q1",
+      "previous_accession": "0000018230-26-000021",
+      "previous_filing_date": "2026-05-06",
+      "previous_primary_document": "cat-20260331.htm",
+      "previous_report_period": "2026-03-31",
+      "ticker": "CAT"
+    },
+    {
+      "cik": "0000018230",
+      "current_accession": "0000018230-26-000021",
+      "current_filing_date": "2026-05-06",
+      "current_primary_document": "cat-20260331.htm",
+      "current_report_period": "2026-03-31",
+      "form": "10-Q",
+      "industry": "industrial_manufacturing",
+      "pair_id": "CAT-2026Q1-vs-2025Q3",
+      "previous_accession": "0000018230-25-000048",
+      "previous_filing_date": "2025-11-03",
+      "previous_primary_document": "cat-20250930.htm",
+      "previous_report_period": "2025-09-30",
+      "ticker": "CAT"
+    },
+    {
+      "cik": "0000034088",
+      "current_accession": "0000034088-26-000093",
+      "current_filing_date": "2026-08-03",
+      "current_primary_document": "xom-20260630.htm",
+      "current_report_period": "2026-06-30",
+      "form": "10-Q",
+      "industry": "energy",
+      "pair_id": "XOM-2026Q2-vs-2026Q1",
+      "previous_accession": "0000034088-26-000067",
+      "previous_filing_date": "2026-05-04",
+      "previous_primary_document": "xom-20260331.htm",
+      "previous_report_period": "2026-03-31",
+      "ticker": "XOM"
+    },
+    {
+      "cik": "0000034088",
+      "current_accession": "0000034088-26-000067",
+      "current_filing_date": "2026-05-04",
+      "current_primary_document": "xom-20260331.htm",
+      "current_report_period": "2026-03-31",
+      "form": "10-Q",
+      "industry": "energy",
+      "pair_id": "XOM-2026Q1-vs-2025Q3",
+      "previous_accession": "0000034088-25-000061",
+      "previous_filing_date": "2025-11-03",
+      "previous_primary_document": "xom-20250930.htm",
+      "previous_report_period": "2025-09-30",
+      "ticker": "XOM"
+    },
+    {
+      "cik": "0000732712",
+      "current_accession": "0000732712-26-000046",
+      "current_filing_date": "2026-07-31",
+      "current_primary_document": "vz-20260630.htm",
+      "current_report_period": "2026-06-30",
+      "form": "10-Q",
+      "industry": "telecommunications_media",
+      "pair_id": "VZ-2026Q2-vs-2026Q1",
+      "previous_accession": "0000732712-26-000023",
+      "previous_filing_date": "2026-05-01",
+      "previous_primary_document": "vz-20260331.htm",
+      "previous_report_period": "2026-03-31",
+      "ticker": "VZ"
+    },
+    {
+      "cik": "0000732712",
+      "current_accession": "0000732712-26-000023",
+      "current_filing_date": "2026-05-01",
+      "current_primary_document": "vz-20260331.htm",
+      "current_report_period": "2026-03-31",
+      "form": "10-Q",
+      "industry": "telecommunications_media",
+      "pair_id": "VZ-2026Q1-vs-2025Q3",
+      "previous_accession": "0000732712-25-000116",
+      "previous_filing_date": "2025-10-29",
+      "previous_primary_document": "vz-20250930.htm",
+      "previous_report_period": "2025-09-30",
+      "ticker": "VZ"
+    },
+    {
+      "cik": "0000027904",
+      "current_accession": "0000027904-26-000031",
+      "current_filing_date": "2026-07-10",
+      "current_primary_document": "dal-20260630.htm",
+      "current_report_period": "2026-06-30",
+      "form": "10-Q",
+      "industry": "transport_logistics",
+      "pair_id": "DAL-2026Q2-vs-2026Q1",
+      "previous_accession": "0000027904-26-000022",
+      "previous_filing_date": "2026-04-08",
+      "previous_primary_document": "dal-20260331.htm",
+      "previous_report_period": "2026-03-31",
+      "ticker": "DAL"
+    },
+    {
+      "cik": "0000027904",
+      "current_accession": "0000027904-26-000022",
+      "current_filing_date": "2026-04-08",
+      "current_primary_document": "dal-20260331.htm",
+      "current_report_period": "2026-03-31",
+      "form": "10-Q",
+      "industry": "transport_logistics",
+      "pair_id": "DAL-2026Q1-vs-2025Q3",
+      "previous_accession": "0000027904-25-000020",
+      "previous_filing_date": "2025-10-09",
+      "previous_primary_document": "dal-20250930.htm",
+      "previous_report_period": "2025-09-30",
+      "ticker": "DAL"
+    },
+    {
+      "cik": "0001318605",
+      "current_accession": "0001628280-26-049270",
+      "current_filing_date": "2026-07-23",
+      "current_primary_document": "tsla-20260630.htm",
+      "current_report_period": "2026-06-30",
+      "form": "10-Q",
+      "industry": "automotive_manufacturing",
+      "pair_id": "TSLA-2026Q2-vs-2026Q1",
+      "previous_accession": "0001628280-26-026673",
+      "previous_filing_date": "2026-04-23",
+      "previous_primary_document": "tsla-20260331.htm",
+      "previous_report_period": "2026-03-31",
+      "ticker": "TSLA"
+    },
+    {
+      "cik": "0001318605",
+      "current_accession": "0001628280-26-026673",
+      "current_filing_date": "2026-04-23",
+      "current_primary_document": "tsla-20260331.htm",
+      "current_report_period": "2026-03-31",
+      "form": "10-Q",
+      "industry": "automotive_manufacturing",
+      "pair_id": "TSLA-2026Q1-vs-2025Q3",
+      "previous_accession": "0001628280-25-045968",
+      "previous_filing_date": "2025-10-23",
+      "previous_primary_document": "tsla-20250930.htm",
+      "previous_report_period": "2025-09-30",
+      "ticker": "TSLA"
+    },
+    {
+      "cik": "0001065280",
+      "current_accession": "0001065280-26-000212",
+      "current_filing_date": "2026-07-17",
+      "current_primary_document": "nflx-20260630.htm",
+      "current_report_period": "2026-06-30",
+      "form": "10-Q",
+      "industry": "telecommunications_media",
+      "pair_id": "NFLX-2026Q2-vs-2026Q1",
+      "previous_accession": "0001065280-26-000138",
+      "previous_filing_date": "2026-04-17",
+      "previous_primary_document": "nflx-20260331.htm",
+      "previous_report_period": "2026-03-31",
+      "ticker": "NFLX"
+    },
+    {
+      "cik": "0001065280",
+      "current_accession": "0001065280-26-000138",
+      "current_filing_date": "2026-04-17",
+      "current_primary_document": "nflx-20260331.htm",
+      "current_report_period": "2026-03-31",
+      "form": "10-Q",
+      "industry": "telecommunications_media",
+      "pair_id": "NFLX-2026Q1-vs-2025Q3",
+      "previous_accession": "0001065280-25-000406",
+      "previous_filing_date": "2025-10-22",
+      "previous_primary_document": "nflx-20250930.htm",
+      "previous_report_period": "2025-09-30",
+      "ticker": "NFLX"
+    }
+  ],
+  "source_type": "sec_submissions_metadata",
+  "split_strategy": {
+    "development": [
+      "AAPL",
+      "MSFT",
+      "AMZN",
+      "WMT"
+    ],
+    "rationale": "Company-level splits reduce leakage from near-identical passages in the same issuer's filing style.",
+    "test": [
+      "VZ",
+      "DAL",
+      "TSLA",
+      "NFLX"
+    ],
+    "type": "company",
+    "validation": [
+      "JPM",
+      "UNH",
+      "CAT",
+      "XOM"
+    ]
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "dataset_name": "real_sec_10q_benchmark_v1",
+  "dataset_version": "real-sec-v1",
+  "task": "real_sec_benchmark",
+  "description": "Real SEC 10-Q filing-pair benchmark scaffold with source-traceable company and accession metadata plus candidate annotation records for human review.",
+  "source_type": "sec_submissions_metadata",
+  "example_count": 16,
+  "annotation_method": "candidate_labels_pending_human_review",
+  "review_status": "candidate",
+  "created_at": "2026-08-11T00:00:00Z",
+  "labels": [
+    "section_matching",
+    "passage_alignment",
+    "disclosure_change",
+    "financial_claim",
+    "xbrl_resolution",
+    "verification",
+    "contradiction_candidate",
+    "evidence_quality"
+  ],
+  "supported_metrics": [
+    "accuracy",
+    "precision",
+    "recall",
+    "macro_f1",
+    "false_positive_rate",
+    "error_analysis"
+  ],
+  "limitations": [
+    "Initial version stores SEC identifiers, pair metadata, and candidate labels only; full filing text is reconstructed explicitly from SEC sources when needed.",
+    "No candidate annotation in this dataset is a gold or approved label until a human reviewer marks it approved with review metadata.",
+    "Standard CI must remain offline and deterministic; live SEC refresh is a separate explicit workflow."
+  ],
+  "examples_path": "real_sec_v1/examples.json"
+}
