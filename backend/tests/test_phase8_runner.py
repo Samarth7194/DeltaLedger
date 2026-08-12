@@ -21,6 +21,7 @@ def test_phase8_dataset_manifests_validate() -> None:
         "phase4_number_normalization",
         "phase5_contradiction",
         "evidence_quality",
+        "real_sec_benchmark",
     }
 
 
