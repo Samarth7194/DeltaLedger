@@ -95,5 +95,14 @@ def validate_examples(manifest: DatasetManifest, examples: list[dict[str, Any]])
 def validate_all_manifests() -> list[DatasetManifest]:
     manifests = [load_manifest(path) for path in evaluation_manifests()]
     for manifest in manifests:
-        validate_examples(manifest, load_dataset_examples(manifest))
+        examples = load_dataset_examples(manifest)
+        validate_examples(manifest, examples)
+        if manifest.task == "real_sec_benchmark":
+            from app.evaluation.real_sec import load_real_sec_payload, validate_real_sec_payload
+
+            if manifest.examples_path is None:
+                raise ValueError("real_sec_benchmark manifest requires examples_path.")
+            validate_real_sec_payload(
+                load_real_sec_payload(EVALUATION_ROOT / "datasets" / manifest.examples_path)
+            )
     return manifests

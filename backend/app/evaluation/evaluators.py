@@ -18,6 +18,7 @@ from app.evaluation.metrics import (
     not_evaluated,
     ranking_metrics,
 )
+from app.evaluation.real_sec import evaluate_real_sec_examples
 from app.services.comparison_utils import content_hash, deterministic_signals
 from app.services.financial_number_parser import parse_financial_number
 
@@ -47,6 +48,8 @@ async def evaluate_manifest(manifest: DatasetManifest) -> SuiteResult:
         metrics = _evaluate_phase5(examples)
     elif manifest.task == "evidence_quality":
         metrics = _evaluate_evidence(examples)
+    elif manifest.task == "real_sec_benchmark":
+        metrics = evaluate_real_sec_examples(examples)
     else:
         metrics = {"suite": not_evaluated(f"No evaluator registered for {manifest.task}.")}
     return SuiteResult(
