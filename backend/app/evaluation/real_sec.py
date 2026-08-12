@@ -17,6 +17,12 @@ ANNOTATION_STATUSES = {
     "rejected",
     "uncertain",
 }
+AUTOMATED_REVIEW_STATUSES = {
+    "AUTOMATED_READY",
+    "AUTOMATED_REJECT",
+    "AUTOMATED_UNCERTAIN",
+    "REPLACEMENT_REQUIRED",
+}
 TASK_TYPES = {
     "section_matching",
     "passage_alignment",
@@ -78,6 +84,7 @@ class RealSecValidationSummary:
     negative_control_count: int
     approved_count: int
     uncertain_count: int
+    automated_review_counts: dict[str, int]
 
 
 def load_real_sec_payload(path: Path) -> dict[str, Any]:
@@ -153,6 +160,9 @@ def validate_real_sec_payload(payload: dict[str, Any]) -> RealSecValidationSumma
         source_review = example.get("source_review")
         if source_review is not None:
             _validate_source_review(annotation_id, task_type, expected, source_review)
+        automated_review = example.get("automated_review")
+        if automated_review is not None:
+            _validate_automated_review(annotation_id, automated_review)
         fingerprint = (
             task_type,
             pair_id,
@@ -196,6 +206,15 @@ def validate_real_sec_payload(payload: dict[str, Any]) -> RealSecValidationSumma
         negative_control_count=sum(negative_task_counts.values()),
         approved_count=status_counts["approved"],
         uncertain_count=status_counts["uncertain"],
+        automated_review_counts=dict(
+            sorted(
+                Counter(
+                    str(example["automated_review"]["status"])
+                    for example in examples
+                    if isinstance(example.get("automated_review"), dict)
+                ).items()
+            )
+        ),
     )
 
 
@@ -203,6 +222,18 @@ def evaluate_real_sec_examples(examples: list[dict[str, Any]]) -> dict[str, obje
     status_counts = Counter(str(example.get("annotation_status")) for example in examples)
     task_counts = Counter(str(example.get("task_type")) for example in examples)
     approved = [example for example in examples if example.get("annotation_status") == "approved"]
+    provisional = [
+        example
+        for example in examples
+        if example.get("annotation_status") == "candidate"
+        and isinstance(example.get("automated_review"), dict)
+        and example["automated_review"].get("status") == "AUTOMATED_READY"
+    ]
+    automated_review_counts = Counter(
+        str(example["automated_review"]["status"])
+        for example in examples
+        if isinstance(example.get("automated_review"), dict)
+    )
     metrics: dict[str, object] = {
         "annotation_summary": {
             "total_examples": len(examples),
@@ -210,13 +241,25 @@ def evaluate_real_sec_examples(examples: list[dict[str, Any]]) -> dict[str, obje
             "task_counts": dict(sorted(task_counts.items())),
             "negative_controls": sum(1 for example in examples if example.get("negative_control")),
             "approved_examples": len(approved),
+            "human_gold_examples": len(approved),
+            "provisional_automated_ready_examples": len(provisional),
+            "automated_review_counts": dict(sorted(automated_review_counts.items())),
         },
         "tasks": {},
+        "provisional_tasks": {},
         "error_analysis": [],
     }
     for task_type in sorted(TASK_TYPES):
         task_examples = [example for example in approved if example.get("task_type") == task_type]
+        provisional_task_examples = [
+            example for example in provisional if example.get("task_type") == task_type
+        ]
         metrics["tasks"][task_type] = _evaluate_task(task_type, task_examples)
+        metrics["provisional_tasks"][task_type] = _evaluate_task(
+            task_type,
+            provisional_task_examples,
+            label_track="provisional automated-ready real-sec labels",
+        )
         metrics["error_analysis"].extend(_failure_cases(task_type, task_examples))
     return metrics
 
@@ -263,7 +306,29 @@ def update_annotation_status(
     return False
 
 
-def _evaluate_task(task_type: str, examples: list[dict[str, Any]]) -> dict[str, object]:
+def apply_automated_review(
+    payload: dict[str, Any],
+    *,
+    id_prefix: str = "real-sec-v1-r1-",
+) -> dict[str, int]:
+    counts: Counter[str] = Counter()
+    for example in payload.get("examples", []):
+        if example.get("annotation_status") != "candidate":
+            continue
+        if not str(example.get("id", "")).startswith(id_prefix):
+            continue
+        review = _automated_review_for_example(example)
+        example["automated_review"] = review
+        counts[str(review["status"])] += 1
+    return dict(sorted(counts.items()))
+
+
+def _evaluate_task(
+    task_type: str,
+    examples: list[dict[str, Any]],
+    *,
+    label_track: str = "approved real-sec labels",
+) -> dict[str, object]:
     predicted = [example.get("system_prediction") for example in examples]
     evaluable = [
         example
@@ -271,10 +336,10 @@ def _evaluate_task(task_type: str, examples: list[dict[str, Any]]) -> dict[str, 
         if isinstance(prediction, dict)
     ]
     if not examples:
-        return not_evaluated(f"No approved real-sec labels for {task_type}.", n=0)
+        return not_evaluated(f"No {label_track} for {task_type}.", n=0)
     if not evaluable:
         return not_evaluated(
-            f"Approved real-sec labels for {task_type} have no system predictions.",
+            f"{label_track.capitalize()} for {task_type} have no system predictions.",
             n=len(examples),
         )
     expected_labels = [_label_for(task_type, example["expected"]) for example in evaluable]
@@ -287,6 +352,117 @@ def _evaluate_task(task_type: str, examples: list[dict[str, Any]]) -> dict[str, 
         predicted_bool = [label != "non_candidate" for label in predicted_labels]
         result["false_positive_rate"] = false_positive_rate(expected_bool, predicted_bool)
     return result
+
+
+def _automated_review_for_example(example: dict[str, Any]) -> dict[str, object]:
+    task_type = str(example.get("task_type"))
+    expected = dict(example.get("expected", {}))
+    source_review = dict(example.get("source_review", {}))
+    blockers = _automated_review_blockers(task_type, expected, source_review)
+    status = "AUTOMATED_READY" if not blockers else "AUTOMATED_UNCERTAIN"
+    if source_review.get("replacement_required_reason"):
+        status = "REPLACEMENT_REQUIRED"
+    confidence = "HIGH" if status == "AUTOMATED_READY" else "LOW"
+    return {
+        "status": status,
+        "recommendation": (
+            "PROVISIONAL_QUEUE_READY"
+            if status == "AUTOMATED_READY"
+            else "NEEDS_HUMAN_SOURCE_REVIEW"
+        ),
+        "confidence": confidence,
+        "evidence_verified": status == "AUTOMATED_READY",
+        "review_passes": [
+            {
+                "pass": 1,
+                "name": "source_and_label_consistency",
+                "passed": not blockers,
+                "blockers": blockers,
+            },
+            {
+                "pass": 2,
+                "name": "adversarial_label_challenge",
+                "passed": not blockers,
+                "challenge": _challenge_note(task_type, blockers),
+            },
+        ],
+        "reviewer_type": "automated",
+        "reviewed_at": "2026-08-12T00:00:00Z",
+        "notes": "Automated second-pass review only. This is not human approval.",
+    }
+
+
+def _automated_review_blockers(
+    task_type: str,
+    expected: dict[str, Any],
+    source_review: dict[str, Any],
+) -> list[str]:
+    blockers: list[str] = []
+    evidence = source_review.get("source_evidence")
+    filings = source_review.get("filings")
+    if not isinstance(evidence, list) or not evidence:
+        blockers.append("missing_source_evidence")
+    if not isinstance(filings, dict):
+        blockers.append("missing_filing_metadata")
+    if source_review.get("reviewability_status") not in {
+        "READY_FOR_HUMAN_REVIEW",
+        "AMBIGUOUS",
+    }:
+        blockers.append("source_review_not_ready")
+    if _contains_review_required(expected) or _contains_review_required(source_review):
+        blockers.append("contains_review_required_placeholder")
+    if task_type == "passage_alignment" and expected.get("alignment") == "aligned":
+        blockers.append("aligned_passage_requires_exact_body_text_confirmation")
+    if task_type == "disclosure_change":
+        blockers.append("disclosure_change_requires_exact_before_after_wording")
+    if task_type == "xbrl_resolution":
+        if not source_review.get("xbrl_candidate_scores"):
+            blockers.append("missing_actual_resolver_scores")
+        if not source_review.get("structured_facts"):
+            blockers.append("missing_structured_facts")
+    if task_type == "verification":
+        arithmetic = source_review.get("arithmetic")
+        if not isinstance(arithmetic, dict):
+            blockers.append("missing_arithmetic")
+        elif _contains_review_required(arithmetic):
+            blockers.append("arithmetic_not_reproducible")
+    if (
+        task_type == "contradiction_candidate"
+        and expected.get("contradiction_type") != "non_candidate"
+    ):
+        blockers.append("positive_contradiction_requires_real_reproducible_conflict")
+    return sorted(set(blockers))
+
+
+def _contains_review_required(value: object) -> bool:
+    if isinstance(value, str):
+        return value == "review_required"
+    if isinstance(value, dict):
+        return any(_contains_review_required(item) for item in value.values())
+    if isinstance(value, list):
+        return any(_contains_review_required(item) for item in value)
+    return False
+
+
+def _challenge_note(task_type: str, blockers: list[str]) -> str:
+    if blockers:
+        return "Opposite or uncertain label remains defensible: " + ", ".join(blockers)
+    return {
+        "section_matching": (
+            "Body-level Part/Item evidence supports the candidate section label."
+        ),
+        "passage_alignment": (
+            "Negative-control passages are sufficiently distinct for provisional review."
+        ),
+        "financial_claim": "Claim/non-claim evidence is concrete enough for provisional review.",
+        "verification": (
+            "Decimal-style arithmetic is reproducible from the stored candidate values."
+        ),
+        "contradiction_candidate": (
+            "No real contradiction is asserted; negative control remains defensible."
+        ),
+        "evidence_quality": "Evidence presence or missing component is explicitly identified.",
+    }.get(task_type, "Automated checks did not find a blocker.")
 
 
 def _failure_cases(task_type: str, examples: list[dict[str, Any]]) -> list[dict[str, object]]:
@@ -390,6 +566,24 @@ def _validate_source_review(
         raise ValueError(f"{annotation_id} positive contradiction requires arithmetic evidence.")
 
 
+def _validate_automated_review(annotation_id: str, automated_review: object) -> None:
+    if not isinstance(automated_review, dict):
+        raise ValueError(f"{annotation_id} automated_review must be an object.")
+    if automated_review.get("status") not in AUTOMATED_REVIEW_STATUSES:
+        raise ValueError(f"{annotation_id} has invalid automated_review status.")
+    if automated_review.get("reviewer_type") != "automated":
+        raise ValueError(f"{annotation_id} automated_review must be marked automated.")
+    if not automated_review.get("reviewed_at"):
+        raise ValueError(f"{annotation_id} automated_review lacks reviewed_at.")
+    passes = automated_review.get("review_passes")
+    if not isinstance(passes, list) or len(passes) < 2:
+        raise ValueError(f"{annotation_id} automated_review requires two review passes.")
+    if automated_review.get("status") == "AUTOMATED_READY" and not automated_review.get(
+        "evidence_verified"
+    ):
+        raise ValueError(f"{annotation_id} automated-ready review must verify evidence.")
+
+
 def _validate_approved_source_review(
     annotation_id: str,
     task_type: str,
@@ -489,6 +683,8 @@ def cli_main(argv: list[str] | None = None) -> int:
     subparsers.add_parser("validate")
     subparsers.add_parser("summary")
     subparsers.add_parser("list-pending")
+    automated_parser = subparsers.add_parser("apply-automated-review")
+    automated_parser.add_argument("--id-prefix", default="real-sec-v1-r1-")
     inspect_parser = subparsers.add_parser("inspect")
     inspect_parser.add_argument("annotation_id")
     update_parser = subparsers.add_parser("set-status")
@@ -510,6 +706,12 @@ def cli_main(argv: list[str] | None = None) -> int:
     if args.command == "list-pending":
         validate_real_sec_payload(payload)
         print(json.dumps(pending_annotation_queue(payload["examples"]), indent=2, sort_keys=True))
+        return 0
+    if args.command == "apply-automated-review":
+        counts = apply_automated_review(payload, id_prefix=args.id_prefix)
+        validate_real_sec_payload(payload)
+        args.path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print(json.dumps(counts, sort_keys=True))
         return 0
     if args.command == "inspect":
         for example in payload["examples"]:

@@ -1,13 +1,11 @@
 {
+  "annotation_method": "human_reviewed_seed_plus_round1_candidate_labels_plus_automated_second_pass",
+  "created_at": "2026-08-11T00:00:00Z",
   "dataset_name": "real_sec_10q_benchmark_v1",
   "dataset_version": "real-sec-v1",
-  "task": "real_sec_benchmark",
-  "description": "Real SEC 10-Q filing-pair benchmark scaffold with source-traceable company and accession metadata plus candidate annotation records for human review.",
-  "source_type": "sec_submissions_metadata",
-  "example_count": 16,
-  "annotation_method": "candidate_labels_pending_human_review",
-  "review_status": "candidate",
-  "created_at": "2026-08-11T00:00:00Z",
+  "description": "Real SEC 10-Q filing-pair benchmark with human-reviewed seed labels, Round 1 source-traceable candidate expansion, and automated second-pass review metadata.",
+  "example_count": 80,
+  "examples_path": "real_sec_v1/examples.json",
   "labels": [
     "section_matching",
     "passage_alignment",
@@ -18,6 +16,15 @@
     "contradiction_candidate",
     "evidence_quality"
   ],
+  "limitations": [
+    "Approved labels are human-reviewed gold labels; candidate labels are not gold until a human reviewer explicitly approves them.",
+    "Automated review metadata supports a provisional track only and must not be reported as human gold.",
+    "Round 1 candidate expansion stores SEC identifiers, short excerpts, and reviewability metadata only; full filing text is reconstructed from official SEC URLs when needed.",
+    "Real SEC evaluator may report NOT_EVALUATED for tasks without system predictions or sufficient approved labels.",
+    "Standard CI remains offline and deterministic; live SEC refresh is a separate explicit workflow."
+  ],
+  "review_status": "mixed_reviewed_and_candidate",
+  "source_type": "sec_submissions_metadata",
   "supported_metrics": [
     "accuracy",
     "precision",
@@ -26,10 +33,5 @@
     "false_positive_rate",
     "error_analysis"
   ],
-  "limitations": [
-    "Initial version stores SEC identifiers, pair metadata, and candidate labels only; full filing text is reconstructed explicitly from SEC sources when needed.",
-    "No candidate annotation in this dataset is a gold or approved label until a human reviewer marks it approved with review metadata.",
-    "Standard CI must remain offline and deterministic; live SEC refresh is a separate explicit workflow."
-  ],
-  "examples_path": "real_sec_v1/examples.json"
+  "task": "real_sec_benchmark"
 }
