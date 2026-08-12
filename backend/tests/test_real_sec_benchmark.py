@@ -24,13 +24,23 @@ def test_real_sec_benchmark_schema_validates() -> None:
 
     summary = validate_real_sec_payload(payload)
 
-    assert summary.company_count == 12
-    assert summary.filing_pair_count == 24
-    assert summary.annotation_count == 16
-    assert summary.status_counts == {"approved": 10, "rejected": 4, "uncertain": 2}
+    assert summary.company_count == 20
+    assert summary.filing_pair_count == 32
+    assert summary.annotation_count == 80
+    assert summary.status_counts == {
+        "approved": 10,
+        "candidate": 64,
+        "rejected": 4,
+        "uncertain": 2,
+    }
     assert summary.approved_count == 10
     assert summary.uncertain_count == 2
-    assert summary.negative_control_count >= 6
+    assert summary.automated_review_counts == {
+        "AUTOMATED_READY": 35,
+        "AUTOMATED_UNCERTAIN": 29,
+    }
+    assert summary.negative_control_count >= 30
+    assert set(summary.task_counts.values()) == {10}
 
 
 def test_real_sec_benchmark_contains_hardened_source_review_metadata() -> None:
@@ -38,7 +48,7 @@ def test_real_sec_benchmark_contains_hardened_source_review_metadata() -> None:
 
     for example in payload["examples"]:
         review = example["source_review"]
-        assert example["annotation_status"] in {"approved", "rejected", "uncertain"}
+        assert example["annotation_status"] in {"approved", "candidate", "rejected", "uncertain"}
         assert review["reviewability_status"] in {
             "READY_FOR_HUMAN_REVIEW",
             "NEEDS_MORE_SOURCE_EVIDENCE",
@@ -55,6 +65,15 @@ def test_real_sec_benchmark_contains_hardened_source_review_metadata() -> None:
             assert example["review"]["reviewed_by"] == "Samarth Shinde"
             assert review["reviewability_status"] == "READY_FOR_HUMAN_REVIEW"
             assert review["replacement_required_reason"] is None
+        if example["id"].startswith("real-sec-v1-r1-"):
+            automated_review = example["automated_review"]
+            assert example["annotation_status"] == "candidate"
+            assert automated_review["reviewer_type"] == "automated"
+            assert automated_review["status"] in {
+                "AUTOMATED_READY",
+                "AUTOMATED_UNCERTAIN",
+            }
+            assert automated_review["notes"].endswith("This is not human approval.")
 
 
 def test_real_sec_benchmark_records_phase10c_label_corrections() -> None:
@@ -170,7 +189,17 @@ def test_real_sec_pending_queue_lists_candidate_examples() -> None:
 
     queue = pending_annotation_queue(payload["examples"])
 
-    assert queue == []
+    assert len(queue) == 64
+    assert {item["task_type"] for item in queue} == {
+        "contradiction_candidate",
+        "disclosure_change",
+        "evidence_quality",
+        "financial_claim",
+        "passage_alignment",
+        "section_matching",
+        "verification",
+        "xbrl_resolution",
+    }
 
 
 @pytest.mark.asyncio
@@ -180,10 +209,16 @@ async def test_real_sec_evaluator_integrates_with_phase8_runner() -> None:
 
     result = await evaluate_manifest(manifest)
 
-    assert len(examples) == 16
+    assert len(examples) == 80
     assert result.suite == "real_sec_benchmark"
     assert result.metrics["annotation_summary"]["approved_examples"] == 10
+    assert result.metrics["annotation_summary"]["human_gold_examples"] == 10
+    assert result.metrics["annotation_summary"]["provisional_automated_ready_examples"] == 35
     assert result.metrics["tasks"]["contradiction_candidate"]["status"] == "not_evaluated"
+    assert (
+        result.metrics["provisional_tasks"]["disclosure_change"]["reason"]
+        == "No provisional automated-ready real-sec labels for disclosure_change."
+    )
 
 
 def test_real_sec_error_analysis_reports_failures_for_approved_predictions() -> None:
