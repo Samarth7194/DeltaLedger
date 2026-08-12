@@ -17,6 +17,7 @@ from app.api.schemas import (
     SectionSummaryResponse,
     TableSummaryResponse,
 )
+from app.core.auth import AuthPrincipal, require_role
 from app.db.session import get_session
 from app.repositories.chunk_repository import ChunkRepository
 from app.repositories.filing_repository import FilingRepository
@@ -26,10 +27,15 @@ from app.workers.tasks import enqueue_process_filing
 
 router = APIRouter(prefix="/filings")
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
+AnalystDep = Annotated[AuthPrincipal, Depends(require_role("analyst"))]
 
 
 @router.post("/{filing_id}/process", status_code=status.HTTP_202_ACCEPTED)
-async def process_filing(filing_id: uuid.UUID, request: Request) -> ResponseEnvelope:
+async def process_filing(
+    filing_id: uuid.UUID,
+    request: Request,
+    _principal: AnalystDep,
+) -> ResponseEnvelope:
     job_id = enqueue_process_filing(filing_id)
     data = ProcessingJobResponse(filing_id=filing_id, job_id=job_id, status="queued")
     return ResponseEnvelope(

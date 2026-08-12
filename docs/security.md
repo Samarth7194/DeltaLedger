@@ -43,6 +43,8 @@ Structured logs include request IDs, analysis IDs, node names, durations, retry 
 
 Production configuration fails fast when it detects:
 
+- authentication disabled
+- missing or placeholder `AUTH_SECRET_KEY`
 - wildcard or localhost CORS origins
 - filesystem object storage
 - memory workflow checkpointing
@@ -55,9 +57,23 @@ The production override for fake providers is intentionally explicit:
 
 ## Review And Resume Boundaries
 
-Human-review and workflow-resume endpoints should be protected by application
-authorization before public deployment. Current local/portfolio builds focus on
-workflow correctness and do not claim multi-user authorization coverage.
+Local and CI profiles keep `AUTH_ENABLED=false` by default so deterministic
+tests and offline demos do not need secrets. Production requires
+`AUTH_ENABLED=true` and a non-placeholder `AUTH_SECRET_KEY`.
+
+Authentication uses short-lived HMAC-signed bearer tokens with role claims. The
+role hierarchy is:
+
+- `analyst`: browse data, create analyses, run retrieval/processing workflows,
+  and view findings, evidence, and reports.
+- `reviewer`: analyst capabilities plus review submission, fact-candidate
+  selection, workflow resume, and cancellation.
+- `admin`: reviewer capabilities plus future administrative operations when
+  such operations exist.
+
+Protected operations return `401` when authentication is missing or invalid and
+`403` when the authenticated role is insufficient. The current implementation
+does not claim multi-tenancy or organization-level isolation.
 
 ## Safe Rendering
 

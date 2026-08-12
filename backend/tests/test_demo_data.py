@@ -34,6 +34,8 @@ async def test_demo_reset_refuses_to_run_in_production() -> None:
         minio_secret_key="prod-secret",
         sec_user_agent="DeltaLedgerAI/0.1 ops@deltaledger.local",
         readiness_dependency_checks_enabled=True,
+        auth_enabled=True,
+        auth_secret_key="0123456789abcdef0123456789abcdef",
         allow_fake_models_in_production=True,
     )
 

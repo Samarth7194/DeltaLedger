@@ -17,6 +17,7 @@ from app.api.schemas import (
     ResponseMeta,
     SectionMatchResponse,
 )
+from app.core.auth import AuthPrincipal, require_role
 from app.core.config import get_settings
 from app.db.session import get_session
 from app.repositories.comparison_repository import ComparisonRepository
@@ -25,6 +26,8 @@ from app.workers.tasks import enqueue_process_comparison
 
 router = APIRouter(prefix="/comparisons")
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
+AnalystDep = Annotated[AuthPrincipal, Depends(require_role("analyst"))]
+ReviewerDep = Annotated[AuthPrincipal, Depends(require_role("reviewer"))]
 
 
 @router.post("", status_code=status.HTTP_202_ACCEPTED)
@@ -32,6 +35,7 @@ async def create_comparison(
     payload: ComparisonCreateRequest,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     service = FilingComparisonService(session, get_settings())
     try:
@@ -174,6 +178,7 @@ async def review_change(
     payload: ChangeReviewRequest,
     request: Request,
     session: SessionDep,
+    _principal: ReviewerDep,
 ) -> ResponseEnvelope:
     repo = ComparisonRepository(session)
     change = await repo.get_change(comparison_id, change_id)

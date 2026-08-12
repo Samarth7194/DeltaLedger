@@ -13,6 +13,7 @@ from app.api.schemas import (
     RetrievalRequest,
     RetrievalResultResponse,
 )
+from app.core.auth import AuthPrincipal, require_role
 from app.core.config import get_settings
 from app.db.session import get_session
 from app.repositories.chunk_repository import ChunkRepository
@@ -20,6 +21,7 @@ from app.services.retrieval_service import HybridSearchRequest, RetrievalService
 
 router = APIRouter(prefix="/retrieval")
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
+AnalystDep = Annotated[AuthPrincipal, Depends(require_role("analyst"))]
 
 
 @router.post("/search")
@@ -27,6 +29,7 @@ async def hybrid_search(
     request: RetrievalRequest,
     http_request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     service = _service(session)
     results = await service.hybrid_search(_to_service_request(request))
@@ -41,6 +44,7 @@ async def dense_search(
     request: RetrievalRequest,
     http_request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     service = _service(session)
     results = await service.dense_search(_to_service_request(request))
@@ -67,6 +71,7 @@ async def lexical_search(
     request: RetrievalRequest,
     http_request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     service = _service(session)
     results = await service.lexical_search(_to_service_request(request))

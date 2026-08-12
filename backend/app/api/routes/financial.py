@@ -17,6 +17,7 @@ from app.api.schemas import (
     ResponseEnvelope,
     ResponseMeta,
 )
+from app.core.auth import AuthPrincipal, require_role
 from app.db.session import get_session
 from app.repositories.financial_repository import FinancialRepository
 from app.workers.tasks import (
@@ -27,10 +28,16 @@ from app.workers.tasks import (
 
 router = APIRouter()
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
+AnalystDep = Annotated[AuthPrincipal, Depends(require_role("analyst"))]
+ReviewerDep = Annotated[AuthPrincipal, Depends(require_role("reviewer"))]
 
 
 @router.post("/filings/{filing_id}/financial-claims/extract", status_code=status.HTTP_202_ACCEPTED)
-async def extract_filing_claims(filing_id: uuid.UUID, request: Request) -> ResponseEnvelope:
+async def extract_filing_claims(
+    filing_id: uuid.UUID,
+    request: Request,
+    _principal: AnalystDep,
+) -> ResponseEnvelope:
     job_id = enqueue_extract_financial_claims(filing_id)
     data = FinancialJobResponse(entity_id=filing_id, job_id=job_id, status="queued")
     return ResponseEnvelope(data=data.model_dump(), meta=_meta(request))
@@ -88,6 +95,7 @@ async def review_fact_candidate(
     payload: ClaimFactCandidateReviewRequest,
     request: Request,
     session: SessionDep,
+    _principal: ReviewerDep,
 ) -> ResponseEnvelope:
     repo = FinancialRepository(session)
     if await repo.get_claim(claim_id) is None:
@@ -109,6 +117,7 @@ async def verify_claim(
     claim_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     if await FinancialRepository(session).get_claim(claim_id) is None:
         raise HTTPException(status_code=404, detail="Financial claim not found.")
@@ -138,6 +147,7 @@ async def review_claim(
     payload: FinancialClaimReviewRequest,
     request: Request,
     session: SessionDep,
+    _principal: ReviewerDep,
 ) -> ResponseEnvelope:
     repo = FinancialRepository(session)
     claim = await repo.get_claim(claim_id)
@@ -168,6 +178,7 @@ async def review_claim(
 async def verify_comparison_financials(
     comparison_id: uuid.UUID,
     request: Request,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     job_id = enqueue_verify_comparison_financials(comparison_id)
     data = FinancialJobResponse(entity_id=comparison_id, job_id=job_id, status="queued")

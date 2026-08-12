@@ -15,6 +15,7 @@ from app.api.schemas import (
     ResponseEnvelope,
     ResponseMeta,
 )
+from app.core.auth import AuthPrincipal, require_role
 from app.db.session import get_session
 from app.repositories.comparison_repository import ComparisonRepository
 from app.repositories.contradiction_repository import ContradictionRepository
@@ -22,6 +23,8 @@ from app.workers.tasks import enqueue_analyze_contradictions
 
 router = APIRouter()
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
+AnalystDep = Annotated[AuthPrincipal, Depends(require_role("analyst"))]
+ReviewerDep = Annotated[AuthPrincipal, Depends(require_role("reviewer"))]
 
 
 @router.post(
@@ -32,6 +35,7 @@ async def analyze_comparison_contradictions(
     comparison_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     if await ComparisonRepository(session).get_comparison(comparison_id) is None:
         raise HTTPException(status_code=404, detail="Comparison not found.")
@@ -125,6 +129,7 @@ async def review_contradiction(
     payload: ContradictionReviewRequest,
     request: Request,
     session: SessionDep,
+    _principal: ReviewerDep,
 ) -> ResponseEnvelope:
     repo = ContradictionRepository(session)
     finding = await repo.get_finding(finding_id)

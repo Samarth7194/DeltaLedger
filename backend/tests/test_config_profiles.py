@@ -113,6 +113,8 @@ def test_production_profile_requires_real_model_provider_or_explicit_override() 
         "minio_secret_key": "prod-secret",
         "sec_user_agent": "DeltaLedgerAI/0.1 ops@deltaledger.local",
         "readiness_dependency_checks_enabled": True,
+        "auth_enabled": True,
+        "auth_secret_key": "0123456789abcdef0123456789abcdef",
     }
     with pytest.raises(ValueError, match="Production fake model providers"):
         Settings(**base)

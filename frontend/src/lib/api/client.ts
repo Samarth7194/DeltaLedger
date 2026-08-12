@@ -16,9 +16,22 @@ export class ApiError extends Error {
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:8000/api/v1";
+const AUTH_TOKEN_KEY = "deltaledger.authToken";
 
 export function apiBaseUrl() {
   return API_BASE_URL;
+}
+
+export function setApiAuthToken(token: string) {
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(AUTH_TOKEN_KEY, token);
+  }
+}
+
+export function clearApiAuthToken() {
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(AUTH_TOKEN_KEY);
+  }
 }
 
 export async function request<T>(
@@ -26,13 +39,18 @@ export async function request<T>(
   options: RequestInit & { params?: ApiListParams } = {}
 ): Promise<T> {
   const { params, headers, ...init } = options;
+  const requestHeaders = new Headers(headers);
+  requestHeaders.set("Accept", "application/json");
+  if (init.body && !requestHeaders.has("Content-Type")) {
+    requestHeaders.set("Content-Type", "application/json");
+  }
+  const token = authToken();
+  if (token) {
+    requestHeaders.set("Authorization", `Bearer ${token}`);
+  }
   const response = await fetch(`${API_BASE_URL}${path}${queryString(params)}`, {
     ...init,
-    headers: {
-      Accept: "application/json",
-      ...(init.body ? { "Content-Type": "application/json" } : {}),
-      ...headers
-    }
+    headers: requestHeaders
   });
 
   const envelope = await parseEnvelope<T>(response);
@@ -44,6 +62,10 @@ export async function request<T>(
     throw new ApiError(message, response.status, envelope.error?.code, envelope.error?.details);
   }
   return envelope.data;
+}
+
+function authToken() {
+  return typeof window === "undefined" ? undefined : window.localStorage.getItem(AUTH_TOKEN_KEY);
 }
 
 function queryString(params?: ApiListParams) {

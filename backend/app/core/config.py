@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     cors_allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     frontend_url: str | None = None
     readiness_dependency_checks_enabled: bool = False
+    auth_enabled: bool = False
+    auth_secret_key: str | None = None
+    auth_token_ttl_seconds: int = 3600
 
     database_url: str = "postgresql+asyncpg://deltaledger@localhost:5433/deltaledger"
     alembic_database_url: str | None = None
@@ -244,6 +247,7 @@ class Settings(BaseSettings):
             self.workflow_review_low_confidence_threshold,
         )
         _require_positive_int("WORKFLOW_MAX_NODE_ATTEMPTS", self.workflow_max_node_attempts)
+        _require_positive_int("AUTH_TOKEN_TTL_SECONDS", self.auth_token_ttl_seconds)
         if self.workflow_review_min_severity not in {"low", "medium", "high", "critical"}:
             raise ValueError("WORKFLOW_REVIEW_MIN_SEVERITY must be low, medium, high, or critical.")
         if self.workflow_checkpoint_provider not in {"memory", "postgres"}:
@@ -256,6 +260,11 @@ class Settings(BaseSettings):
             raise ValueError("ENVIRONMENT=production requires APP_PROFILE=production.")
         if self.is_production and self.workflow_checkpoint_provider != "postgres":
             raise ValueError("Production workflow checkpointing must use PostgreSQL.")
+        if self.is_production:
+            if not self.auth_enabled:
+                raise ValueError("Production must enable authentication.")
+            if not self.auth_secret_key or _is_placeholder_secret(self.auth_secret_key):
+                raise ValueError("Production AUTH_SECRET_KEY must be a non-placeholder secret.")
         if self.app_profile == "docker":
             _require_host(self.database_url, "postgres", "DATABASE_URL")
             _require_host(self.redis_url, "redis", "REDIS_URL")
@@ -349,6 +358,11 @@ def _require_host(url: str, expected: str, name: str) -> None:
 def _is_placeholder_contact(value: str) -> bool:
     lowered = value.lower()
     return "example.com" in lowered or "your-email" in lowered
+
+
+def _is_placeholder_secret(value: str) -> bool:
+    lowered = value.lower()
+    return lowered in {"change-me", "secret", "password"} or len(value) < 32
 
 
 def _require_unit_interval(name: str, value: float) -> None:

@@ -17,6 +17,7 @@ from app.api.schemas import (
     ResponseEnvelope,
     ResponseMeta,
 )
+from app.core.auth import AuthPrincipal, require_role
 from app.db.session import get_session
 from app.repositories.workflow_repository import WorkflowRepository
 from app.services.analysis_workflow_service import AnalysisWorkflowService, WorkflowError
@@ -27,6 +28,8 @@ from app.workers.tasks import (
 
 router = APIRouter(prefix="/analyses")
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
+AnalystDep = Annotated[AuthPrincipal, Depends(require_role("analyst"))]
+ReviewerDep = Annotated[AuthPrincipal, Depends(require_role("reviewer"))]
 
 
 @router.post("", status_code=status.HTTP_202_ACCEPTED)
@@ -34,6 +37,7 @@ async def create_analysis(
     payload: AnalysisCreateRequest,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     service = AnalysisWorkflowService(session, _settings())
     try:
@@ -126,6 +130,7 @@ async def submit_analysis_review(
     payload: AnalysisReviewSubmitRequest,
     request: Request,
     session: SessionDep,
+    _principal: ReviewerDep,
 ) -> ResponseEnvelope:
     if payload.status not in {
         "approved",
@@ -154,6 +159,7 @@ async def resume_analysis(
     analysis_run_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: ReviewerDep,
 ) -> ResponseEnvelope:
     repo = WorkflowRepository(session)
     run = await repo.get_run(analysis_run_id)
@@ -193,6 +199,7 @@ async def cancel_analysis(
     analysis_run_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: ReviewerDep,
 ) -> ResponseEnvelope:
     try:
         run = await AnalysisWorkflowService(session, _settings()).cancel_analysis(analysis_run_id)
