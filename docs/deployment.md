@@ -44,6 +44,9 @@ LOG_JSON=true
 CORS_ALLOWED_ORIGINS=https://your-frontend.example.com
 FRONTEND_URL=https://your-frontend.example.com
 READINESS_DEPENDENCY_CHECKS_ENABLED=true
+AUTH_ENABLED=true
+AUTH_SECRET_KEY=<32+ character secret from platform secret storage>
+AUTH_TOKEN_TTL_SECONDS=3600
 ```
 
 Database:
@@ -207,6 +210,7 @@ After deploying:
 
 ```bash
 cd backend
+python -m app.cli.production_audit
 python -m app.cli.health all
 python -m app.cli.evaluate --suite all --offline
 ```
@@ -215,6 +219,8 @@ Then verify:
 
 - API docs load at `/api/docs`.
 - Frontend can call `/api/v1/health`.
+- Protected API calls return `401` without a bearer token and `403` for an
+  insufficient role.
 - Worker imports with `dramatiq app.workers.tasks`.
 - A deterministic demo manifest prints with
   `python -m app.cli.seed_demo_data --manifest-only`.

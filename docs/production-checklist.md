@@ -17,6 +17,8 @@ Use this before claiming a deployment is ready.
 - [ ] `APP_PROFILE=production`.
 - [ ] `ENVIRONMENT=production`.
 - [ ] `READINESS_DEPENDENCY_CHECKS_ENABLED=true`.
+- [ ] `AUTH_ENABLED=true`.
+- [ ] `AUTH_SECRET_KEY` is set from secret storage and is not a placeholder.
 - [ ] `CORS_ALLOWED_ORIGINS` contains only HTTPS frontend origins.
 - [ ] `SEC_USER_AGENT` contains real contact information.
 - [ ] Production does not use filesystem object storage.
@@ -27,6 +29,7 @@ Use this before claiming a deployment is ready.
 
 - [ ] `GET /api/v1/health` returns `status=ok`.
 - [ ] `GET /api/v1/ready` returns `status=ready`.
+- [ ] `python -m app.cli.production_audit` passes.
 - [ ] `python -m app.cli.health all` passes.
 - [ ] Worker imports with `dramatiq app.workers.tasks`.
 - [ ] Frontend uses the deployed `NEXT_PUBLIC_API_BASE_URL`.
@@ -39,7 +42,8 @@ Use this before claiming a deployment is ready.
 - [ ] No secrets are committed.
 - [ ] Secrets are set through deployment platform secret storage.
 - [ ] Logs do not expose DB URLs, Redis credentials, object-storage secrets, tokens, or signed URLs.
-- [ ] Review/resume routes are protected before public multi-user deployment.
+- [ ] Review/resume/cancel routes require reviewer or admin role.
+- [ ] Analyst-only tokens cannot submit reviews or resume workflows.
 - [ ] Dependency audit status is reviewed and documented.
 
 ## Release
