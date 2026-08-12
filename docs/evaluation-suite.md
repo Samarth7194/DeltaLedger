@@ -22,8 +22,12 @@ The adapters preserve those examples instead of duplicating them into benchmark
 data files.
 
 Phase 10A also adds `backend/evaluation/datasets/real_sec_v1`, a metadata-only
-real SEC 10-Q benchmark foundation. It stores public SEC identifiers and
-candidate annotation records, not large filing HTML. See
+real SEC 10-Q benchmark foundation. Phase 10E expands that corpus to 80 records:
+10 approved seed labels, 2 uncertain labels, 4 rejected labels, and 64
+candidate labels awaiting human review. Phase 10F separates the 10-label human
+gold track from a provisional automated-reviewed track containing 35
+`AUTOMATED_READY` candidates. It stores public SEC identifiers and short
+evidence excerpts, not large filing HTML. See
 [real-sec-benchmark.md](real-sec-benchmark.md).
 
 ## Command
@@ -65,8 +69,9 @@ Otherwise the metric value is `not_evaluated` or `no_data` with a reason.
 - Evidence: citation resolution, source hash validity, calculation evidence,
   evidence-backed finding rate, and unsupported finding rate.
 - Real SEC benchmark: candidate-label inventory, approved-label metrics when
-  human-reviewed predictions exist, contradiction false-positive rate where
-  labels support it, and task-level error-analysis output.
+  human-reviewed predictions exist, provisional automated-reviewed metrics
+  clearly labelled as non-gold, contradiction false-positive rate where labels
+  support it, and task-level error-analysis output.
 - Human review and workflow operations: return `no_data` until a labelled review
   or operational benchmark dataset exists.
 
