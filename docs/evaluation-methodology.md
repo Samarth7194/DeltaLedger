@@ -141,6 +141,24 @@ reports under `backend/evaluation/reports`.
 The runner never fills placeholder scores. If a labelled dataset or prediction
 artifact is missing, it returns `not_evaluated` or `no_data` with a reason.
 
+## Real SEC Benchmark
+
+`real-sec-v1` extends the same offline runner with source-traceable 10-Q filing
+pairs from public SEC metadata. It is intentionally metadata-only in the
+repository: filing text is reconstructed from CIK, accession, report period, and
+primary document references during explicit review workflows.
+
+Initial annotations are candidate labels. They are not gold labels and are not
+eligible for scored metrics until a human reviewer marks them `approved` with
+review metadata. Candidate, uncertain, rejected, and human-reviewed labels are
+reported in annotation summaries but excluded from accuracy, F1, false-positive,
+and XBRL-resolution metrics.
+
+The real SEC suite uses company-aware development, validation, and test splits.
+It includes negative controls and hard cases for section non-matches, passage
+misalignment, similar-wording non-contradictions, ambiguous XBRL facts, unit
+matching, per-share facts, number normalization, and evidence failures.
+
 See [evaluation-suite.md](evaluation-suite.md),
 [quality-gates.md](quality-gates.md), and
 [confidence-calibration.md](confidence-calibration.md).

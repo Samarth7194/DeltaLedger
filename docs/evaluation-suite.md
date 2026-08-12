@@ -21,6 +21,11 @@ Existing curated fixtures are reused through adapters:
 The adapters preserve those examples instead of duplicating them into benchmark
 data files.
 
+Phase 10A also adds `backend/evaluation/datasets/real_sec_v1`, a metadata-only
+real SEC 10-Q benchmark foundation. It stores public SEC identifiers and
+candidate annotation records, not large filing HTML. See
+[real-sec-benchmark.md](real-sec-benchmark.md).
+
 ## Command
 
 ```powershell
@@ -59,6 +64,9 @@ Otherwise the metric value is `not_evaluated` or `no_data` with a reason.
   rules where the fixture supports them.
 - Evidence: citation resolution, source hash validity, calculation evidence,
   evidence-backed finding rate, and unsupported finding rate.
+- Real SEC benchmark: candidate-label inventory, approved-label metrics when
+  human-reviewed predictions exist, contradiction false-positive rate where
+  labels support it, and task-level error-analysis output.
 - Human review and workflow operations: return `no_data` until a labelled review
   or operational benchmark dataset exists.
 

@@ -41,3 +41,8 @@ Phase 8 automatically.
 - evaluation report artifact upload
 
 It does not weaken existing infrastructure, frontend, or model-smoke jobs.
+
+The real SEC benchmark is included in the offline evaluation workflow, but it is
+not a hard semantic gate until labels are human-approved and an approved
+baseline exists. Candidate labels are validated for schema, traceability, split
+consistency, and negative-control coverage.
