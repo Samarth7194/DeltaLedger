@@ -25,6 +25,8 @@ test-results/
 out/
 dist/
 build/
+frontend/AGENTS.md
+frontend/CLAUDE.md
 
 # Local infrastructure data
 postgres_data/
