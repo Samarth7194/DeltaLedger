@@ -206,6 +206,11 @@ public API URL before building.
 - `/api/v1/ready` returns structured dependency status and 503 when degraded.
 - `python -m app.cli.health all` checks config, database, PGVector, Redis,
   storage configuration, and checkpoint configuration.
+- `python -m app.cli.production_doctor` runs non-destructive diagnostics with
+  masked runtime URLs. It checks configuration, model-provider state,
+  database schema and indexes when reachable, Redis, storage configuration, and
+  checkpoint configuration. Use `--initialize-checkpoint` only when the
+  configured database is intended to allow LangGraph checkpoint table setup.
 
 ## Smoke Tests
 
@@ -214,6 +219,7 @@ After deploying:
 ```bash
 cd backend
 python -m app.cli.production_audit
+python -m app.cli.production_doctor
 python -m app.cli.health all
 python -m app.cli.evaluate --suite all --offline
 ```

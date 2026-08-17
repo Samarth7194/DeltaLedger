@@ -30,6 +30,7 @@ Use this before claiming a deployment is ready.
 - [ ] `GET /api/v1/health` returns `status=ok`.
 - [ ] `GET /api/v1/ready` returns `status=ready`.
 - [ ] `python -m app.cli.production_audit` passes.
+- [ ] `python -m app.cli.production_doctor` reports no blocked checks.
 - [ ] `python -m app.cli.health all` passes.
 - [ ] Worker imports with `dramatiq app.workers.tasks`.
 - [ ] Frontend uses the deployed `NEXT_PUBLIC_API_BASE_URL`.

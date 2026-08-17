@@ -160,6 +160,7 @@ Health checks:
 - Liveness: `GET /api/v1/health`
 - Readiness: `GET /api/v1/ready`
 - Deep CLI: `python -m app.cli.health all`
+- Production doctor: `python -m app.cli.production_doctor`
 
 See [docs/deployment.md](docs/deployment.md) and
 [docs/production-checklist.md](docs/production-checklist.md).
