@@ -113,6 +113,6 @@ object-storage keys by tenant.
 
 ## Current Limitations
 
-The system is not deployed remotely yet, benchmarks are compact, authentication
-is not production-complete, and potential inconsistencies require analyst
+The system is not deployed remotely yet, benchmarks are compact, multi-tenant
+authorization is future work, and potential inconsistencies require analyst
 review. It is not an investment advisor or fraud detector.

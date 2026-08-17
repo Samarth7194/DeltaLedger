@@ -75,6 +75,16 @@ Protected operations return `401` when authentication is missing or invalid and
 `403` when the authenticated role is insufficient. The current implementation
 does not claim multi-tenancy or organization-level isolation.
 
+### API Permission Matrix
+
+| API surface | Required role | Notes |
+| --- | --- | --- |
+| Health and readiness | Public | Responses avoid credential-bearing URLs and detailed secrets. |
+| Company and filing browsing | `analyst` | Covers company lists/details, filing status, sections, tables, and chunks. |
+| Retrieval and analysis creation | `analyst` | Includes hybrid, dense, lexical search and analysis/comparison start routes. |
+| Analysis, comparison, finding, evidence, and report reads | `analyst` | Sensitive analyst output is not anonymously readable in production. |
+| Review submission, fact-candidate selection, resume, and cancel | `reviewer` | `admin` inherits reviewer capability through the role hierarchy. |
+
 ## Safe Rendering
 
 The frontend treats filing-derived content as data. Do not render untrusted SEC

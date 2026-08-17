@@ -43,6 +43,7 @@ Use this before claiming a deployment is ready.
 - [ ] No secrets are committed.
 - [ ] Secrets are set through deployment platform secret storage.
 - [ ] Logs do not expose DB URLs, Redis credentials, object-storage secrets, tokens, or signed URLs.
+- [ ] Company, filing, analysis, finding, evidence, and report reads require analyst or higher role.
 - [ ] Review/resume/cancel routes require reviewer or admin role.
 - [ ] Analyst-only tokens cannot submit reviews or resume workflows.
 - [ ] Dependency audit status is reviewed and documented.
