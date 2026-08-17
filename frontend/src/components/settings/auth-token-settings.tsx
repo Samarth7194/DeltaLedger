@@ -1,0 +1,67 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { KeyRound, LogOut, Save } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { clearApiAuthToken, setApiAuthToken } from "@/lib/api/client";
+
+const AUTH_TOKEN_KEY = "deltaledger.authToken";
+
+export function AuthTokenSettings() {
+  const [token, setToken] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setToken(window.localStorage.getItem(AUTH_TOKEN_KEY) ?? "");
+  }, []);
+
+  function saveToken() {
+    const trimmed = token.trim();
+    if (trimmed) {
+      setApiAuthToken(trimmed);
+      setToken(trimmed);
+      setSaved(true);
+    }
+  }
+
+  function clearToken() {
+    clearApiAuthToken();
+    setToken("");
+    setSaved(false);
+  }
+
+  return (
+    <div className="rounded-md border border-stone-200 bg-stone-50 p-3">
+      <div className="flex items-center gap-2">
+        <KeyRound aria-hidden="true" className="h-4 w-4 text-stone-600" />
+        <h3 className="text-sm font-semibold text-ink-950">API Bearer Token</h3>
+      </div>
+      <label className="mt-3 block text-xs font-medium text-stone-700" htmlFor="api-token">
+        Token
+      </label>
+      <input
+        id="api-token"
+        className="mt-1 w-full rounded-md border border-stone-300 bg-white px-3 py-2 font-mono text-xs outline-none focus:border-ledger-600 focus:ring-2 focus:ring-ledger-200"
+        type="password"
+        autoComplete="off"
+        value={token}
+        onChange={(event) => {
+          setSaved(false);
+          setToken(event.target.value);
+        }}
+      />
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <Button type="button" variant="primary" onClick={saveToken} disabled={!token.trim()}>
+          <Save aria-hidden="true" className="h-4 w-4" />
+          Save
+        </Button>
+        <Button type="button" variant="secondary" onClick={clearToken}>
+          <LogOut aria-hidden="true" className="h-4 w-4" />
+          Clear
+        </Button>
+        {saved ? <span className="text-xs text-emerald-700">Saved for this browser.</span> : null}
+      </div>
+    </div>
+  );
+}
