@@ -61,6 +61,7 @@ async def create_comparison(
 async def list_comparisons(
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
     company_id: uuid.UUID | None = None,
     status_filter: str | None = Query(default=None, alias="status"),
     current_filing_id: uuid.UUID | None = None,
@@ -89,6 +90,7 @@ async def get_comparison(
     comparison_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     repo = ComparisonRepository(session)
     comparison = await repo.get_comparison(comparison_id)
@@ -103,6 +105,7 @@ async def list_section_matches(
     comparison_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     repo = ComparisonRepository(session)
     await _require_comparison(repo, comparison_id)
@@ -118,6 +121,7 @@ async def list_passage_matches(
     comparison_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     repo = ComparisonRepository(session)
     await _require_comparison(repo, comparison_id)
@@ -133,6 +137,7 @@ async def list_changes(
     comparison_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
     change_type: str | None = None,
     risk_category: str | None = None,
     min_materiality: float | None = Query(default=None, ge=0.0, le=1.0),
@@ -163,6 +168,7 @@ async def get_change(
     change_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     repo = ComparisonRepository(session)
     change = await repo.get_change(comparison_id, change_id)

@@ -49,6 +49,7 @@ async def processing_status(
     filing_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     filing = await FilingRepository(session).get(filing_id)
     if filing is None:
@@ -72,6 +73,7 @@ async def list_sections(
     filing_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     sections = await SectionRepository(session).list_sections(filing_id)
     return ResponseEnvelope(
@@ -86,6 +88,7 @@ async def get_section(
     section_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     section = await SectionRepository(session).get_section(filing_id, section_id)
     if section is None:
@@ -104,6 +107,7 @@ async def list_tables(
     filing_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     tables = await SectionRepository(session).list_tables(filing_id)
     data = [
@@ -128,6 +132,7 @@ async def list_chunks(
     filing_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> ResponseEnvelope:

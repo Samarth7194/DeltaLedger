@@ -56,6 +56,7 @@ async def create_analysis(
 async def list_analyses(
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
     company_id: uuid.UUID | None = None,
     status_filter: Annotated[str | None, Query(alias="status")] = None,
     current_filing_id: uuid.UUID | None = None,
@@ -84,6 +85,7 @@ async def get_analysis(
     analysis_run_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     repo = WorkflowRepository(session)
     run = await repo.get_run(analysis_run_id)
@@ -97,6 +99,7 @@ async def list_analysis_events(
     analysis_run_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> ResponseEnvelope:
@@ -115,6 +118,7 @@ async def get_analysis_review(
     analysis_run_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     repo = WorkflowRepository(session)
     review = await repo.get_latest_review(analysis_run_id)
@@ -187,6 +191,7 @@ async def get_analysis_report(
     analysis_run_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     report = await WorkflowRepository(session).get_report(analysis_run_id)
     if report is None:

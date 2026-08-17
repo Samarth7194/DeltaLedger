@@ -48,6 +48,7 @@ async def list_filing_claims(
     filing_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
     canonical_metric: str | None = None,
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
@@ -65,7 +66,12 @@ async def list_filing_claims(
 
 
 @router.get("/financial-claims/{claim_id}")
-async def get_claim(claim_id: uuid.UUID, request: Request, session: SessionDep) -> ResponseEnvelope:
+async def get_claim(
+    claim_id: uuid.UUID,
+    request: Request,
+    session: SessionDep,
+    _principal: AnalystDep,
+) -> ResponseEnvelope:
     claim = await FinancialRepository(session).get_claim(claim_id)
     if claim is None:
         raise HTTPException(status_code=404, detail="Financial claim not found.")
@@ -77,6 +83,7 @@ async def list_fact_candidates(
     claim_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     repo = FinancialRepository(session)
     if await repo.get_claim(claim_id) is None:
@@ -131,6 +138,7 @@ async def get_verification(
     claim_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     repo = FinancialRepository(session)
     if await repo.get_claim(claim_id) is None:
@@ -190,6 +198,7 @@ async def list_comparison_claims(
     comparison_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
     canonical_metric: str | None = None,
     filing_id: uuid.UUID | None = None,
     limit: int = Query(default=100, ge=1, le=500),
@@ -213,6 +222,7 @@ async def list_comparison_verifications(
     comparison_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
     verification_status: str | None = None,
     min_confidence: Decimal | None = None,
 ) -> ResponseEnvelope:

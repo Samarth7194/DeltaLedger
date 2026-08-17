@@ -49,6 +49,7 @@ async def list_comparison_contradictions(
     comparison_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
     contradiction_type: str | None = None,
     severity: str | None = None,
     risk_category: str | None = None,
@@ -83,6 +84,7 @@ async def get_comparison_contradiction_summary(
     comparison_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     if await ComparisonRepository(session).get_comparison(comparison_id) is None:
         raise HTTPException(status_code=404, detail="Comparison not found.")
@@ -95,6 +97,7 @@ async def get_contradiction(
     finding_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     repo = ContradictionRepository(session)
     finding = await repo.get_finding(finding_id)
@@ -112,6 +115,7 @@ async def list_contradiction_evidence(
     finding_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     repo = ContradictionRepository(session)
     if await repo.get_finding(finding_id) is None:

@@ -14,18 +14,21 @@ from app.api.schemas import (
     ResponseEnvelope,
     ResponseMeta,
 )
+from app.core.auth import AuthPrincipal, require_role
 from app.db.session import get_session
 from app.repositories.company_repository import CompanyRepository
 from app.repositories.filing_repository import FilingRepository
 
 router = APIRouter(prefix="/companies")
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
+AnalystDep = Annotated[AuthPrincipal, Depends(require_role("analyst"))]
 
 
 @router.get("")
 async def list_companies(
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
     search: str | None = None,
     ticker: str | None = None,
     industry: str | None = None,
@@ -54,6 +57,7 @@ async def get_company(
     company_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
 ) -> ResponseEnvelope:
     repo = CompanyRepository(session)
     company = await repo.get(company_id)
@@ -72,6 +76,7 @@ async def list_company_filings(
     company_id: uuid.UUID,
     request: Request,
     session: SessionDep,
+    _principal: AnalystDep,
     form_type: str | None = "10-Q",
     ingestion_status: str | None = None,
     report_period_from: date | None = None,
