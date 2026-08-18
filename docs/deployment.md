@@ -157,6 +157,22 @@ configured separately for filings and reports. Avoid logging presigned URLs.
 
 ## Backend Deployment
 
+Render native Python service settings:
+
+```text
+Runtime: Python
+Root Directory: backend
+Build Command: python -m pip install --upgrade pip setuptools wheel && python -m pip install -e .
+Pre-Deploy Command: python -m alembic upgrade head
+Start Command: python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
+Health Check Path: /api/v1/health
+Python Version: 3.12
+```
+
+The repository also includes `render.yaml` for Blueprint-managed API and worker
+services. If an existing Render dashboard service is not managed by the
+Blueprint, update the dashboard fields manually to match the values above.
+
 API command:
 
 ```bash
@@ -193,6 +209,16 @@ dramatiq app.workers.tasks
 Run workers as a separate service from the API. Tune worker process count at the
 platform level. Each task creates its own SQLAlchemy async session and uses
 PostgreSQL advisory locks for duplicate workflow prevention.
+
+Render worker settings:
+
+```text
+Runtime: Python
+Root Directory: backend
+Build Command: python -m pip install --upgrade pip setuptools wheel && python -m pip install -e .
+Start Command: dramatiq app.workers.tasks
+Python Version: 3.12
+```
 
 ## Frontend Deployment
 

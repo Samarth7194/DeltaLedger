@@ -1,0 +1,104 @@
+services:
+  - type: web
+    name: deltaledger-api
+    runtime: python
+    rootDir: backend
+    plan: starter
+    branch: main
+    autoDeploy: true
+    buildCommand: python -m pip install --upgrade pip setuptools wheel && python -m pip install -e .
+    preDeployCommand: python -m alembic upgrade head
+    startCommand: python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: APP_PROFILE
+        value: production
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_JSON
+        value: "true"
+      - key: READINESS_DEPENDENCY_CHECKS_ENABLED
+        value: "true"
+      - key: AUTH_ENABLED
+        value: "true"
+      - key: AUTH_SECRET_KEY
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: ALEMBIC_DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: WORKFLOW_CHECKPOINT_PROVIDER
+        value: postgres
+      - key: OBJECT_STORAGE_PROVIDER
+        value: minio
+      - key: MINIO_ENDPOINT
+        sync: false
+      - key: MINIO_ACCESS_KEY
+        sync: false
+      - key: MINIO_SECRET_KEY
+        sync: false
+      - key: MINIO_BUCKET_FILINGS
+        sync: false
+      - key: MINIO_BUCKET_REPORTS
+        sync: false
+      - key: SEC_USER_AGENT
+        sync: false
+      - key: ALLOW_FAKE_MODELS_IN_PRODUCTION
+        value: "true"
+
+  - type: worker
+    name: deltaledger-worker
+    runtime: python
+    rootDir: backend
+    plan: starter
+    branch: main
+    autoDeploy: true
+    buildCommand: python -m pip install --upgrade pip setuptools wheel && python -m pip install -e .
+    startCommand: dramatiq app.workers.tasks
+    envVars:
+      - key: APP_PROFILE
+        value: production
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_JSON
+        value: "true"
+      - key: READINESS_DEPENDENCY_CHECKS_ENABLED
+        value: "true"
+      - key: AUTH_ENABLED
+        value: "true"
+      - key: AUTH_SECRET_KEY
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: ALEMBIC_DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: WORKFLOW_CHECKPOINT_PROVIDER
+        value: postgres
+      - key: OBJECT_STORAGE_PROVIDER
+        value: minio
+      - key: MINIO_ENDPOINT
+        sync: false
+      - key: MINIO_ACCESS_KEY
+        sync: false
+      - key: MINIO_SECRET_KEY
+        sync: false
+      - key: MINIO_BUCKET_FILINGS
+        sync: false
+      - key: MINIO_BUCKET_REPORTS
+        sync: false
+      - key: SEC_USER_AGENT
+        sync: false
+      - key: ALLOW_FAKE_MODELS_IN_PRODUCTION
+        value: "true"
