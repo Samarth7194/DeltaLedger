@@ -222,7 +222,7 @@ Python Version: 3.12
 
 ## Frontend Deployment
 
-Use Node `20.20.x`, `npm ci`, and `npm run build`. The frontend is configured
+Use Node `24.x`, `npm ci`, and `npm run build`. The frontend is configured
 for Next.js `16.3.0` standalone output. Set `NEXT_PUBLIC_API_BASE_URL` to the
 public API URL before building.
 
@@ -238,6 +238,39 @@ public API URL before building.
   checkpoint configuration. Use `--initialize-checkpoint` only when the
   configured database is intended to allow LangGraph checkpoint table setup.
 
+## Real AI Provider Configuration
+
+Local and CI runs can keep the deterministic fake providers. Production real
+provider mode uses `openai_compatible` for hosted chat/embedding endpoints and
+keeps deterministic XBRL matching, arithmetic verification, and metric
+resolution local.
+
+Set only environment variable names, never credentials in source control:
+
+```text
+AI_PROVIDER_API_KEY
+AI_PROVIDER_BASE_URL
+AI_PROVIDER_TIMEOUT_SECONDS
+AI_PROVIDER_MAX_RETRIES
+AI_PROVIDER_INPUT_TOKEN_COST_USD_PER_MILLION
+AI_PROVIDER_OUTPUT_TOKEN_COST_USD_PER_MILLION
+EMBEDDING_PROVIDER=openai_compatible
+EMBEDDING_MODEL
+EMBEDDING_MODEL_NAME
+CHANGE_CLASSIFIER_PROVIDER=openai_compatible
+CHANGE_CLASSIFIER_MODEL
+CLAIM_EXTRACTOR_PROVIDER=openai_compatible
+CLAIM_EXTRACTOR_MODEL
+CONTRADICTION_CLASSIFIER_PROVIDER=openai_compatible
+CONTRADICTION_CLASSIFIER_MODEL
+ALLOW_FAKE_MODELS_IN_PRODUCTION=false
+```
+
+Run `python -m app.cli.production_doctor` after setting these values. The
+doctor reports configured provider/model metadata, missing credentials, and any
+fake providers that would block production when fake mode is disabled. It never
+prints API keys.
+
 ## Smoke Tests
 
 After deploying:
@@ -248,6 +281,7 @@ python -m app.cli.production_audit
 python -m app.cli.production_doctor
 python -m app.cli.health all
 python -m app.cli.evaluate --suite all --offline
+python -m app.cli.evaluate_providers --suite all --provider openai_compatible --model <model> --offline
 ```
 
 Then verify:

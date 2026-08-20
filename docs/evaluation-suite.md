@@ -88,3 +88,30 @@ CI providers from configured local or managed providers. The current default
 configuration reports `NOT_EVALUATED_FAKE_ONLY_CONFIGURATION`; if Hugging Face
 inference embeddings are selected without `HF_TOKEN`, the manifest reports
 `BLOCKED_EXTERNAL_CREDENTIAL` instead of failing the whole offline benchmark.
+OpenAI-compatible hosted providers use `AI_PROVIDER_API_KEY` and
+`AI_PROVIDER_BASE_URL`; if a real provider is selected without credentials, the
+manifest reports `BLOCKED_EXTERNAL_CREDENTIAL`.
+
+Provider comparison starts with the safe offline configuration command:
+
+```powershell
+Set-Location backend
+python -m app.cli.evaluate_providers --suite all --provider openai_compatible --model <model> --offline
+```
+
+Live provider benchmark runs are intentionally gated because they can incur API
+cost. Do not run a paid benchmark until a provider, model, budget, suite, and
+review plan are selected.
+
+## Monitoring Signals
+
+Real provider outputs include versioned inference metadata where available:
+provider, provider type, model, model version, prompt version, timestamp,
+latency, retry count, structured-output parse status, token usage, and estimated
+cost when token prices are configured. Evaluation reports include an
+`ai_monitoring` section that can summarize these records and human-feedback
+statuses such as approved, rejected, edited, and uncertain.
+
+This is quality monitoring and provider-performance monitoring. It should not
+be described as traditional statistical model drift unless a future signal
+actually supports that claim.

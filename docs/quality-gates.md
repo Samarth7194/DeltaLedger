@@ -46,3 +46,13 @@ The real SEC benchmark is included in the offline evaluation workflow, but it is
 not a hard semantic gate until labels are human-approved and an approved
 baseline exists. Candidate labels are validated for schema, traceability, split
 consistency, and negative-control coverage.
+
+Provider and prompt changes should follow this loop:
+
+1. Configure the candidate provider/model with environment variables.
+2. Run the offline evaluation report and provider manifest.
+3. Run an explicitly approved live benchmark only when API cost is accepted.
+4. Compare provider, model, prompt version, dataset version, and code version.
+5. Promote the better configuration.
+6. Monitor latency, failures, invalid structured outputs, token/cost metadata,
+   and human-feedback quality signals after deployment.

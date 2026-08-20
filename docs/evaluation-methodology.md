@@ -141,6 +141,16 @@ reports under `backend/evaluation/reports`.
 The runner never fills placeholder scores. If a labelled dataset or prediction
 artifact is missing, it returns `not_evaluated` or `no_data` with a reason.
 
+Provider/model comparison uses the same benchmark metadata and can be prepared
+with `python -m app.cli.evaluate_providers --suite all --provider openai_compatible
+--model <model> --offline`. Live external provider evaluation is intentionally
+gated so API keys, provider choice, suite scope, and cost budget are selected
+before paid calls run.
+
+DeltaLedger uses pretrained or hosted AI models for language and embedding
+tasks. It does not claim to train a foundation model, and deterministic
+financial verification remains deterministic.
+
 ## Real SEC Benchmark
 
 `real-sec-v1` extends the same offline runner with source-traceable 10-Q filing
