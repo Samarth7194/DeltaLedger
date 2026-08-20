@@ -296,6 +296,28 @@ CONTRADICTION_CLASSIFIER_MODEL
 ALLOW_FAKE_MODELS_IN_PRODUCTION=false
 ```
 
+For Google Gemini Developer API through its OpenAI-compatible endpoint, use:
+
+```text
+AI_PROVIDER_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+EMBEDDING_PROVIDER=openai_compatible
+EMBEDDING_MODEL=gemini-embedding-001
+EMBEDDING_MODEL_NAME=gemini-embedding-001
+EMBEDDING_DIMENSION=1024
+EMBEDDING_DIMENSIONS=1024
+CHANGE_CLASSIFIER_PROVIDER=openai_compatible
+CHANGE_CLASSIFIER_MODEL=gemini-2.5-flash
+CLAIM_EXTRACTOR_PROVIDER=openai_compatible
+CLAIM_EXTRACTOR_MODEL=gemini-2.5-flash
+CONTRADICTION_CLASSIFIER_PROVIDER=openai_compatible
+CONTRADICTION_CLASSIFIER_MODEL=gemini-2.5-flash
+ALLOW_FAKE_MODELS_IN_PRODUCTION=false
+```
+
+The OpenAI-compatible embedding adapter sends the configured
+`EMBEDDING_DIMENSION` as the embeddings `dimensions` request field. Keep this at
+`1024` because the PostgreSQL column is `vector(1024)`.
+
 Run `python -m app.cli.production_doctor` after setting these values. The
 doctor reports configured provider/model metadata, missing credentials, and any
 fake providers that would block production when fake mode is disabled. It never

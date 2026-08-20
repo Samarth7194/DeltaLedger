@@ -154,7 +154,11 @@ class OpenAICompatibleEmbeddingProvider:
         self.last_metadata: dict[str, object] | None = None
 
     async def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        vectors, metadata = await self._client.embeddings(model=self.model_name, inputs=texts)
+        vectors, metadata = await self._client.embeddings(
+            model=self.model_name,
+            inputs=texts,
+            dimensions=self.dimension,
+        )
         if self.normalize:
             vectors = [_normalize_vector(vector) for vector in vectors]
         self.last_metadata = metadata.model_dump()

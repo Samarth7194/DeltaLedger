@@ -39,11 +39,12 @@ class OpenAICompatibleClient:
         *,
         model: str,
         inputs: list[str],
+        dimensions: int,
     ) -> tuple[list[list[float]], InferenceMetadata]:
         started = time.perf_counter()
         response, retry_count = await self._post(
             "/embeddings",
-            {"model": model, "input": inputs},
+            {"model": model, "input": inputs, "dimensions": dimensions},
         )
         try:
             vectors = [

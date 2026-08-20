@@ -31,6 +31,7 @@ class _Response:
 
 class _Client:
     payloads: list[dict[str, object]] = []
+    requests: list[dict[str, object]] = []
 
     def __init__(self, *args, **kwargs) -> None:
         pass
@@ -42,6 +43,12 @@ class _Client:
         return None
 
     async def post(self, *args, **kwargs) -> _Response:
+        self.requests.append(
+            {
+                "url": args[0] if args else None,
+                "json": kwargs.get("json"),
+            }
+        )
         return _Response(self.payloads.pop(0))
 
 
@@ -85,6 +92,7 @@ async def test_openai_compatible_change_classifier_parses_metadata(monkeypatch) 
             }
         )
     ]
+    _Client.requests = []
     monkeypatch.setattr("app.ai.openai_compatible.httpx.AsyncClient", _Client)
     classifier = create_change_classifier(
         _settings(
@@ -128,6 +136,7 @@ async def test_openai_compatible_claim_extractor_parses_claims(monkeypatch) -> N
             }
         )
     ]
+    _Client.requests = []
     monkeypatch.setattr("app.ai.openai_compatible.httpx.AsyncClient", _Client)
     extractor = create_claim_extractor(
         "openai_compatible",
@@ -160,6 +169,7 @@ async def test_openai_compatible_contradiction_classifier_parses_output(monkeypa
             }
         )
     ]
+    _Client.requests = []
     monkeypatch.setattr("app.ai.openai_compatible.httpx.AsyncClient", _Client)
     classifier = create_contradiction_classifier(
         "openai_compatible",
@@ -189,6 +199,7 @@ async def test_openai_compatible_embedding_provider_parses_vectors(monkeypatch) 
             "usage": {"prompt_tokens": 2, "total_tokens": 2},
         }
     ]
+    _Client.requests = []
     monkeypatch.setattr("app.ai.openai_compatible.httpx.AsyncClient", _Client)
     service = create_embedding_service(
         _settings(
@@ -204,6 +215,65 @@ async def test_openai_compatible_embedding_provider_parses_vectors(monkeypatch) 
 
     assert len(vectors) == 2
     assert vectors[0] == [1.0, 0.0, 0.0]
+    assert _Client.requests[0]["json"] == {
+        "model": "test-embedding-model",
+        "input": ["a", "b"],
+        "dimensions": 3,
+    }
+
+
+@pytest.mark.asyncio
+async def test_openai_compatible_embedding_request_uses_configured_1024_dimensions(
+    monkeypatch,
+) -> None:
+    _Client.payloads = [
+        {
+            "model": "gemini-embedding-001",
+            "data": [{"index": 0, "embedding": [1.0] + [0.0] * 1023}],
+            "usage": {"prompt_tokens": 1, "total_tokens": 1},
+        }
+    ]
+    _Client.requests = []
+    monkeypatch.setattr("app.ai.openai_compatible.httpx.AsyncClient", _Client)
+    service = create_embedding_service(
+        _settings(
+            embedding_provider="openai_compatible",
+            embedding_model="gemini-embedding-001",
+            embedding_model_name="gemini-embedding-001",
+            embedding_dimension=1024,
+            embedding_dimensions=1024,
+        )
+    )
+
+    vectors = await service.embed_documents(["cash flow disclosure"])
+
+    assert len(vectors[0]) == 1024
+    assert dict(_Client.requests[0]["json"])["dimensions"] == 1024
+
+
+@pytest.mark.asyncio
+async def test_openai_compatible_embedding_dimension_mismatch_fails_clearly(monkeypatch) -> None:
+    _Client.payloads = [
+        {
+            "model": "gemini-embedding-001",
+            "data": [{"index": 0, "embedding": [1.0, 0.0, 0.0]}],
+            "usage": {"prompt_tokens": 1, "total_tokens": 1},
+        }
+    ]
+    _Client.requests = []
+    monkeypatch.setattr("app.ai.openai_compatible.httpx.AsyncClient", _Client)
+    service = create_embedding_service(
+        _settings(
+            embedding_provider="openai_compatible",
+            embedding_model="gemini-embedding-001",
+            embedding_model_name="gemini-embedding-001",
+            embedding_dimension=1024,
+            embedding_dimensions=1024,
+        )
+    )
+
+    with pytest.raises(ValueError, match="Embedding vector has dimension 3; expected 1024"):
+        await service.embed_documents(["cash flow disclosure"])
 
 
 def test_ai_monitoring_summarizes_inference_metadata_and_review_outcomes() -> None:
