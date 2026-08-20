@@ -238,6 +238,36 @@ public API URL before building.
   checkpoint configuration. Use `--initialize-checkpoint` only when the
   configured database is intended to allow LangGraph checkpoint table setup.
 
+## Frontend Login
+
+When `AUTH_ENABLED=true`, the frontend settings page obtains a signed bearer
+token from:
+
+```text
+POST /api/v1/auth/token
+```
+
+Configure these backend environment variables in Render:
+
+```text
+AUTH_SECRET_KEY
+AUTH_TOKEN_TTL_SECONDS
+AUTH_LOGIN_USERNAME
+AUTH_LOGIN_PASSWORD
+AUTH_LOGIN_ROLE
+```
+
+`AUTH_SECRET_KEY` signs tokens and must not be used as the browser token.
+`AUTH_LOGIN_PASSWORD` is the separate login password and should be a long
+non-placeholder secret. The response token has the existing DeltaLedger format:
+
+```text
+base64url(json-payload).base64url(hmac-sha256-signature)
+```
+
+The browser stores the issued token under `deltaledger.authToken` and sends it
+as `Authorization: Bearer <token>`.
+
 ## Real AI Provider Configuration
 
 Local and CI runs can keep the deterministic fake providers. Production real

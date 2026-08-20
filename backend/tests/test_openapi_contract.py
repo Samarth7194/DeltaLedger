@@ -32,6 +32,7 @@ def test_openapi_documents_bearer_auth_and_public_route_boundary() -> None:
 
     assert "HTTPBearer" in schema["components"]["securitySchemes"]
     assert public_routes == {
+        ("POST", "/api/v1/auth/token"),
         ("GET", "/api/v1/health"),
         ("GET", "/api/v1/ready"),
     }

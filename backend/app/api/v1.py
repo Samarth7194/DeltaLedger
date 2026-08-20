@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from app.api.routes import (
     analyses,
+    auth,
     companies,
     comparisons,
     contradictions,
@@ -15,6 +16,7 @@ from app.api.routes import (
 
 api_router = APIRouter()
 api_router.include_router(health.router, tags=["system"])
+api_router.include_router(auth.router, tags=["auth"])
 api_router.include_router(companies.router, tags=["companies"])
 api_router.include_router(filings.router, tags=["filings"])
 api_router.include_router(retrieval.router, tags=["retrieval"])

@@ -62,7 +62,19 @@ tests and offline demos do not need secrets. Production requires
 `AUTH_ENABLED=true` and a non-placeholder `AUTH_SECRET_KEY`.
 
 Authentication uses short-lived HMAC-signed bearer tokens with role claims. The
-role hierarchy is:
+frontend obtains those tokens through `POST /api/v1/auth/token` using
+`AUTH_LOGIN_USERNAME` and `AUTH_LOGIN_PASSWORD`; the password is a deployment
+secret and is not committed. `AUTH_SECRET_KEY` signs tokens and must not be used
+directly as a browser token.
+
+The token body is a base64url JSON payload containing `sub`, `role`, `iat`, and
+`exp`, followed by a base64url HMAC-SHA256 signature:
+
+```text
+base64url(json-payload).base64url(hmac-sha256-signature)
+```
+
+The role hierarchy is:
 
 - `analyst`: browse data, create analyses, run retrieval/processing workflows,
   and view findings, evidence, and reports.

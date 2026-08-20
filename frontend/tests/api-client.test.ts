@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, clearApiAuthToken, request, setApiAuthToken } from "@/lib/api/client";
+import {
+  ApiError,
+  clearApiAuthToken,
+  issueApiAuthToken,
+  request,
+  setApiAuthToken
+} from "@/lib/api/client";
 
 describe("api client auth", () => {
   afterEach(() => {
@@ -60,6 +66,48 @@ describe("api client auth", () => {
       status: 403,
       message: "Forbidden."
     } satisfies Partial<ApiError>);
+  });
+
+  it("issues and stores a signed bearer token", async () => {
+    setApiAuthToken("old-token");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          data: {
+            access_token: "signed-token",
+            token_type: "bearer",
+            expires_in: 3600,
+            subject: "demo",
+            role: "admin"
+          },
+          meta: {},
+          error: null
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" }
+        }
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const issued = await issueApiAuthToken({ username: "demo", password: "secret" });
+
+    expect(issued.access_token).toBe("signed-token");
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(fetchMock.mock.calls[0][0]).toContain("/auth/token");
+    expect((init.headers as HeadersInit as Record<string, string>).Authorization).toBeUndefined();
+
+    const protectedFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ data: { ok: true }, meta: {}, error: null }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      })
+    );
+    vi.stubGlobal("fetch", protectedFetch);
+    await request<{ ok: boolean }>("/companies");
+    const protectedInit = protectedFetch.mock.calls[0][1] as RequestInit;
+    expect((protectedInit.headers as Headers).get("Authorization")).toBe("Bearer signed-token");
   });
 
   it("clears bearer token from browser storage", async () => {

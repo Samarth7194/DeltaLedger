@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     auth_enabled: bool = False
     auth_secret_key: str | None = None
     auth_token_ttl_seconds: int = 3600
+    auth_login_username: str = "demo"
+    auth_login_password: str | None = None
+    auth_login_role: Literal["analyst", "reviewer", "admin"] = "admin"
 
     database_url: str = "postgresql+asyncpg://deltaledger@localhost:5433/deltaledger"
     alembic_database_url: str | None = None
@@ -254,6 +257,8 @@ class Settings(BaseSettings):
         )
         _require_positive_int("WORKFLOW_MAX_NODE_ATTEMPTS", self.workflow_max_node_attempts)
         _require_positive_int("AUTH_TOKEN_TTL_SECONDS", self.auth_token_ttl_seconds)
+        if self.auth_login_role not in {"analyst", "reviewer", "admin"}:
+            raise ValueError("AUTH_LOGIN_ROLE must be analyst, reviewer, or admin.")
         _require_non_negative("AI_PROVIDER_TIMEOUT_SECONDS", self.ai_provider_timeout_seconds)
         _require_positive_int("AI_PROVIDER_MAX_RETRIES", self.ai_provider_max_retries)
         if self.ai_provider_input_token_cost_usd_per_million is not None:
@@ -283,6 +288,10 @@ class Settings(BaseSettings):
                 raise ValueError("Production must enable authentication.")
             if not self.auth_secret_key or _is_placeholder_secret(self.auth_secret_key):
                 raise ValueError("Production AUTH_SECRET_KEY must be a non-placeholder secret.")
+            if self.auth_login_password is not None and _is_placeholder_secret(
+                self.auth_login_password
+            ):
+                raise ValueError("Production AUTH_LOGIN_PASSWORD must be a non-placeholder secret.")
         if self.app_profile == "docker":
             _require_host(self.database_url, "postgres", "DATABASE_URL")
             _require_host(self.redis_url, "redis", "REDIS_URL")

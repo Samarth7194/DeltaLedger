@@ -18,6 +18,14 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:8000/api/v1";
 const AUTH_TOKEN_KEY = "deltaledger.authToken";
 
+export type AuthTokenResponse = {
+  access_token: string;
+  token_type: "bearer";
+  expires_in: number;
+  subject: string;
+  role: string;
+};
+
 export function apiBaseUrl() {
   return API_BASE_URL;
 }
@@ -32,6 +40,30 @@ export function clearApiAuthToken() {
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(AUTH_TOKEN_KEY);
   }
+}
+
+export async function issueApiAuthToken(body: {
+  username: string;
+  password: string;
+}): Promise<AuthTokenResponse> {
+  const response = await fetch(`${API_BASE_URL}/auth/token`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+  const envelope = await parseEnvelope<AuthTokenResponse>(response);
+  if (!response.ok || envelope.error) {
+    const message =
+      envelope.error?.message ??
+      (typeof envelope.data === "string" ? envelope.data : null) ??
+      `Request failed with status ${response.status}`;
+    throw new ApiError(message, response.status, envelope.error?.code, envelope.error?.details);
+  }
+  setApiAuthToken(envelope.data.access_token);
+  return envelope.data;
 }
 
 export async function request<T>(
