@@ -56,7 +56,7 @@
 - [x] Readiness checks can validate configured dependencies.
 - [x] Deployment docs include required environment variables.
 - [x] Remaining deployment work is limited to real environment provisioning and CI/deployment execution.
-- [x] Frontend CI pins Node 20.20.2 and uses `npm ci`.
+- [x] Frontend CI pins Node 24 and uses `npm ci`.
 
 ## PORTFOLIO
 
