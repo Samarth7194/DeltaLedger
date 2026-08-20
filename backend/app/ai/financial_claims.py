@@ -5,6 +5,9 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel, Field
 
+from app.ai.openai_compatible import OpenAICompatibleClient
+from app.core.config import Settings
+
 ClaimType = Literal[
     "absolute_value",
     "directional_change",
@@ -60,7 +63,62 @@ class DeterministicFakeClaimExtractor:
         return []
 
 
-def create_claim_extractor(provider_name: str) -> ClaimExtractorProvider:
+class ClaimExtractionResponse(BaseModel):
+    claims: list[FinancialClaimExtraction] = Field(default_factory=list)
+
+
+class OpenAICompatibleClaimExtractor:
+    prompt_version = "financial-claim-extraction-json-v1"
+
+    def __init__(self, settings: Settings) -> None:
+        self.model_name = settings.claim_extractor_model
+        self.model_version = settings.claim_extractor_model
+        self._client = OpenAICompatibleClient(
+            settings,
+            provider_type="financial_claim_extractor",
+        )
+
+    async def extract_claims(
+        self,
+        text: str,
+        section_metadata: dict[str, object],
+        allowed_metrics: list[str],
+    ) -> list[FinancialClaimExtraction]:
+        result, metadata, raw = await self._client.chat_json(
+            model=self.model_name,
+            prompt_version=self.prompt_version,
+            system_prompt=(
+                "Extract factual financial claims from SEC filing text. Return only JSON "
+                "with a claims array. Use null for unknown values and never infer facts "
+                "not present in the text."
+            ),
+            user_payload={
+                "text": text,
+                "section_metadata": section_metadata,
+                "allowed_metrics": allowed_metrics,
+            },
+            response_model=ClaimExtractionResponse,
+        )
+        inference_metadata = {
+            **metadata.model_dump(),
+            "response_id": raw.get("id"),
+        }
+        for claim in result.claims:
+            claim.original_output = {
+                **claim.original_output,
+                "inference_metadata": inference_metadata,
+            }
+        return result.claims
+
+
+def create_claim_extractor(
+    provider_name: str,
+    settings: Settings | None = None,
+) -> ClaimExtractorProvider:
     if provider_name == "fake":
         return DeterministicFakeClaimExtractor()
+    if provider_name == "openai_compatible":
+        if settings is None:
+            raise ValueError("Settings are required for CLAIM_EXTRACTOR_PROVIDER=openai_compatible")
+        return OpenAICompatibleClaimExtractor(settings)
     raise ValueError(f"Unsupported claim extractor provider: {provider_name}")

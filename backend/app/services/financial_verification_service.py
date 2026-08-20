@@ -24,7 +24,7 @@ class FinancialVerificationService:
         self.extractor = FinancialClaimExtractionService(
             session,
             settings,
-            create_claim_extractor(settings.claim_extractor_provider),
+            create_claim_extractor(settings.claim_extractor_provider, settings),
         )
         self.verifier = FinancialClaimVerificationService(session, settings)
 

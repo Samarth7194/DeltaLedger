@@ -5,6 +5,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from app.ai.openai_compatible import OpenAICompatibleClient
+from app.core.config import Settings
+
 AllowedContradictionType = Literal[
     "direction_contradiction",
     "magnitude_overstatement",
@@ -35,6 +38,7 @@ class ContradictionClassifierOutput(BaseModel):
     severity: AllowedSeverity
     confidence: float = Field(ge=0.0, le=1.0)
     limitations: list[str] = Field(default_factory=list)
+    inference_metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ContradictionClassifierProvider(ABC):
@@ -76,7 +80,48 @@ class DeterministicFakeContradictionClassifier(ContradictionClassifierProvider):
         )
 
 
-def create_contradiction_classifier(provider: str) -> ContradictionClassifierProvider:
+class OpenAICompatibleContradictionClassifier(ContradictionClassifierProvider):
+    prompt_version = "contradiction-classifier-json-v1"
+
+    def __init__(self, settings: Settings) -> None:
+        self.model_name = settings.contradiction_classifier_model
+        self.model_version = settings.contradiction_classifier_model
+        self._client = OpenAICompatibleClient(
+            settings,
+            provider_type="contradiction_classifier",
+        )
+
+    async def classify(
+        self,
+        payload: ContradictionClassifierInput,
+    ) -> ContradictionClassifierOutput:
+        result, metadata, raw = await self._client.chat_json(
+            model=self.model_name,
+            prompt_version=self.prompt_version,
+            system_prompt=(
+                "Classify possible financial disclosure inconsistencies for analyst review. "
+                "Return only JSON matching the schema. Do not assert fraud or wrongdoing."
+            ),
+            user_payload=payload.model_dump(),
+            response_model=ContradictionClassifierOutput,
+        )
+        result.inference_metadata = {
+            **metadata.model_dump(),
+            "response_id": raw.get("id"),
+        }
+        return result
+
+
+def create_contradiction_classifier(
+    provider: str,
+    settings: Settings | None = None,
+) -> ContradictionClassifierProvider:
     if provider == "fake":
         return DeterministicFakeContradictionClassifier()
+    if provider == "openai_compatible":
+        if settings is None:
+            raise ValueError(
+                "Settings are required for CONTRADICTION_CLASSIFIER_PROVIDER=openai_compatible"
+            )
+        return OpenAICompatibleContradictionClassifier(settings)
     raise ValueError(f"Unsupported contradiction classifier provider: {provider}")

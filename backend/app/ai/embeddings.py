@@ -11,6 +11,7 @@ import anyio
 import httpx
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
+from app.ai.openai_compatible import OpenAICompatibleClient
 from app.core.config import Settings
 from app.core.exceptions import DeltaLedgerError
 
@@ -142,6 +143,27 @@ class HuggingFaceInferenceEmbeddingProvider:
         return (await self.embed_documents([text]))[0]
 
 
+class OpenAICompatibleEmbeddingProvider:
+    def __init__(self, settings: Settings) -> None:
+        self.model_name = settings.embedding_model
+        self.model_version = settings.embedding_model
+        self.dimension = settings.embedding_dimension
+        self.batch_size = settings.embedding_batch_size
+        self.normalize = settings.embedding_normalize
+        self._client = OpenAICompatibleClient(settings, provider_type="embedding")
+        self.last_metadata: dict[str, object] | None = None
+
+    async def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        vectors, metadata = await self._client.embeddings(model=self.model_name, inputs=texts)
+        if self.normalize:
+            vectors = [_normalize_vector(vector) for vector in vectors]
+        self.last_metadata = metadata.model_dump()
+        return vectors
+
+    async def embed_query(self, text: str) -> list[float]:
+        return (await self.embed_documents([text]))[0]
+
+
 class EmbeddingService:
     def __init__(
         self,
@@ -200,6 +222,8 @@ def create_embedding_service(settings: Settings) -> EmbeddingService:
         )
     elif settings.embedding_provider == "huggingface_inference":
         provider = HuggingFaceInferenceEmbeddingProvider(settings)
+    elif settings.embedding_provider == "openai_compatible":
+        provider = OpenAICompatibleEmbeddingProvider(settings)
     elif settings.embedding_provider == "sentence_transformers":
         provider = SentenceTransformerEmbeddingProvider(settings)
     else:

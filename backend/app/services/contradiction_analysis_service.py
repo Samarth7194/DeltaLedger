@@ -107,7 +107,8 @@ class ContradictionAnalysisService:
         self.financial_repo = FinancialRepository(session)
         self.comparisons = ComparisonRepository(session)
         self.classifier = classifier or create_contradiction_classifier(
-            settings.contradiction_classifier_provider
+            settings.contradiction_classifier_provider,
+            settings,
         )
         self.numerical = NumericalContradictionDetector(settings)
         self.magnitude = MagnitudeContradictionDetector(settings)

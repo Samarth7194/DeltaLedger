@@ -4,6 +4,7 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel, Field
 
+from app.ai.openai_compatible import OpenAICompatibleClient
 from app.core.config import Settings
 
 ChangeType = Literal["added", "removed", "strengthened", "weakened", "no_material_change"]
@@ -26,6 +27,7 @@ class ChangeClassificationResult(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     risk_category: RiskCategory
     materiality_reason: str
+    inference_metadata: dict[str, object] = Field(default_factory=dict)
 
 
 class ChangeClassifierProvider(Protocol):
@@ -95,9 +97,41 @@ class DeterministicFakeChangeClassifier:
         )
 
 
+class OpenAICompatibleChangeClassifier:
+    prompt_version = "disclosure-change-json-v1"
+
+    def __init__(self, settings: Settings) -> None:
+        self.model_name = settings.change_classifier_model
+        self.model_version = settings.change_classifier_model
+        self._client = OpenAICompatibleClient(
+            settings,
+            provider_type="disclosure_change_classifier",
+        )
+
+    async def classify(self, request: ChangeClassificationRequest) -> ChangeClassificationResult:
+        result, metadata, raw = await self._client.chat_json(
+            model=self.model_name,
+            prompt_version=self.prompt_version,
+            system_prompt=(
+                "Classify SEC filing disclosure changes. Return only JSON matching: "
+                "change_type, summary, explanation, changed_spans, confidence, "
+                "risk_category, materiality_reason. Do not make legal conclusions."
+            ),
+            user_payload=request.model_dump(),
+            response_model=ChangeClassificationResult,
+        )
+        result.inference_metadata = {
+            **metadata.model_dump(),
+            "response_id": raw.get("id"),
+        }
+        return result
+
+
 def create_change_classifier(settings: Settings) -> ChangeClassifierProvider:
     if settings.change_classifier_provider == "fake":
         return DeterministicFakeChangeClassifier()
+    if settings.change_classifier_provider == "openai_compatible":
+        return OpenAICompatibleChangeClassifier(settings)
     raise ValueError(
         f"Unsupported change classifier provider: {settings.change_classifier_provider}"
     )

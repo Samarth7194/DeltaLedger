@@ -74,6 +74,12 @@ class Settings(BaseSettings):
     hf_token: str | None = None
     hf_inference_base_url: str = "https://api-inference.huggingface.co"
     allow_fake_models_in_production: bool = False
+    ai_provider_api_key: str | None = None
+    ai_provider_base_url: str = "https://api.openai.com/v1"
+    ai_provider_timeout_seconds: float = 60.0
+    ai_provider_max_retries: int = 3
+    ai_provider_input_token_cost_usd_per_million: float | None = None
+    ai_provider_output_token_cost_usd_per_million: float | None = None
 
     reranker_enabled: bool = False
     reranker_provider: str = "fake"
@@ -248,6 +254,18 @@ class Settings(BaseSettings):
         )
         _require_positive_int("WORKFLOW_MAX_NODE_ATTEMPTS", self.workflow_max_node_attempts)
         _require_positive_int("AUTH_TOKEN_TTL_SECONDS", self.auth_token_ttl_seconds)
+        _require_non_negative("AI_PROVIDER_TIMEOUT_SECONDS", self.ai_provider_timeout_seconds)
+        _require_positive_int("AI_PROVIDER_MAX_RETRIES", self.ai_provider_max_retries)
+        if self.ai_provider_input_token_cost_usd_per_million is not None:
+            _require_non_negative(
+                "AI_PROVIDER_INPUT_TOKEN_COST_USD_PER_MILLION",
+                self.ai_provider_input_token_cost_usd_per_million,
+            )
+        if self.ai_provider_output_token_cost_usd_per_million is not None:
+            _require_non_negative(
+                "AI_PROVIDER_OUTPUT_TOKEN_COST_USD_PER_MILLION",
+                self.ai_provider_output_token_cost_usd_per_million,
+            )
         if self.workflow_review_min_severity not in {"low", "medium", "high", "critical"}:
             raise ValueError("WORKFLOW_REVIEW_MIN_SEVERITY must be low, medium, high, or critical.")
         if self.workflow_checkpoint_provider not in {"memory", "postgres"}:
@@ -332,6 +350,21 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "Production fake model providers are disabled: " + ", ".join(sorted(fake))
                 )
+        if self._uses_openai_compatible_provider() and not self.ai_provider_api_key:
+            raise ValueError("Production OpenAI-compatible providers require AI_PROVIDER_API_KEY.")
+        if self.embedding_provider == "huggingface_inference" and not self.hf_token:
+            raise ValueError("Production Hugging Face inference embeddings require HF_TOKEN.")
+
+    def _uses_openai_compatible_provider(self) -> bool:
+        providers = {
+            self.embedding_provider,
+            self.change_classifier_provider,
+            self.claim_extractor_provider,
+            self.contradiction_classifier_provider,
+        }
+        if self.reranker_enabled:
+            providers.add(self.reranker_provider)
+        return "openai_compatible" in providers
 
 
 @lru_cache
