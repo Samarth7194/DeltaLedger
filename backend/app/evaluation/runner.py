@@ -21,6 +21,7 @@ from app.evaluation.evaluators import (
     workflow_operational_metrics,
 )
 from app.evaluation.gates import evaluate_quality_gates
+from app.evaluation.monitoring import ai_call_monitoring
 from app.evaluation.providers import provider_manifest
 from app.evaluation.reports import write_json_report, write_markdown_report
 
@@ -66,6 +67,7 @@ async def run_benchmark(
         "suites": sorted(suite_results, key=lambda item: item["suite"]),
         "human_review": human_review_metrics([]),
         "workflow_operations": workflow_operational_metrics([]),
+        "ai_monitoring": ai_call_monitoring([]),
         "provider_manifest": provider_manifest(get_settings()),
         "model_cost": {
             "status": "not_evaluated",
