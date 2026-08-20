@@ -8,7 +8,7 @@ import type { CompanySummary, FilingSummary } from "@/lib/api/types";
 import { FilingTable } from "../filings/filing-table";
 import { Button } from "../ui/button";
 import { Panel, PanelHeader } from "../ui/panel";
-import { EmptyState } from "../ui/state";
+import { EmptyState, ErrorState, SkeletonRows } from "../ui/state";
 
 export function isValidFilingPair(
   current?: FilingSummary,
@@ -25,6 +25,8 @@ export function isValidFilingPair(
 export function NewAnalysisForm({
   companies,
   filings,
+  filingsError,
+  filingsLoading = false,
   selectedCompanyId,
   onCompanyChange,
   onSubmit,
@@ -32,6 +34,8 @@ export function NewAnalysisForm({
 }: {
   companies: CompanySummary[];
   filings: FilingSummary[];
+  filingsError?: unknown;
+  filingsLoading?: boolean;
   selectedCompanyId?: string;
   onCompanyChange: (companyId: string) => void;
   onSubmit: (currentFilingId: string, comparisonFilingId: string) => void;
@@ -103,13 +107,19 @@ export function NewAnalysisForm({
       <Panel>
         <PanelHeader title="Available Filings" eyebrow="Selection" />
         {selectedCompanyId ? (
-          <FilingTable
-            filings={filings}
-            currentId={currentId}
-            comparisonId={comparisonId}
-            onSelectCurrent={setCurrentId}
-            onSelectComparison={setComparisonId}
-          />
+          filingsLoading ? (
+            <SkeletonRows rows={4} />
+          ) : filingsError ? (
+            <ErrorState error={filingsError} />
+          ) : (
+            <FilingTable
+              filings={filings}
+              currentId={currentId}
+              comparisonId={comparisonId}
+              onSelectCurrent={setCurrentId}
+              onSelectComparison={setComparisonId}
+            />
+          )
         ) : (
           <EmptyState title="Select a company" detail="Filing choices appear after a company is selected." />
         )}

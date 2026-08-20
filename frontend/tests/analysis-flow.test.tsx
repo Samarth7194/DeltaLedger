@@ -7,6 +7,34 @@ import { NewAnalysisForm } from "@/components/analyses/new-analysis-form";
 import { company, filings } from "./fixtures";
 
 describe("new analysis flow", () => {
+  it("keeps the company selector usable when filings fail to load", async () => {
+    const user = userEvent.setup();
+    const onCompanyChange = vi.fn();
+    const otherCompany = {
+      ...company,
+      id: "company-2",
+      ticker: "MSFT",
+      legal_name: "Microsoft Corporation"
+    };
+    render(
+      <NewAnalysisForm
+        companies={[company, otherCompany]}
+        filings={[]}
+        filingsError={new Error("Filing lookup failed")}
+        selectedCompanyId={company.id}
+        onCompanyChange={onCompanyChange}
+        onSubmit={vi.fn()}
+      />
+    );
+
+    const selector = screen.getByLabelText(/company/i);
+    await user.selectOptions(selector, otherCompany.id);
+
+    expect(onCompanyChange).toHaveBeenCalledWith(otherCompany.id);
+    expect(selector).toBeEnabled();
+    expect(screen.getByText("Filing lookup failed")).toBeInTheDocument();
+  });
+
   it("prevents invalid current and previous filing selection", async () => {
     const submit = vi.fn();
     render(

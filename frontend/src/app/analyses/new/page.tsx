@@ -18,14 +18,16 @@ export default function NewAnalysisPage() {
   if (companies.isLoading) {
     return <SkeletonRows rows={6} />;
   }
-  if (companies.error || filings.error || createAnalysis.error) {
-    return <ErrorState error={companies.error ?? filings.error ?? createAnalysis.error} />;
+  if (companies.error || createAnalysis.error) {
+    return <ErrorState error={companies.error ?? createAnalysis.error} />;
   }
 
   return (
     <NewAnalysisForm
       companies={companies.data ?? []}
       filings={filings.data ?? []}
+      filingsError={filings.error}
+      filingsLoading={filings.isLoading}
       selectedCompanyId={companyId}
       onCompanyChange={setCompanyId}
       submitting={createAnalysis.isPending}
