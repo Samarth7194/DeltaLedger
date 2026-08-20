@@ -118,6 +118,54 @@ async def test_openai_compatible_change_classifier_parses_metadata(monkeypatch) 
 
 
 @pytest.mark.asyncio
+async def test_openai_compatible_chat_request_omits_deprecated_sampling_params(
+    monkeypatch,
+) -> None:
+    _Client.payloads = [
+        _chat_payload(
+            {
+                "change_type": "weakened",
+                "summary": "Disclosure became more conditional.",
+                "explanation": "The current text added may.",
+                "changed_spans": [],
+                "confidence": 0.81,
+                "risk_category": "liquidity",
+                "materiality_reason": "Risk wording changed.",
+            }
+        )
+    ]
+    _Client.requests = []
+    monkeypatch.setattr("app.ai.openai_compatible.httpx.AsyncClient", _Client)
+    classifier = create_change_classifier(
+        _settings(
+            change_classifier_provider="openai_compatible",
+            change_classifier_model="gemini-3.6-flash",
+        )
+    )
+
+    await classifier.classify(
+        ChangeClassificationRequest(
+            previous_text="We will have sufficient cash.",
+            current_text="We may need additional financing.",
+            deterministic_signals={"uncertainty_added": True},
+            section_metadata={},
+            allowed_labels=["weakened"],
+        )
+    )
+
+    payload = _Client.requests[0]["json"]
+    assert payload["model"] == "gemini-3.6-flash"
+    assert payload["response_format"] == {"type": "json_object"}
+    system_prompt = payload["messages"][0]["content"]
+    assert "request allowed_labels" in system_prompt
+    assert "liquidity, revenue_guidance, litigation, other" in system_prompt
+    assert "changed_spans as an array of objects" in system_prompt
+    assert "temperature" not in payload
+    assert "top_p" not in payload
+    assert "top_k" not in payload
+
+
+@pytest.mark.asyncio
 async def test_openai_compatible_claim_extractor_parses_claims(monkeypatch) -> None:
     _Client.payloads = [
         _chat_payload(

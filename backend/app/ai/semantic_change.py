@@ -115,7 +115,12 @@ class OpenAICompatibleChangeClassifier:
             system_prompt=(
                 "Classify SEC filing disclosure changes. Return only JSON matching: "
                 "change_type, summary, explanation, changed_spans, confidence, "
-                "risk_category, materiality_reason. Do not make legal conclusions."
+                "risk_category, materiality_reason. Use change_type from the "
+                "request allowed_labels. Use risk_category exactly as one of: "
+                "liquidity, revenue_guidance, litigation, other. Use "
+                "changed_spans as an array of objects, not strings; each object "
+                "should include text and side when available. Do not make legal "
+                "conclusions."
             ),
             user_payload=request.model_dump(),
             response_model=ChangeClassificationResult,
