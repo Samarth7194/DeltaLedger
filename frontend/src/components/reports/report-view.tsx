@@ -32,14 +32,12 @@ export function ReportView({ report }: { report?: AnalysisReport }) {
   };
 
   return (
-    <article className="space-y-5 rounded-md border border-stone-200 bg-white p-5 print:border-0 print:p-0">
+    <article className="space-y-5 rounded-md border border-white/10 bg-white/[0.04] p-5 print:border-0 print:p-0">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
-            DeltaLedger Analysis
-          </p>
-          <h2 className="text-2xl font-semibold">Structured Report</h2>
-          <p className="mt-1 text-sm text-stone-600">Version {report.report_version}</p>
+          <p className="text-xs font-semibold uppercase text-ledger-200">DeltaLedger Analysis</p>
+          <h2 className="text-2xl font-semibold text-ink-950">Structured Report</h2>
+          <p className="mt-1 text-sm text-ink-700">Version {report.report_version}</p>
         </div>
         <div className="flex gap-2 no-print">
           <Button type="button" onClick={() => window.print()}>
@@ -54,8 +52,8 @@ export function ReportView({ report }: { report?: AnalysisReport }) {
       </div>
 
       <section>
-        <h3 className="text-base font-semibold">Executive Summary</h3>
-        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-stone-700">
+        <h3 className="text-base font-semibold text-ink-950">Executive Summary</h3>
+        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-ink-700">
           {report.executive_summary}
         </p>
       </section>
@@ -84,16 +82,16 @@ export function ReportView({ report }: { report?: AnalysisReport }) {
       <ReportSection title="Potential Inconsistencies" value={report.contradiction_summary} />
       <ReportFindings findings={report.high_priority_findings} />
       <ReportSection title="Review Outcomes" value={reviewOutcomes(report.report_payload)} />
-      <section className="rounded-md border border-amber-200 bg-amberline-100 p-4">
-        <h3 className="text-base font-semibold text-amber-950">Limitations</h3>
+      <section className="rounded-md border border-amber-300/25 bg-amber-400/10 p-4">
+        <h3 className="text-base font-semibold text-amber-100">Limitations</h3>
         {report.limitations.length ? (
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-950">
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-100/85">
             {report.limitations.map((limitation) => (
               <li key={limitation}>{limitation}</li>
             ))}
           </ul>
         ) : (
-          <p className="mt-2 text-sm text-amber-900">No report limitations were returned.</p>
+          <p className="mt-2 text-sm text-amber-100/80">No report limitations were returned.</p>
         )}
       </section>
       <ReportSection title="Evidence Manifest" value={report.evidence_manifest} />
@@ -103,9 +101,9 @@ export function ReportView({ report }: { report?: AnalysisReport }) {
 
 function ReportSection({ title, value }: { title: string; value: Record<string, unknown> }) {
   return (
-    <section className="rounded-md border border-stone-200 p-4">
-      <h3 className="text-base font-semibold">{title}</h3>
-      <pre className="mt-3 max-h-72 overflow-auto rounded-md bg-stone-950 p-3 text-xs text-stone-50">
+    <section className="rounded-md border border-white/10 bg-graphite-950/60 p-4">
+      <h3 className="text-base font-semibold text-ink-950">{title}</h3>
+      <pre className="mt-3 max-h-72 overflow-auto rounded-md bg-graphite-950 p-3 text-xs text-ink-900">
         {compactJson(value)}
       </pre>
     </section>
@@ -114,18 +112,18 @@ function ReportSection({ title, value }: { title: string; value: Record<string, 
 
 function ReportFindings({ findings }: { findings: Record<string, unknown>[] }) {
   return (
-    <section className="rounded-md border border-stone-200 p-4">
-      <h3 className="text-base font-semibold">High-Priority Findings</h3>
+    <section className="rounded-md border border-white/10 bg-graphite-950/60 p-4">
+      <h3 className="text-base font-semibold text-ink-950">High-Priority Findings</h3>
       {findings.length ? (
         <div className="mt-3 space-y-3">
           {findings.map((finding, index) => (
-            <pre key={index} className="overflow-auto rounded-md bg-stone-950 p-3 text-xs text-stone-50">
+            <pre key={index} className="overflow-auto rounded-md bg-graphite-950 p-3 text-xs text-ink-900">
               {compactJson(finding)}
             </pre>
           ))}
         </div>
       ) : (
-        <p className="mt-2 text-sm text-stone-600">No high-priority findings were returned.</p>
+        <p className="mt-2 text-sm text-ink-700">No high-priority findings were returned.</p>
       )}
     </section>
   );

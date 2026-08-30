@@ -8,6 +8,7 @@ import { FilingTable } from "@/components/filings/filing-table";
 import { Badge } from "@/components/ui/badge";
 import { Metric } from "@/components/ui/metric";
 import { Panel, PanelHeader } from "@/components/ui/panel";
+import { PageHeader, SignalPill } from "@/components/ui/product";
 import { ErrorState, SkeletonRows } from "@/components/ui/state";
 import { formatDate } from "@/lib/formatters";
 import { useAnalyses, useCompany, useCompanyFilings } from "@/lib/queries/hooks";
@@ -33,65 +34,59 @@ export default function CompanyDetailPage() {
 
   return (
     <div className="space-y-5">
-      <Panel>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
-              Company
-            </p>
-            <h2 className="text-2xl font-semibold">{detail.ticker ?? detail.cik}</h2>
-            <p className="mt-1 text-sm text-stone-600">{detail.legal_name}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Badge value={detail.latest_ingestion_status} />
-              <span className="rounded-md border border-stone-200 bg-stone-50 px-2 py-1 text-xs">
-                CIK {detail.cik}
-              </span>
-              {detail.exchange ? (
-                <span className="rounded-md border border-stone-200 bg-stone-50 px-2 py-1 text-xs">
-                  {detail.exchange}
-                </span>
-              ) : null}
-            </div>
-          </div>
-          <Link
-            href={`/analyses/new?companyId=${detail.id}`}
-            className="inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-ledger-700 bg-ledger-700 px-3 py-2 text-sm font-medium text-white outline-none transition hover:bg-ledger-600 focus-visible:ring-2 focus-visible:ring-ledger-600"
-          >
-            <PlayCircle aria-hidden="true" className="h-4 w-4" />
-            New Analysis
+      <PageHeader
+        eyebrow="Company monitor"
+        title={detail.ticker ?? detail.cik}
+        description={detail.legal_name}
+        action={
+          <Link href={`/analyses/new?companyId=${detail.id}`}>
+            <button className="inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-ledger-500 bg-ledger-500 px-3 py-2 text-sm font-medium text-graphite-980 transition hover:bg-ledger-200 focus-visible:ring-2 focus-visible:ring-ledger-500" type="button">
+              <PlayCircle aria-hidden="true" className="h-4 w-4" />
+              New Analysis
+            </button>
           </Link>
+        }
+      >
+        <div className="flex flex-wrap gap-2">
+          <SignalPill>CIK {detail.cik}</SignalPill>
+          {detail.exchange ? <SignalPill>{detail.exchange}</SignalPill> : null}
+          {detail.industry ? <SignalPill>{detail.industry}</SignalPill> : null}
+          <Badge value={detail.latest_ingestion_status} />
         </div>
-      </Panel>
+      </PageHeader>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <Metric label="Filings" value={detail.filing_count} detail="Stored filings" />
+        <Metric label="Filings" value={detail.filing_count} detail="Stored SEC filings" />
         <Metric label="Latest Period" value={formatDate(detail.latest_report_period)} />
         <Metric label="Latest Filing" value={formatDate(detail.latest_filing_date)} />
-        <Metric label="Industry" value={detail.industry ?? "Not available"} />
+        <Metric label="Active" value={detail.is_active ? "Yes" : "No"} tone={detail.is_active ? "success" : "warning"} />
       </div>
 
       <Panel>
-        <PanelHeader title="Filings" eyebrow="10-Q selection" />
+        <PanelHeader title="Filings" eyebrow="10-Q selection" detail="Available filings for inspection and comparison workflows." />
         <FilingTable filings={filings.data ?? []} />
       </Panel>
 
       <Panel>
         <PanelHeader title="Recent Analyses" eyebrow="History" />
         {(analyses.data ?? []).length ? (
-          <div className="space-y-2">
+          <div className="grid gap-3 md:grid-cols-2">
             {(analyses.data ?? []).map((run) => (
               <Link
                 key={run.id}
                 href={`/analyses/${run.id}`}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-stone-200 p-3 outline-none hover:bg-stone-50 focus-visible:ring-2 focus-visible:ring-ledger-600"
+                className="rounded-md border border-white/10 bg-white/[0.04] p-3 outline-none transition hover:border-ledger-200/30 hover:bg-white/[0.07] focus-visible:ring-2 focus-visible:ring-ledger-500"
               >
-                <span className="font-medium">{run.id.slice(0, 8)}</span>
-                <Badge value={run.status} />
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="font-mono text-sm font-medium text-ledger-200">{run.id.slice(0, 8)}</span>
+                  <Badge value={run.status} />
+                </div>
+                <p className="mt-2 text-xs text-ink-700">Progress {run.progress.progress_percent}%</p>
               </Link>
             ))}
           </div>
         ) : (
-          <p className="text-sm text-stone-600">No analyses have been created for this company yet.</p>
+          <p className="text-sm text-ink-700">No analyses have been created for this company yet.</p>
         )}
       </Panel>
     </div>

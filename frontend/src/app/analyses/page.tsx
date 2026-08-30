@@ -7,21 +7,24 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Panel, PanelHeader } from "@/components/ui/panel";
+import { PageHeader } from "@/components/ui/product";
 import { EmptyState, ErrorState, SkeletonRows } from "@/components/ui/state";
-import { labelFor } from "@/lib/status";
 import { useAnalyses } from "@/lib/queries/hooks";
+import { labelFor } from "@/lib/status";
 
 const statuses = ["", "queued", "running", "awaiting_human_review", "generating_report", "completed", "failed"];
 
 export default function AnalysesPage() {
   const [status, setStatus] = useState("");
   const analyses = useAnalyses({ status, limit: 100 });
+  const data = analyses.data ?? [];
 
   return (
-    <Panel>
-      <PanelHeader
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow="Analysis runs"
         title="Analyses"
-        eyebrow="Workflow runs"
+        description="Track filing comparison workflows from request through evidence retrieval, verification, review, and report generation."
         action={
           <Link href="/analyses/new">
             <Button type="button" variant="primary">
@@ -31,62 +34,62 @@ export default function AnalysesPage() {
           </Link>
         }
       />
-      <label className="mb-4 block max-w-xs text-sm font-medium">
-        Status filter
-        <select
-          value={status}
-          onChange={(event) => setStatus(event.target.value)}
-          className="mt-2 w-full rounded-md border border-stone-300 bg-white px-3 py-2 outline-none focus-visible:ring-2 focus-visible:ring-ledger-600"
-        >
-          {statuses.map((item) => (
-            <option key={item || "all"} value={item}>
-              {item ? labelFor(item) : "All statuses"}
-            </option>
-          ))}
-        </select>
-      </label>
-      {analyses.isLoading ? <SkeletonRows rows={6} /> : null}
-      {analyses.error ? <ErrorState error={analyses.error} /> : null}
-      {!analyses.isLoading && !analyses.error ? (
-        (analyses.data ?? []).length ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-stone-200 text-left text-sm">
-              <thead className="bg-stone-50 text-xs uppercase tracking-[0.1em] text-stone-500">
-                <tr>
-                  <th className="px-3 py-2">Run</th>
-                  <th className="px-3 py-2">Current Filing</th>
-                  <th className="px-3 py-2">Previous Filing</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2">Progress</th>
-                  <th className="px-3 py-2">Review</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-100">
-                {(analyses.data ?? []).map((run) => (
-                  <tr key={run.id}>
-                    <td className="px-3 py-3">
-                      <Link href={`/analyses/${run.id}`} className="font-medium text-ledger-700">
-                        {run.id.slice(0, 8)}
-                      </Link>
-                    </td>
-                    <td className="px-3 py-3 font-mono text-xs">{run.current_filing_id.slice(0, 8)}</td>
-                    <td className="px-3 py-3 font-mono text-xs">{run.comparison_filing_id.slice(0, 8)}</td>
-                    <td className="px-3 py-3">
-                      <Badge value={run.status} />
-                    </td>
-                    <td className="px-3 py-3">{run.progress.progress_percent}%</td>
-                    <td className="px-3 py-3">
-                      {run.requires_human_review ? "Requires review" : "No gate"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <EmptyState title="No analyses" detail="Create a filing comparison analysis to start." />
-        )
-      ) : null}
-    </Panel>
+      <Panel>
+        <PanelHeader title="Workflow Runs" eyebrow="Operations" />
+        <label className="mb-4 block max-w-xs text-sm font-medium text-ink-950">
+          Status filter
+          <select
+            value={status}
+            onChange={(event) => setStatus(event.target.value)}
+            className="mt-2 w-full rounded-md border border-white/12 bg-graphite-950 px-3 py-2 text-ink-950 outline-none focus-visible:ring-2 focus-visible:ring-ledger-500"
+          >
+            {statuses.map((item) => (
+              <option key={item || "all"} value={item}>
+                {item ? labelFor(item) : "All statuses"}
+              </option>
+            ))}
+          </select>
+        </label>
+        {analyses.isLoading ? <SkeletonRows rows={6} /> : null}
+        {analyses.error ? <ErrorState error={analyses.error} /> : null}
+        {!analyses.isLoading && !analyses.error ? (
+          data.length ? (
+            <div className="grid gap-3">
+              {data.map((run) => (
+                <Link
+                  key={run.id}
+                  href={`/analyses/${run.id}`}
+                  className="rounded-md border border-white/10 bg-white/[0.04] p-4 outline-none transition hover:border-ledger-200/30 hover:bg-white/[0.07] focus-visible:ring-2 focus-visible:ring-ledger-500"
+                >
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-sm font-semibold text-ledger-200">{run.id.slice(0, 8)}</span>
+                        <Badge value={run.status} />
+                      </div>
+                      <p className="mt-2 text-sm text-ink-700">
+                        Current {run.current_filing_id.slice(0, 8)} compared with previous {run.comparison_filing_id.slice(0, 8)}
+                      </p>
+                    </div>
+                    <div className="min-w-40">
+                      <div className="flex justify-between text-xs text-ink-700">
+                        <span>Progress</span>
+                        <span>{run.progress.progress_percent}%</span>
+                      </div>
+                      <div className="mt-1 h-1.5 rounded-full bg-white/10">
+                        <div className="h-1.5 rounded-full bg-ledger-500" style={{ width: `${Math.max(0, Math.min(100, run.progress.progress_percent))}%` }} />
+                      </div>
+                    </div>
+                    <div className="text-sm text-ink-700">{run.requires_human_review ? "Requires analyst review" : "No review gate"}</div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <EmptyState title="No analyses" detail="Create a filing comparison analysis to start." />
+          )
+        ) : null}
+      </Panel>
+    </div>
   );
 }

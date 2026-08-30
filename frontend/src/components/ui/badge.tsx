@@ -7,10 +7,10 @@ export function Badge({ value, label }: { value?: string | null; label?: string 
     <span
       className={cn(
         "inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium",
-        tone === "success" && "border-emerald-200 bg-emerald-50 text-emerald-800",
-        tone === "warning" && "border-amber-200 bg-amber-50 text-amber-800",
-        tone === "danger" && "border-red-200 bg-red-50 text-red-800",
-        tone === "neutral" && "border-stone-200 bg-stone-100 text-stone-700"
+        tone === "success" && "border-emerald-300/30 bg-emerald-400/10 text-emerald-200",
+        tone === "warning" && "border-amber-300/35 bg-amber-400/10 text-amber-200",
+        tone === "danger" && "border-red-300/35 bg-red-400/10 text-red-200",
+        tone === "neutral" && "border-white/10 bg-white/[0.06] text-ink-800"
       )}
     >
       {label ?? labelFor(value)}

@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Ban, RefreshCcw } from "lucide-react";
+import { AlertTriangle, Ban, Clock3, FileSearch, RefreshCcw } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
@@ -16,7 +16,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Metric } from "@/components/ui/metric";
 import { Panel, PanelHeader } from "@/components/ui/panel";
+import { PageHeader, SignalPill } from "@/components/ui/product";
 import { SkeletonRows, ErrorState } from "@/components/ui/state";
+import { Tabs } from "@/components/ui/tabs";
 import {
   useAnalysis,
   useAnalysisEvents,
@@ -34,19 +36,19 @@ import {
 import { labelFor } from "@/lib/status";
 
 const tabs = [
-  "Overview",
-  "Disclosure Changes",
-  "Financial Verification",
-  "Potential Inconsistencies",
-  "Evidence",
-  "Review",
-  "Report"
+  { id: "overview", label: "Overview" },
+  { id: "changes", label: "Disclosure Changes" },
+  { id: "verification", label: "Financial Verification" },
+  { id: "inconsistencies", label: "Potential Inconsistencies" },
+  { id: "evidence", label: "Evidence" },
+  { id: "review", label: "Review" },
+  { id: "report", label: "Report" }
 ];
 
 export default function AnalysisWorkspacePage() {
   const params = useParams<{ analysisRunId: string }>();
   const analysisRunId = stringParam(params.analysisRunId);
-  const [activeTab, setActiveTab] = useState("Overview");
+  const [activeTab, setActiveTab] = useState("overview");
   const [evidenceFindingId, setEvidenceFindingId] = useState<string | null>(null);
   const analysis = useAnalysis(analysisRunId);
   const events = useAnalysisEvents(analysisRunId, Boolean(analysis.data));
@@ -54,7 +56,7 @@ export default function AnalysisWorkspacePage() {
   const workflowReview = useWorkflowReview(analysisRunId);
   const resume = useResumeAnalysis(analysisRunId);
   const cancel = useCancelAnalysis(analysisRunId);
-  const report = useReport(analysisRunId, Boolean(analysis.data?.report_id || activeTab === "Report"));
+  const report = useReport(analysisRunId, Boolean(analysis.data?.report_id || activeTab === "report"));
   const comparisonId = analysis.data?.comparison_id;
   const changes = useDisclosureChanges(comparisonId, { limit: 100 });
   const claims = useFinancialClaims(comparisonId, { limit: 100 });
@@ -73,19 +75,11 @@ export default function AnalysisWorkspacePage() {
 
   return (
     <div className="space-y-5">
-      <Panel>
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
-              Analysis Workspace
-            </p>
-            <h2 className="text-xl font-semibold">Run {run.id.slice(0, 8)}</h2>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Badge value={run.status} />
-              {run.requires_human_review ? <Badge value="awaiting_human_review" /> : null}
-              {run.failure_code ? <Badge value="failed" label={run.failure_code} /> : null}
-            </div>
-          </div>
+      <PageHeader
+        eyebrow="Analysis workspace"
+        title={`Run ${run.id.slice(0, 8)}`}
+        description="Follow a filing comparison from retrieval through verification, contradiction detection, evidence inspection, human review, and final reporting."
+        action={
           <div className="flex flex-wrap gap-2 no-print">
             <Button type="button" onClick={() => analysis.refetch()}>
               <RefreshCcw aria-hidden="true" className="h-4 w-4" />
@@ -101,52 +95,67 @@ export default function AnalysisWorkspacePage() {
               Cancel
             </Button>
           </div>
+        }
+      >
+        <div className="flex flex-wrap gap-2">
+          <Badge value={run.status} />
+          <SignalPill>{labelFor(run.current_node)}</SignalPill>
+          {run.requires_human_review ? <SignalPill tone="warning">Review required</SignalPill> : null}
+          {run.failure_code ? <Badge value="failed" label={run.failure_code} /> : null}
         </div>
-      </Panel>
+      </PageHeader>
 
       {run.failure_message ? (
-        <Panel className="border-red-200 bg-red-50">
-          <div className="flex gap-3 text-red-900">
+        <Panel className="border-red-300/25 bg-red-500/10">
+          <div className="flex gap-3 text-red-100">
             <AlertTriangle aria-hidden="true" className="mt-0.5 h-5 w-5" />
             <div>
               <h3 className="font-semibold">Analysis failed</h3>
-              <p className="mt-1 text-sm">{run.failure_message}</p>
+              <p className="mt-1 text-sm text-red-100/80">{run.failure_message}</p>
             </div>
           </div>
         </Panel>
       ) : null}
 
-      <div className="overflow-x-auto border-b border-stone-200 no-print">
-        <div className="flex min-w-max gap-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setActiveTab(tab)}
-              className={`border-b-2 px-3 py-3 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ledger-600 ${
-                activeTab === tab
-                  ? "border-ledger-700 text-ledger-700"
-                  : "border-transparent text-stone-600"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-      </div>
+      <Panel className="p-0">
+        <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
+      </Panel>
 
-      {activeTab === "Overview" ? (
+      {activeTab === "overview" ? (
         <div className="space-y-5">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <Metric label="Disclosure Changes" value={count(run.counts.disclosure_changes)} />
             <Metric label="Financial Claims" value={count(run.counts.financial_claims)} />
             <Metric label="Verified Claims" value={count(run.counts.verified_claims)} />
-            <Metric label="Potential Inconsistencies" value={count(run.counts.contradictions)} />
+            <Metric
+              label="Potential Inconsistencies"
+              value={count(run.counts.contradictions)}
+              tone={count(run.counts.contradictions) ? "warning" : "neutral"}
+            />
           </div>
-          <Panel>
-            <PanelHeader title="Workflow Progress" eyebrow={labelFor(run.current_node)} />
-            <WorkflowProgress progress={run.progress} />
-          </Panel>
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+            <Panel>
+              <PanelHeader title="Workflow Progress" eyebrow={labelFor(run.current_node)} />
+              <WorkflowProgress progress={run.progress} />
+            </Panel>
+            <Panel>
+              <PanelHeader title="Run Context" eyebrow="Filing pair" />
+              <div className="grid gap-3 text-sm">
+                <div className="rounded-md border border-white/10 bg-white/[0.04] p-3">
+                  <div className="text-xs font-medium text-ink-700">Current filing</div>
+                  <div className="mt-1 break-all font-mono text-ink-950">{run.current_filing_id}</div>
+                </div>
+                <div className="rounded-md border border-white/10 bg-white/[0.04] p-3">
+                  <div className="text-xs font-medium text-ink-700">Comparison filing</div>
+                  <div className="mt-1 break-all font-mono text-ink-950">{run.comparison_filing_id}</div>
+                </div>
+                <div className="flex items-center gap-2 text-ink-700">
+                  <Clock3 aria-hidden="true" className="h-4 w-4 text-ledger-200" />
+                  {run.warnings.length} workflow warnings captured
+                </div>
+              </div>
+            </Panel>
+          </div>
           <Panel>
             <PanelHeader title="Workflow Events" eyebrow="History" />
             {events.isLoading ? <SkeletonRows rows={4} /> : <WorkflowEvents events={events.data ?? []} />}
@@ -154,18 +163,18 @@ export default function AnalysisWorkspacePage() {
         </div>
       ) : null}
 
-      {activeTab === "Disclosure Changes" ? (
+      {activeTab === "changes" ? (
         <Panel>
-          <PanelHeader title="Disclosure Changes" eyebrow="What changed?" />
+          <PanelHeader title="Disclosure Changes" eyebrow="Narrative delta" />
           {changes.isLoading ? <SkeletonRows rows={5} /> : null}
           {changes.error ? <ErrorState error={changes.error} /> : null}
           {!changes.isLoading && !changes.error ? <DisclosureChangeList changes={changes.data ?? []} /> : null}
         </Panel>
       ) : null}
 
-      {activeTab === "Financial Verification" ? (
+      {activeTab === "verification" ? (
         <Panel>
-          <PanelHeader title="Financial Verification" eyebrow="Do official numbers support the claim?" />
+          <PanelHeader title="Financial Verification" eyebrow="Official XBRL check" />
           {claims.isLoading || verifications.isLoading ? <SkeletonRows rows={5} /> : null}
           {claims.error || verifications.error ? <ErrorState error={claims.error ?? verifications.error} /> : null}
           {!claims.isLoading && !verifications.isLoading && !claims.error && !verifications.error ? (
@@ -174,9 +183,9 @@ export default function AnalysisWorkspacePage() {
         </Panel>
       ) : null}
 
-      {activeTab === "Potential Inconsistencies" ? (
+      {activeTab === "inconsistencies" ? (
         <Panel>
-          <PanelHeader title="Potential Inconsistencies" eyebrow="Is there a potential inconsistency?" />
+          <PanelHeader title="Potential Inconsistencies" eyebrow="Narrative versus numbers" />
           {contradictions.isLoading ? <SkeletonRows rows={5} /> : null}
           {contradictions.error ? <ErrorState error={contradictions.error} /> : null}
           {!contradictions.isLoading && !contradictions.error ? (
@@ -184,21 +193,25 @@ export default function AnalysisWorkspacePage() {
               findings={contradictions.data ?? []}
               onOpenEvidence={(findingId) => {
                 setEvidenceFindingId(findingId);
-                setActiveTab("Evidence");
+                setActiveTab("evidence");
               }}
             />
           ) : null}
         </Panel>
       ) : null}
 
-      {activeTab === "Evidence" ? (
+      {activeTab === "evidence" ? (
         <Panel>
-          <PanelHeader title="Evidence" eyebrow="What evidence proves the finding?" />
-          <InconsistencyList findings={contradictions.data ?? []} onOpenEvidence={setEvidenceFindingId} />
+          <PanelHeader title="Evidence" eyebrow="Source support" />
+          {contradictions.isLoading ? <SkeletonRows rows={5} /> : null}
+          {contradictions.error ? <ErrorState error={contradictions.error} /> : null}
+          {!contradictions.isLoading && !contradictions.error ? (
+            <InconsistencyList findings={contradictions.data ?? []} onOpenEvidence={setEvidenceFindingId} />
+          ) : null}
         </Panel>
       ) : null}
 
-      {activeTab === "Review" ? (
+      {activeTab === "review" ? (
         <ReviewPanel
           review={review.data}
           submitting={workflowReview.isPending}
@@ -208,7 +221,7 @@ export default function AnalysisWorkspacePage() {
         />
       ) : null}
 
-      {activeTab === "Report" ? (
+      {activeTab === "report" ? (
         report.isLoading ? (
           <SkeletonRows rows={5} />
         ) : report.error ? (

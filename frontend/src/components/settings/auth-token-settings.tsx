@@ -56,17 +56,17 @@ export function AuthTokenSettings() {
   }
 
   return (
-    <div className="rounded-md border border-stone-200 bg-stone-50 p-3">
+    <div className="rounded-md border border-white/10 bg-white/[0.04] p-3">
       <div className="flex items-center gap-2">
-        <KeyRound aria-hidden="true" className="h-4 w-4 text-stone-600" />
+        <KeyRound aria-hidden="true" className="h-4 w-4 text-ledger-200" />
         <h3 className="text-sm font-semibold text-ink-950">API Access</h3>
       </div>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <label className="block text-xs font-medium text-stone-700" htmlFor="api-username">
+        <label className="block text-xs font-medium text-ink-700" htmlFor="api-username">
           Username
           <input
             id="api-username"
-            className="mt-1 w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm outline-none focus:border-ledger-600 focus:ring-2 focus:ring-ledger-200"
+            className="mt-1 w-full rounded-md border border-white/12 bg-graphite-950 px-3 py-2 text-sm text-ink-950 outline-none focus-visible:ring-2 focus-visible:ring-ledger-500"
             type="text"
             autoComplete="username"
             value={username}
@@ -76,11 +76,11 @@ export function AuthTokenSettings() {
             }}
           />
         </label>
-        <label className="block text-xs font-medium text-stone-700" htmlFor="api-password">
+        <label className="block text-xs font-medium text-ink-700" htmlFor="api-password">
           Password
           <input
             id="api-password"
-            className="mt-1 w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm outline-none focus:border-ledger-600 focus:ring-2 focus:ring-ledger-200"
+            className="mt-1 w-full rounded-md border border-white/12 bg-graphite-950 px-3 py-2 text-sm text-ink-950 outline-none focus-visible:ring-2 focus-visible:ring-ledger-500"
             type="password"
             autoComplete="current-password"
             value={password}
@@ -101,12 +101,12 @@ export function AuthTokenSettings() {
         <LogIn aria-hidden="true" className="h-4 w-4" />
         {submitting ? "Signing in" : "Sign in"}
       </Button>
-      <label className="mt-3 block text-xs font-medium text-stone-700" htmlFor="api-token">
+      <label className="mt-3 block text-xs font-medium text-ink-700" htmlFor="api-token">
         Token
       </label>
       <input
         id="api-token"
-        className="mt-1 w-full rounded-md border border-stone-300 bg-white px-3 py-2 font-mono text-xs outline-none focus:border-ledger-600 focus:ring-2 focus:ring-ledger-200"
+        className="mt-1 w-full rounded-md border border-white/12 bg-graphite-950 px-3 py-2 font-mono text-xs text-ink-950 outline-none focus-visible:ring-2 focus-visible:ring-ledger-500"
         type="password"
         autoComplete="off"
         value={token}
@@ -124,9 +124,9 @@ export function AuthTokenSettings() {
           <LogOut aria-hidden="true" className="h-4 w-4" />
           Clear
         </Button>
-        {saved ? <span className="text-xs text-emerald-700">Saved.</span> : null}
+        {saved ? <span className="text-xs text-emerald-200">Saved.</span> : null}
       </div>
-      {status ? <p className="mt-2 text-xs text-stone-700">{status}</p> : null}
+      {status ? <p className="mt-2 text-xs text-ink-700">{status}</p> : null}
     </div>
   );
 }

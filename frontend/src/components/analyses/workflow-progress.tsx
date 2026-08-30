@@ -11,11 +11,11 @@ export function WorkflowProgress({ progress }: { progress: AnalysisProgress }) {
     <div>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <Badge value={progress.status} />
-        <span className="text-sm font-medium text-stone-700">{progress.progress_percent}%</span>
+        <span className="text-sm font-semibold text-ink-950">{progress.progress_percent}%</span>
       </div>
-      <div className="h-2 rounded-full bg-stone-200">
+      <div className="h-2 rounded-full bg-white/10">
         <div
-          className="h-2 rounded-full bg-ledger-700 transition-all"
+          className="h-2 rounded-full bg-ledger-500 shadow-glow transition-all"
           style={{ width: `${Math.max(0, Math.min(100, progress.progress_percent))}%` }}
         />
       </div>
@@ -29,11 +29,11 @@ export function WorkflowProgress({ progress }: { progress: AnalysisProgress }) {
             <li
               key={stage}
               className={cn(
-                "flex min-h-10 items-center gap-2 rounded-md border px-3 py-2 text-sm",
-                complete && "border-emerald-200 bg-emerald-50",
-                current && "border-ledger-700 bg-ledger-100",
-                failed && "border-red-200 bg-red-50",
-                !complete && !current && !failed && "border-stone-200 bg-stone-50"
+                "flex min-h-10 items-center gap-2 rounded-md border px-3 py-2 text-sm text-ink-800",
+                complete && "border-emerald-300/25 bg-emerald-400/10 text-emerald-100",
+                current && "border-ledger-200/35 bg-ledger-500/12 text-ledger-100",
+                failed && "border-red-300/25 bg-red-500/10 text-red-100",
+                !complete && !current && !failed && "border-white/10 bg-white/[0.04]"
               )}
             >
               <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />

@@ -8,15 +8,10 @@ import { labelFor } from "@/lib/status";
 
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import { Panel, PanelHeader } from "../ui/panel";
 import { EmptyState } from "../ui/state";
 
-const workflowStatuses = [
-  "approved",
-  "rejected",
-  "partially_approved",
-  "needs_changes",
-  "uncertain"
-];
+const workflowStatuses = ["approved", "rejected", "partially_approved", "needs_changes", "uncertain"];
 
 export function ReviewPanel({
   review,
@@ -36,26 +31,23 @@ export function ReviewPanel({
 
   if (!review) {
     return (
-      <EmptyState
-        title="No workflow review request"
-        detail="When an analysis reaches a human-review gate, the required review appears here."
-      />
+      <Panel>
+        <EmptyState
+          title="No workflow review request"
+          detail="When an analysis reaches a human-review gate, the required review appears here."
+        />
+      </Panel>
     );
   }
   const canResume = review.status !== "pending";
 
   return (
-    <section className="rounded-md border border-stone-200 bg-white p-4">
+    <Panel>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
-            Human Review
-          </p>
-          <h3 className="text-base font-semibold">{labelFor(review.review_type)}</h3>
-        </div>
+        <PanelHeader title={labelFor(review.review_type)} eyebrow="Human review" />
         <Badge value={review.status} />
       </div>
-      <p className="mt-3 text-sm leading-6 text-stone-700">{review.reason}</p>
+      <p className="mt-3 text-sm leading-6 text-ink-700">{review.reason}</p>
       <dl className="mt-4 grid gap-3 sm:grid-cols-3">
         <ReviewMetric label="Findings" value={review.finding_ids.length} />
         <ReviewMetric label="Claims" value={review.claim_ids.length} />
@@ -64,7 +56,7 @@ export function ReviewPanel({
 
       <div className="mt-5 grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
         <div>
-          <label className="text-sm font-medium" htmlFor="review-status">
+          <label className="text-sm font-medium text-ink-950" htmlFor="review-status">
             Review decision
           </label>
           <select
@@ -72,7 +64,7 @@ export function ReviewPanel({
             value={status}
             onChange={(event) => setStatus(event.target.value)}
             disabled={submitting || review.status !== "pending"}
-            className="mt-2 w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ledger-600 disabled:bg-stone-100"
+            className="mt-2 w-full rounded-md border border-white/12 bg-graphite-950 px-3 py-2 text-sm text-ink-950 outline-none focus-visible:ring-2 focus-visible:ring-ledger-500 disabled:opacity-60"
           >
             {workflowStatuses.map((item) => (
               <option key={item} value={item}>
@@ -82,7 +74,7 @@ export function ReviewPanel({
           </select>
         </div>
         <div>
-          <label className="text-sm font-medium" htmlFor="review-comment">
+          <label className="text-sm font-medium text-ink-950" htmlFor="review-comment">
             Analyst note
           </label>
           <textarea
@@ -91,7 +83,7 @@ export function ReviewPanel({
             onChange={(event) => setComment(event.target.value)}
             disabled={submitting || review.status !== "pending"}
             rows={4}
-            className="mt-2 w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ledger-600 disabled:bg-stone-100"
+            className="mt-2 w-full rounded-md border border-white/12 bg-graphite-950 px-3 py-2 text-sm text-ink-950 outline-none focus-visible:ring-2 focus-visible:ring-ledger-500 disabled:opacity-60"
           />
         </div>
       </div>
@@ -111,15 +103,15 @@ export function ReviewPanel({
           Resume Analysis
         </Button>
       </div>
-    </section>
+    </Panel>
   );
 }
 
 function ReviewMetric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-md border border-stone-200 bg-stone-50 p-3">
-      <dt className="text-xs font-semibold uppercase tracking-[0.1em] text-stone-500">{label}</dt>
-      <dd className="mt-1 text-lg font-semibold">{value}</dd>
+    <div className="rounded-md border border-white/10 bg-white/[0.04] p-3">
+      <dt className="text-xs font-semibold uppercase text-ink-700">{label}</dt>
+      <dd className="mt-1 text-lg font-semibold text-ink-950">{value}</dd>
     </div>
   );
 }
