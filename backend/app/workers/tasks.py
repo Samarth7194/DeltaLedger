@@ -13,6 +13,7 @@ from app.services.contradiction_analysis_service import ContradictionAnalysisSer
 from app.services.filing_comparison_service import FilingComparisonService
 from app.services.filing_processing_service import FilingProcessingService
 from app.services.financial_verification_service import FinancialVerificationService
+from app.workers.async_runner import run_worker_coroutine
 
 settings = get_settings()
 broker = RedisBroker(
@@ -69,9 +70,7 @@ def enqueue_resume_analysis_workflow(
 
 @dramatiq.actor(max_retries=3, time_limit=30 * 60 * 1000)
 def process_filing_task(filing_id: str) -> None:
-    import asyncio
-
-    asyncio.run(_process_filing(uuid.UUID(filing_id)))
+    run_worker_coroutine(_process_filing(uuid.UUID(filing_id)))
 
 
 async def _process_filing(filing_id: uuid.UUID) -> None:
@@ -82,9 +81,7 @@ async def _process_filing(filing_id: uuid.UUID) -> None:
 
 @dramatiq.actor(max_retries=3, time_limit=30 * 60 * 1000)
 def process_comparison_task(comparison_id: str) -> None:
-    import asyncio
-
-    asyncio.run(_process_comparison(uuid.UUID(comparison_id)))
+    run_worker_coroutine(_process_comparison(uuid.UUID(comparison_id)))
 
 
 async def _process_comparison(comparison_id: uuid.UUID) -> None:
@@ -95,9 +92,7 @@ async def _process_comparison(comparison_id: uuid.UUID) -> None:
 
 @dramatiq.actor(max_retries=3, time_limit=30 * 60 * 1000)
 def extract_financial_claims_task(filing_id: str) -> None:
-    import asyncio
-
-    asyncio.run(_extract_financial_claims(uuid.UUID(filing_id)))
+    run_worker_coroutine(_extract_financial_claims(uuid.UUID(filing_id)))
 
 
 async def _extract_financial_claims(filing_id: uuid.UUID) -> None:
@@ -108,9 +103,7 @@ async def _extract_financial_claims(filing_id: uuid.UUID) -> None:
 
 @dramatiq.actor(max_retries=3, time_limit=30 * 60 * 1000)
 def verify_financial_claim_task(claim_id: str) -> None:
-    import asyncio
-
-    asyncio.run(_verify_financial_claim(uuid.UUID(claim_id)))
+    run_worker_coroutine(_verify_financial_claim(uuid.UUID(claim_id)))
 
 
 async def _verify_financial_claim(claim_id: uuid.UUID) -> None:
@@ -121,9 +114,7 @@ async def _verify_financial_claim(claim_id: uuid.UUID) -> None:
 
 @dramatiq.actor(max_retries=3, time_limit=30 * 60 * 1000)
 def verify_comparison_financials_task(comparison_id: str) -> None:
-    import asyncio
-
-    asyncio.run(_verify_comparison_financials(uuid.UUID(comparison_id)))
+    run_worker_coroutine(_verify_comparison_financials(uuid.UUID(comparison_id)))
 
 
 async def _verify_comparison_financials(comparison_id: uuid.UUID) -> None:
@@ -134,9 +125,7 @@ async def _verify_comparison_financials(comparison_id: uuid.UUID) -> None:
 
 @dramatiq.actor(max_retries=3, time_limit=30 * 60 * 1000)
 def analyze_contradictions_for_comparison(comparison_id: str) -> None:
-    import asyncio
-
-    asyncio.run(_analyze_contradictions_for_comparison(uuid.UUID(comparison_id)))
+    run_worker_coroutine(_analyze_contradictions_for_comparison(uuid.UUID(comparison_id)))
 
 
 async def _analyze_contradictions_for_comparison(comparison_id: uuid.UUID) -> None:
@@ -147,9 +136,7 @@ async def _analyze_contradictions_for_comparison(comparison_id: uuid.UUID) -> No
 
 @dramatiq.actor(max_retries=1, time_limit=60 * 60 * 1000)
 def run_analysis_workflow_task(analysis_run_id: str) -> None:
-    import asyncio
-
-    asyncio.run(_run_analysis_workflow(uuid.UUID(analysis_run_id)))
+    run_worker_coroutine(_run_analysis_workflow(uuid.UUID(analysis_run_id)))
 
 
 async def _run_analysis_workflow(analysis_run_id: uuid.UUID) -> None:
@@ -166,9 +153,7 @@ async def _run_analysis_workflow(analysis_run_id: uuid.UUID) -> None:
 
 @dramatiq.actor(max_retries=1, time_limit=60 * 60 * 1000)
 def resume_analysis_workflow_task(analysis_run_id: str, review_request_id: str) -> None:
-    import asyncio
-
-    asyncio.run(
+    run_worker_coroutine(
         _resume_analysis_workflow(
             uuid.UUID(analysis_run_id),
             uuid.UUID(review_request_id),
