@@ -66,14 +66,15 @@ class Settings(BaseSettings):
     chunk_overlap_tokens: int = 60
 
     embedding_provider: str = "fake"
-    embedding_model: str = "BAAI/bge-m3"
-    embedding_model_name: str = "BAAI/bge-m3"
+    embedding_model: str = "BAAI/bge-large-en-v1.5"
+    embedding_model_name: str = "BAAI/bge-large-en-v1.5"
     embedding_dimension: int = 1024
     embedding_dimensions: int = 1024
     embedding_batch_size: int = 16
     embedding_batch_delay_seconds: float = 0.75
     embedding_device: str = "cpu"
     embedding_normalize: bool = True
+    embedding_query_instruction: str | None = None
     embedding_timeout_seconds: float = 60.0
     hf_token: str | None = None
     hf_inference_base_url: str = "https://api-inference.huggingface.co"

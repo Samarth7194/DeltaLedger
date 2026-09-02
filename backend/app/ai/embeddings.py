@@ -66,6 +66,7 @@ class SentenceTransformerEmbeddingProvider:
         self.dimension = settings.embedding_dimension
         self.batch_size = settings.embedding_batch_size
         self.normalize = settings.embedding_normalize
+        self.query_instruction = settings.embedding_query_instruction or ""
         self._model = SentenceTransformer(
             settings.embedding_model,
             device=settings.embedding_device,
@@ -87,7 +88,8 @@ class SentenceTransformerEmbeddingProvider:
         return await anyio.to_thread.run_sync(self._encode, texts)
 
     async def embed_query(self, text: str) -> list[float]:
-        return (await self.embed_documents([text]))[0]
+        query_text = f"{self.query_instruction}{text}" if self.query_instruction else text
+        return (await self.embed_documents([query_text]))[0]
 
     def _encode(self, texts: list[str]) -> list[list[float]]:
         vectors = self._model.encode(

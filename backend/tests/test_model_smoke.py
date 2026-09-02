@@ -16,11 +16,12 @@ pytestmark = [pytest.mark.model_smoke, pytest.mark.slow]
 async def test_real_embedding_model_smoke() -> None:
     settings = Settings(
         embedding_provider="sentence_transformers",
-        embedding_model="BAAI/bge-m3",
-        embedding_model_name="BAAI/bge-m3",
+        embedding_model="BAAI/bge-large-en-v1.5",
+        embedding_model_name="BAAI/bge-large-en-v1.5",
         embedding_dimension=1024,
         embedding_dimensions=1024,
         embedding_normalize=True,
+        embedding_query_instruction="Represent this sentence for searching relevant passages: ",
     )
     service = create_embedding_service(settings)
 
