@@ -71,6 +71,7 @@ class Settings(BaseSettings):
     embedding_dimension: int = 1024
     embedding_dimensions: int = 1024
     embedding_batch_size: int = 16
+    embedding_batch_delay_seconds: float = 0.75
     embedding_device: str = "cpu"
     embedding_normalize: bool = True
     embedding_timeout_seconds: float = 60.0
@@ -264,6 +265,10 @@ class Settings(BaseSettings):
             raise ValueError("AUTH_LOGIN_ROLE must be analyst, reviewer, or admin.")
         _require_non_negative("AI_PROVIDER_TIMEOUT_SECONDS", self.ai_provider_timeout_seconds)
         _require_positive_int("AI_PROVIDER_MAX_RETRIES", self.ai_provider_max_retries)
+        _require_non_negative(
+            "EMBEDDING_BATCH_DELAY_SECONDS",
+            self.embedding_batch_delay_seconds,
+        )
         _require_non_negative(
             "AI_PROVIDER_RETRY_BASE_DELAY_SECONDS",
             self.ai_provider_retry_base_delay_seconds,

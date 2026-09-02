@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import math
 from collections.abc import Awaitable, Callable, Sequence
@@ -175,10 +176,12 @@ class EmbeddingService:
         *,
         expected_dimension: int,
         batch_size: int,
+        batch_delay_seconds: float = 0.0,
     ) -> None:
         self.provider = provider
         self.expected_dimension = expected_dimension
         self.batch_size = batch_size
+        self.batch_delay_seconds = batch_delay_seconds
         if provider.dimension != expected_dimension:
             raise ValueError(
                 f"Embedding provider dimension {provider.dimension} does not match "
@@ -192,12 +195,15 @@ class EmbeddingService:
         on_batch: Callable[[list[str], list[list[float]]], Awaitable[None]] | None = None,
     ) -> list[list[float]]:
         vectors: list[list[float]] = []
-        for batch in _batches(texts, self.batch_size):
+        batches = _batches(texts, self.batch_size)
+        for index, batch in enumerate(batches):
             batch_vectors = await self.provider.embed_documents(batch)
             self._validate_vectors(batch_vectors, len(batch))
             vectors.extend(batch_vectors)
             if on_batch is not None:
                 await on_batch(batch, batch_vectors)
+            if self.batch_delay_seconds > 0 and index < len(batches) - 1:
+                await asyncio.sleep(self.batch_delay_seconds)
         return vectors
 
     async def embed_query(self, text: str) -> list[float]:
@@ -243,6 +249,7 @@ def create_embedding_service(settings: Settings) -> EmbeddingService:
         provider,
         expected_dimension=settings.embedding_dimension,
         batch_size=settings.embedding_batch_size,
+        batch_delay_seconds=settings.embedding_batch_delay_seconds,
     )
 
 

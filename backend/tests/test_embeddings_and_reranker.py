@@ -57,6 +57,71 @@ async def test_embed_documents_persists_completed_batches_before_a_later_failure
     assert provider.calls == 2
 
 
+@pytest.mark.asyncio
+async def test_embed_documents_paces_successful_batches(monkeypatch: pytest.MonkeyPatch) -> None:
+    sleep_calls: list[float] = []
+
+    async def _record_sleep(seconds: float) -> None:
+        sleep_calls.append(seconds)
+
+    monkeypatch.setattr("app.ai.embeddings.asyncio.sleep", _record_sleep)
+    service = EmbeddingService(
+        DeterministicFakeEmbeddingProvider(dimension=2),
+        expected_dimension=2,
+        batch_size=2,
+        batch_delay_seconds=0.75,
+    )
+
+    vectors = await service.embed_documents(["a", "b", "c", "d", "e"])
+
+    assert len(vectors) == 5
+    assert sleep_calls == [0.75, 0.75]
+
+
+@pytest.mark.asyncio
+async def test_embed_documents_does_not_sleep_after_final_batch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sleep_calls: list[float] = []
+
+    async def _record_sleep(seconds: float) -> None:
+        sleep_calls.append(seconds)
+
+    monkeypatch.setattr("app.ai.embeddings.asyncio.sleep", _record_sleep)
+    service = EmbeddingService(
+        DeterministicFakeEmbeddingProvider(dimension=2),
+        expected_dimension=2,
+        batch_size=2,
+        batch_delay_seconds=0.75,
+    )
+
+    await service.embed_documents(["a", "b", "c", "d"])
+
+    assert sleep_calls == [0.75]
+
+
+@pytest.mark.asyncio
+async def test_embed_documents_one_batch_has_no_pacing_sleep(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sleep_calls: list[float] = []
+
+    async def _record_sleep(seconds: float) -> None:
+        sleep_calls.append(seconds)
+
+    monkeypatch.setattr("app.ai.embeddings.asyncio.sleep", _record_sleep)
+    service = EmbeddingService(
+        DeterministicFakeEmbeddingProvider(dimension=2),
+        expected_dimension=2,
+        batch_size=16,
+        batch_delay_seconds=0.75,
+    )
+
+    await service.embed_documents(["a"])
+
+    assert sleep_calls == []
+
+
 def test_embedding_service_rejects_dimension_mismatch() -> None:
     with pytest.raises(ValueError):
         EmbeddingService(
