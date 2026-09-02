@@ -120,6 +120,8 @@ class WorkflowRepository:
             run.started_at = now
         if status in {"completed", "completed_with_warnings", "failed", "cancelled"}:
             run.completed_at = now
+        else:
+            run.completed_at = None
         if metrics is not None:
             run.processing_metrics = {**(run.processing_metrics or {}), **metrics}
         if comparison_id is not None:

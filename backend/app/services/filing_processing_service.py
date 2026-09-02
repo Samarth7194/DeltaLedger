@@ -161,12 +161,26 @@ class FilingProcessingService:
             and chunk.embedding_version == self.embedding_service.model_version
         ]
         to_embed = [chunk for chunk in chunks if chunk not in unchanged]
-        vectors = await self.embedding_service.embed_documents([chunk.text for chunk in to_embed])
-        await self.chunks.update_embeddings(
-            to_embed,
-            vectors,
-            model_name=self.embedding_service.model_name,
-            model_version=self.embedding_service.model_version,
+        if not to_embed:
+            return chunks
+
+        offset = 0
+
+        async def _persist_batch(batch_texts: list[str], batch_vectors: list[list[float]]) -> None:
+            nonlocal offset
+            batch_chunks = to_embed[offset : offset + len(batch_texts)]
+            await self.chunks.update_embeddings(
+                batch_chunks,
+                batch_vectors,
+                model_name=self.embedding_service.model_name,
+                model_version=self.embedding_service.model_version,
+            )
+            await self.session.flush()
+            offset += len(batch_texts)
+
+        await self.embedding_service.embed_documents(
+            [chunk.text for chunk in to_embed],
+            on_batch=_persist_batch,
         )
         return chunks
 

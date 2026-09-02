@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import math
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from typing import Protocol
 from urllib.parse import quote
@@ -185,12 +185,19 @@ class EmbeddingService:
                 f"expected dimension {expected_dimension}."
             )
 
-    async def embed_documents(self, texts: list[str]) -> list[list[float]]:
+    async def embed_documents(
+        self,
+        texts: list[str],
+        *,
+        on_batch: Callable[[list[str], list[list[float]]], Awaitable[None]] | None = None,
+    ) -> list[list[float]]:
         vectors: list[list[float]] = []
         for batch in _batches(texts, self.batch_size):
             batch_vectors = await self.provider.embed_documents(batch)
             self._validate_vectors(batch_vectors, len(batch))
             vectors.extend(batch_vectors)
+            if on_batch is not None:
+                await on_batch(batch, batch_vectors)
         return vectors
 
     async def embed_query(self, text: str) -> list[float]:

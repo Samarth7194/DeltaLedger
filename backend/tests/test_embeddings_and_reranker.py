@@ -24,6 +24,39 @@ async def test_embedding_service_batches_and_validates_dimension() -> None:
     assert all(len(vector) == 8 for vector in vectors)
 
 
+@pytest.mark.asyncio
+async def test_embed_documents_persists_completed_batches_before_a_later_failure() -> None:
+    class _FlakyProvider:
+        model_name = "flaky"
+        model_version = "v1"
+        dimension = 2
+
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def embed_documents(self, texts: list[str]) -> list[list[float]]:
+            self.calls += 1
+            if self.calls == 2:
+                raise RuntimeError("rate limited")
+            return [[1.0, 0.0] for _ in texts]
+
+        async def embed_query(self, text: str) -> list[float]:
+            return [1.0, 0.0]
+
+    provider = _FlakyProvider()
+    service = EmbeddingService(provider, expected_dimension=2, batch_size=1)
+    persisted: list[tuple[list[str], list[list[float]]]] = []
+
+    async def on_batch(batch_texts: list[str], batch_vectors: list[list[float]]) -> None:
+        persisted.append((batch_texts, batch_vectors))
+
+    with pytest.raises(RuntimeError):
+        await service.embed_documents(["a", "b", "c"], on_batch=on_batch)
+
+    assert persisted == [(["a"], [[1.0, 0.0]])]
+    assert provider.calls == 2
+
+
 def test_embedding_service_rejects_dimension_mismatch() -> None:
     with pytest.raises(ValueError):
         EmbeddingService(

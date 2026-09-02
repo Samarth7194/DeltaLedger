@@ -80,7 +80,10 @@ class Settings(BaseSettings):
     ai_provider_api_key: str | None = None
     ai_provider_base_url: str = "https://api.openai.com/v1"
     ai_provider_timeout_seconds: float = 60.0
-    ai_provider_max_retries: int = 3
+    ai_provider_max_retries: int = 5
+    ai_provider_retry_base_delay_seconds: float = 1.0
+    ai_provider_retry_max_delay_seconds: float = 60.0
+    ai_provider_retry_jitter_seconds: float = 0.5
     ai_provider_input_token_cost_usd_per_million: float | None = None
     ai_provider_output_token_cost_usd_per_million: float | None = None
 
@@ -261,6 +264,19 @@ class Settings(BaseSettings):
             raise ValueError("AUTH_LOGIN_ROLE must be analyst, reviewer, or admin.")
         _require_non_negative("AI_PROVIDER_TIMEOUT_SECONDS", self.ai_provider_timeout_seconds)
         _require_positive_int("AI_PROVIDER_MAX_RETRIES", self.ai_provider_max_retries)
+        _require_non_negative(
+            "AI_PROVIDER_RETRY_BASE_DELAY_SECONDS",
+            self.ai_provider_retry_base_delay_seconds,
+        )
+        _require_non_negative(
+            "AI_PROVIDER_RETRY_JITTER_SECONDS",
+            self.ai_provider_retry_jitter_seconds,
+        )
+        if self.ai_provider_retry_max_delay_seconds < self.ai_provider_retry_base_delay_seconds:
+            raise ValueError(
+                "AI_PROVIDER_RETRY_MAX_DELAY_SECONDS must be greater than or equal to "
+                "AI_PROVIDER_RETRY_BASE_DELAY_SECONDS."
+            )
         if self.ai_provider_input_token_cost_usd_per_million is not None:
             _require_non_negative(
                 "AI_PROVIDER_INPUT_TOKEN_COST_USD_PER_MILLION",

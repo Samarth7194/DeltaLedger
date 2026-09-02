@@ -10,6 +10,7 @@ from langgraph.types import Command, interrupt
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai.openai_compatible import ProviderRequestError
 from app.core.config import Settings
 from app.db.models import (
     AnalysisReviewRequest,
@@ -287,6 +288,15 @@ class AnalysisWorkflowService:
                 return
         except WorkflowError as exc:
             await self._fail_run(run.id, exc)
+            raise
+        except ProviderRequestError as exc:
+            workflow_error = WorkflowError(
+                "provider_error",
+                exc.error_category,
+                _provider_error_message(exc),
+                node=run.current_node,
+            )
+            await self._fail_run(run.id, workflow_error)
             raise
         except Exception as exc:
             workflow_error = WorkflowError(
@@ -722,7 +732,16 @@ class AnalysisWorkflowService:
             .join(FilingSection)
             .where(FilingSection.filing_id == filing_id)
         )
-        return bool(section_count and chunk_count)
+        embedded_chunk_count = await self.session.scalar(
+            select(func.count())
+            .select_from(FilingChunk)
+            .join(FilingSection)
+            .where(
+                FilingSection.filing_id == filing_id,
+                FilingChunk.embedding.is_not(None),
+            )
+        )
+        return bool(section_count and chunk_count and chunk_count == embedded_chunk_count)
 
     def _review_policy(
         self,
@@ -831,6 +850,18 @@ def _compact_outputs(result: dict[str, object]) -> dict[str, object]:
         or key.endswith("_ids")
         or key in {"counts", "workflow_status", "requires_human_review", "evidence_valid"}
     }
+
+
+def _provider_error_message(exc: ProviderRequestError) -> str:
+    parts = [f"{exc.provider} request failed", f"category={exc.error_category}"]
+    if exc.model:
+        parts.append(f"model={exc.model}")
+    if exc.status_code is not None:
+        parts.append(f"status={exc.status_code}")
+    parts.append(f"retries={exc.retry_count}")
+    if exc.retry_after_seconds is not None:
+        parts.append(f"retry_after={exc.retry_after_seconds:.0f}s")
+    return " ".join(parts)
 
 
 def json_safe(value: object) -> dict[str, object]:

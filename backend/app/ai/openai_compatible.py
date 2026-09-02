@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import random
 import time
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from typing import Any, TypeVar
 
 import anyio
@@ -13,6 +16,8 @@ from app.core.config import Settings
 from app.core.exceptions import DeltaLedgerError
 
 T = TypeVar("T", bound=BaseModel)
+
+_RETRYABLE_STATUS_CODES = {408, 409, 425, 429}
 
 
 class OpenAICompatibleClient:
@@ -27,6 +32,9 @@ class OpenAICompatibleClient:
         self.base_url = settings.ai_provider_base_url.rstrip("/")
         self.timeout = settings.ai_provider_timeout_seconds
         self.max_retries = settings.ai_provider_max_retries
+        self.retry_base_delay_seconds = settings.ai_provider_retry_base_delay_seconds
+        self.retry_max_delay_seconds = settings.ai_provider_retry_max_delay_seconds
+        self.retry_jitter_seconds = settings.ai_provider_retry_jitter_seconds
         self.input_cost_per_million = settings.ai_provider_input_token_cost_usd_per_million
         self.output_cost_per_million = settings.ai_provider_output_token_cost_usd_per_million
         self.headers = {
@@ -139,8 +147,13 @@ class OpenAICompatibleClient:
         return parsed, metadata, response
 
     async def _post(self, path: str, payload: dict[str, Any]) -> tuple[dict[str, Any], int]:
-        last_error: Exception | None = None
+        model = payload.get("model") if isinstance(payload.get("model"), str) else None
+        status_code: int | None = None
+        retry_after_seconds: float | None = None
+        error_category = "unknown_error"
+        error_message = "Unknown provider error"
         for attempt in range(self.max_retries):
+            is_last_attempt = attempt == self.max_retries - 1
             try:
                 async with httpx.AsyncClient(timeout=self.timeout) as client:
                     response = await client.post(
@@ -148,28 +161,143 @@ class OpenAICompatibleClient:
                         headers=self.headers,
                         json=payload,
                     )
-                if response.status_code in {408, 409, 425, 429} or response.status_code >= 500:
-                    last_error = DeltaLedgerError(
-                        f"OpenAI-compatible provider returned status {response.status_code}."
-                    )
-                    if attempt < self.max_retries - 1:
-                        await anyio.sleep(min(8.0, 2.0**attempt))
-                        continue
-                response.raise_for_status()
-                return response.json(), attempt
-            except (httpx.HTTPError, ValueError, DeltaLedgerError) as exc:
-                last_error = exc
-                if attempt >= self.max_retries - 1:
+            except httpx.HTTPError as exc:
+                status_code = None
+                retry_after_seconds = None
+                error_category = "network_error"
+                error_message = f"{exc.__class__.__name__}: {exc}"
+                if is_last_attempt:
                     break
-                await anyio.sleep(min(8.0, 2.0**attempt))
-        message = last_error.__class__.__name__ if last_error else "Unknown provider error"
-        raise DeltaLedgerError(f"OpenAI-compatible provider request failed: {message}")
+                await anyio.sleep(self._retry_delay(attempt, None))
+                continue
+
+            if response.status_code in _RETRYABLE_STATUS_CODES or response.status_code >= 500:
+                status_code = response.status_code
+                retry_after_seconds = _parse_retry_after(response.headers.get("retry-after"))
+                error_category = _error_category(status_code)
+                error_message = _safe_error_message(response)
+                if is_last_attempt:
+                    break
+                await anyio.sleep(self._retry_delay(attempt, retry_after_seconds))
+                continue
+
+            try:
+                response.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                raise ProviderRequestError(
+                    "OpenAI-compatible provider rejected the request with a "
+                    f"non-retryable status {exc.response.status_code}: "
+                    f"{_safe_error_message(response)}",
+                    provider=self.provider,
+                    provider_type=self.provider_type,
+                    model=model,
+                    status_code=exc.response.status_code,
+                    retry_count=attempt,
+                    retry_after_seconds=None,
+                    error_category=_error_category(exc.response.status_code),
+                ) from exc
+            return response.json(), attempt
+
+        raise ProviderRequestError(
+            f"OpenAI-compatible provider request failed after {self.max_retries} "
+            f"attempt(s): {error_message}",
+            provider=self.provider,
+            provider_type=self.provider_type,
+            model=model,
+            status_code=status_code,
+            retry_count=self.max_retries,
+            retry_after_seconds=retry_after_seconds,
+            error_category=error_category,
+        )
+
+    def _retry_delay(self, attempt: int, retry_after_seconds: float | None) -> float:
+        if retry_after_seconds is not None:
+            return min(retry_after_seconds, self.retry_max_delay_seconds)
+        backoff = self.retry_base_delay_seconds * (2**attempt)
+        jitter = random.uniform(0, self.retry_jitter_seconds) if self.retry_jitter_seconds else 0.0
+        return min(backoff + jitter, self.retry_max_delay_seconds)
 
 
 class StructuredOutputError(DeltaLedgerError):
     def __init__(self, message: str, metadata: InferenceMetadata) -> None:
         super().__init__(message)
         self.metadata = metadata
+
+
+class ProviderRequestError(DeltaLedgerError):
+    """Raised when an OpenAI-compatible provider request ultimately fails.
+
+    Carries enough detail for callers to log or report the failure usefully
+    without ever including request headers (and therefore the API key).
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        provider: str,
+        provider_type: str,
+        model: str | None,
+        status_code: int | None,
+        retry_count: int,
+        retry_after_seconds: float | None,
+        error_category: str,
+    ) -> None:
+        super().__init__(message)
+        self.provider = provider
+        self.provider_type = provider_type
+        self.model = model
+        self.status_code = status_code
+        self.retry_count = retry_count
+        self.retry_after_seconds = retry_after_seconds
+        self.error_category = error_category
+
+
+def _error_category(status_code: int | None) -> str:
+    if status_code is None:
+        return "network_error"
+    if status_code == 429:
+        return "rate_limited"
+    if status_code == 408:
+        return "timeout"
+    if status_code >= 500:
+        return "server_error"
+    if status_code >= 400:
+        return "client_error"
+    return "unknown_error"
+
+
+def _safe_error_message(response: httpx.Response) -> str:
+    try:
+        payload = response.json()
+    except ValueError:
+        return response.text[:500]
+    if isinstance(payload, dict):
+        error = payload.get("error")
+        if isinstance(error, dict):
+            message = error.get("message")
+            if isinstance(message, str):
+                return message[:500]
+        if isinstance(error, str):
+            return error[:500]
+    return json.dumps(payload)[:500]
+
+
+def _parse_retry_after(value: str | None) -> float | None:
+    if not value:
+        return None
+    value = value.strip()
+    try:
+        return max(float(value), 0.0)
+    except ValueError:
+        pass
+    try:
+        retry_at = parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        return None
+    if retry_at.tzinfo is None:
+        retry_at = retry_at.replace(tzinfo=UTC)
+    return max((retry_at - datetime.now(UTC)).total_seconds(), 0.0)
 
 
 def _message_content(response: dict[str, Any]) -> str:
