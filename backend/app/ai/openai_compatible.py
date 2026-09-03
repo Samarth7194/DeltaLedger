@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import random
+import re
 import time
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
@@ -323,33 +324,69 @@ def _parse_retry_after(value: str | None) -> float | None:
     return max((retry_at - datetime.now(UTC)).total_seconds(), 0.0)
 
 
+_RETRY_MESSAGE_PATTERN = re.compile(r"retry in\s+([\d.]+)\s*s\b", re.IGNORECASE)
+_MAX_RETRY_DELAY_SEARCH_DEPTH = 6
+
+
 def _parse_structured_retry_delay(response: httpx.Response) -> float | None:
     """Prefer the provider's own retry hint over headers or exponential backoff.
 
-    Google's OpenAI-compatible endpoint reports 429 quota resets as a
-    ``google.rpc.RetryInfo`` protobuf (``retryDelay``, e.g. ``"15.69s"``)
-    inside the JSON error body rather than an HTTP ``Retry-After`` header.
+    Google's Gemini API reports 429 quota resets via a ``google.rpc.RetryInfo``
+    duration (``retryDelay``), but the exact JSON shape isn't guaranteed by the
+    OpenAI-compatibility endpoint: it may or may not preserve a typed
+    ``error.details`` array, the delay itself may be a duration string
+    (``"34.7s"``), a bare number of seconds, or a protobuf
+    ``{"seconds": .., "nanos": ..}`` object, and the key may be either
+    ``retryDelay`` or ``retry_delay``. A depth-bounded recursive scan handles
+    all of these without assuming one exact nesting. If no machine-readable
+    value is found anywhere in the body, the human-readable message (which
+    Gemini's free-tier 429s reliably include, e.g. "Please retry in
+    34.725132932s") is used as a narrow, last-resort fallback.
     """
     try:
         payload = response.json()
     except ValueError:
+        payload = None
+    if isinstance(payload, dict):
+        delay = _find_retry_delay(payload)
+        if delay is not None:
+            return delay
+    return _parse_retry_delay_from_text(response.text)
+
+
+def _find_retry_delay(node: object, *, _depth: int = 0) -> float | None:
+    if _depth > _MAX_RETRY_DELAY_SEARCH_DEPTH:
         return None
-    if not isinstance(payload, dict):
-        return None
-    error = payload.get("error")
-    if not isinstance(error, dict):
-        return None
-    details = error.get("details")
-    if not isinstance(details, list):
-        return None
-    for detail in details:
-        if not isinstance(detail, dict):
-            continue
-        type_name = detail.get("@type")
-        if isinstance(type_name, str) and type_name.endswith("RetryInfo"):
-            delay = detail.get("retryDelay")
-            if isinstance(delay, str):
-                return _parse_duration_seconds(delay)
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if isinstance(key, str) and key.replace("_", "").lower() == "retrydelay":
+                parsed = _coerce_retry_delay_value(value)
+                if parsed is not None:
+                    return parsed
+        for value in node.values():
+            found = _find_retry_delay(value, _depth=_depth + 1)
+            if found is not None:
+                return found
+    elif isinstance(node, list):
+        for item in node:
+            found = _find_retry_delay(item, _depth=_depth + 1)
+            if found is not None:
+                return found
+    return None
+
+
+def _coerce_retry_delay_value(value: object) -> float | None:
+    if isinstance(value, str):
+        return _parse_duration_seconds(value)
+    if isinstance(value, int | float) and not isinstance(value, bool):
+        return max(float(value), 0.0)
+    if isinstance(value, dict):
+        try:
+            seconds = float(value.get("seconds", 0) or 0)
+            nanos = float(value.get("nanos", 0) or 0)
+        except (TypeError, ValueError):
+            return None
+        return max(seconds + nanos / 1_000_000_000, 0.0)
     return None
 
 
@@ -359,6 +396,18 @@ def _parse_duration_seconds(value: str) -> float | None:
         value = value[:-1]
     try:
         return max(float(value), 0.0)
+    except ValueError:
+        return None
+
+
+def _parse_retry_delay_from_text(text: str) -> float | None:
+    if not text:
+        return None
+    match = _RETRY_MESSAGE_PATTERN.search(text)
+    if not match:
+        return None
+    try:
+        return max(float(match.group(1)), 0.0)
     except ValueError:
         return None
 

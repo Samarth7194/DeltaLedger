@@ -278,6 +278,15 @@ class AnalysisWorkflowService:
         return graph.compile(checkpointer=await create_workflow_checkpointer(self.settings))
 
     async def _invoke_graph(self, run: AnalysisRun, state: AnalysisState) -> None:
+        # Snapshot the primary key before invoking the graph: a node's own
+        # service (e.g. FilingComparisonService) may roll back this shared
+        # session on failure, which expires every object in the identity
+        # map, `run` included. Reading `run.id`/`run.current_node`
+        # synchronously afterwards would then trigger an implicit lazy
+        # refresh outside the async greenlet context (MissingGreenlet),
+        # masking the real error. `run_id` is captured now, while `run` is
+        # still fresh, and any post-failure state is re-fetched explicitly.
+        run_id = run.id
         graph = await self._compile_graph()
         try:
             result = await graph.ainvoke(
@@ -287,26 +296,36 @@ class AnalysisWorkflowService:
             if isinstance(result, dict) and result.get("__interrupt__"):
                 return
         except WorkflowError as exc:
-            await self._fail_run(run.id, exc)
+            await self._fail_run(run_id, exc)
             raise
         except ProviderRequestError as exc:
             workflow_error = WorkflowError(
                 "provider_error",
                 exc.error_category,
                 _provider_error_message(exc),
-                node=run.current_node,
+                node=await self._current_node_for_error(run_id),
             )
-            await self._fail_run(run.id, workflow_error)
+            await self._fail_run(run_id, workflow_error)
             raise
         except Exception as exc:
             workflow_error = WorkflowError(
                 "fatal_internal_error",
                 exc.__class__.__name__,
                 "Analysis workflow failed unexpectedly.",
-                node=run.current_node,
+                node=await self._current_node_for_error(run_id),
             )
-            await self._fail_run(run.id, workflow_error)
+            await self._fail_run(run_id, workflow_error)
             raise
+
+    async def _current_node_for_error(self, analysis_run_id: uuid.UUID) -> str | None:
+        """Re-fetch current_node instead of trusting an in-memory attribute.
+
+        This performs its own await-bounded query, so it safely refreshes an
+        expired object instead of triggering an implicit lazy load from
+        plain synchronous attribute access.
+        """
+        run = await self.workflow.get_run(analysis_run_id)
+        return run.current_node if run is not None else None
 
     async def _validate_analysis_request(self, state: AnalysisState) -> AnalysisState:
         async def work() -> AnalysisState:

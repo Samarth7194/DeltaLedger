@@ -11,10 +11,13 @@ from pydantic import BaseModel
 from app.ai.openai_compatible import (
     OpenAICompatibleClient,
     ProviderRequestError,
+    _find_retry_delay,
     _parse_retry_after,
     _parse_structured_retry_delay,
 )
 from app.core.config import Settings
+
+_NO_TEXT_GIVEN = object()
 
 
 class _FakeResponse:
@@ -24,12 +27,15 @@ class _FakeResponse:
         payload: dict[str, object] | None = None,
         *,
         headers: dict[str, str] | None = None,
-        text: str = "",
+        text: str | object = _NO_TEXT_GIVEN,
     ) -> None:
         self.status_code = status_code
         self._payload = payload if payload is not None else {}
         self.headers = headers or {}
-        self.text = text
+        # Real httpx responses expose the same raw body via both .json() and
+        # .text, so a fake built only from `payload` should too, unless a
+        # caller deliberately wants to simulate non-JSON/malformed text.
+        self.text = json.dumps(self._payload) if text is _NO_TEXT_GIVEN else text
 
     def json(self) -> dict[str, object]:
         return self._payload
@@ -109,6 +115,23 @@ def _quota_exceeded_payload(retry_delay: str = "15.693241900s") -> dict[str, obj
                     "retryDelay": retry_delay,
                 },
             ],
+        }
+    }
+
+
+def _real_apple_run_quota_payload() -> dict[str, object]:
+    """The actual body shape observed against the real Gemini OpenAI-compatible
+    endpoint during the Apple analysis run: no typed ``error.details`` array
+    at all, just a free-text message carrying the retry hint."""
+    return {
+        "error": {
+            "code": 429,
+            "message": (
+                "Quota exceeded for metric: "
+                "generativelanguage.googleapis.com/generate_content_free_tier_requests, "
+                "limit: 5, model: gemini-3.6-flash. Please retry in 34.725132932s."
+            ),
+            "status": "RESOURCE_EXHAUSTED",
         }
     }
 
@@ -310,6 +333,108 @@ def test_parse_structured_retry_delay_returns_none_without_retry_info() -> None:
     assert _parse_structured_retry_delay(_FakeResponse(429, {"error": {"message": "nope"}})) is None
     assert _parse_structured_retry_delay(_FakeResponse(429, {})) is None
     assert _parse_structured_retry_delay(_FakeResponse(429, text="not json")) is None
+
+
+def test_parse_structured_retry_delay_falls_back_to_real_apple_run_message() -> None:
+    """Reproduces the actual Apple-run failure: no error.details array at all,
+    only a free-text message. This is the real shape the original details-only
+    parser missed."""
+    response = _FakeResponse(429, _real_apple_run_quota_payload())
+
+    assert _parse_structured_retry_delay(response) == pytest.approx(34.725132932)
+
+
+def test_find_retry_delay_supports_snake_case_key() -> None:
+    payload = {"error": {"details": [{"retry_delay": "34.725132932s"}]}}
+
+    assert _find_retry_delay(payload) == pytest.approx(34.725132932)
+
+
+def test_find_retry_delay_supports_protobuf_duration_object() -> None:
+    payload = {
+        "error": {
+            "details": [
+                {
+                    "@type": "type.googleapis.com/google.rpc.RetryInfo",
+                    "retryDelay": {"seconds": 34, "nanos": 725132932},
+                }
+            ]
+        }
+    }
+
+    assert _find_retry_delay(payload) == pytest.approx(34.725132932)
+
+
+def test_find_retry_delay_supports_bare_numeric_seconds() -> None:
+    payload = {"error": {"retryDelay": 34.7}}
+
+    assert _find_retry_delay(payload) == pytest.approx(34.7)
+
+
+def test_find_retry_delay_ignores_malformed_values_without_raising() -> None:
+    assert _find_retry_delay({"error": {"retryDelay": None}}) is None
+    assert _find_retry_delay({"error": {"retryDelay": {"seconds": "not-a-number"}}}) is None
+    assert _find_retry_delay({"error": {"retryDelay": ["unexpected", "list"]}}) is None
+    assert _find_retry_delay("not even a dict") is None
+
+
+@pytest.mark.asyncio
+async def test_post_uses_real_apple_run_retry_delay_instead_of_exponential_backoff(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Proves the ~34.7s Gemini quota delay is honored instead of the
+    1s/2s/4s exponential backoff the base delay/multiplier would otherwise
+    produce. Sleep is mocked so the test does not actually wait."""
+    _FakeAsyncClient.responses = [
+        _FakeResponse(429, _real_apple_run_quota_payload()),
+        _FakeResponse(200, _chat_response()),
+    ]
+    sleep_calls: list[float] = []
+
+    async def _record_sleep(seconds: float) -> None:
+        sleep_calls.append(seconds)
+
+    monkeypatch.setattr("app.ai.openai_compatible.anyio.sleep", _record_sleep)
+    monkeypatch.setattr("app.ai.openai_compatible.httpx.AsyncClient", _FakeAsyncClient)
+    monkeypatch.setattr(OpenAICompatibleClient, "_last_chat_call_monotonic", None)
+
+    client = OpenAICompatibleClient(
+        _settings(
+            ai_provider_retry_base_delay_seconds=1.0,
+            ai_provider_retry_max_delay_seconds=60.0,
+        ),
+        provider_type="disclosure_change_classifier",
+    )
+    result = await _chat_json(client)
+
+    assert result.value == "ok"
+    assert sleep_calls == [pytest.approx(34.725132932)]
+    assert sleep_calls[0] not in (1.0, 2.0, 4.0)
+
+
+@pytest.mark.asyncio
+async def test_post_caps_a_very_long_structured_retry_delay_at_configured_max(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = {"error": {"message": "Please retry in 500.0s."}}
+    _FakeAsyncClient.responses = [
+        _FakeResponse(429, payload),
+        _FakeResponse(200, _embedding_payload([1.0])),
+    ]
+    sleep_calls: list[float] = []
+
+    async def _record_sleep(seconds: float) -> None:
+        sleep_calls.append(seconds)
+
+    monkeypatch.setattr("app.ai.openai_compatible.anyio.sleep", _record_sleep)
+    monkeypatch.setattr("app.ai.openai_compatible.httpx.AsyncClient", _FakeAsyncClient)
+
+    client = OpenAICompatibleClient(
+        _settings(ai_provider_retry_max_delay_seconds=60.0), provider_type="embedding"
+    )
+    await client.embeddings(model="m", inputs=["a"], dimensions=1)
+
+    assert sleep_calls == [60.0]
 
 
 @pytest.mark.asyncio
