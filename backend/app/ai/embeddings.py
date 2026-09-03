@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import math
+import threading
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from typing import Protocol
@@ -52,6 +53,16 @@ class DeterministicFakeEmbeddingProvider:
         return [value / norm for value in vector]
 
 
+_SENTENCE_TRANSFORMER_CACHE: dict[tuple[str, str], object] = {}
+_SENTENCE_TRANSFORMER_CACHE_LOCK = threading.Lock()
+
+
+def _reset_sentence_transformer_cache() -> None:
+    """Test-only hook: clear the process-local model cache between tests."""
+    with _SENTENCE_TRANSFORMER_CACHE_LOCK:
+        _SENTENCE_TRANSFORMER_CACHE.clear()
+
+
 class SentenceTransformerEmbeddingProvider:
     def __init__(self, settings: Settings) -> None:
         try:
@@ -67,10 +78,16 @@ class SentenceTransformerEmbeddingProvider:
         self.batch_size = settings.embedding_batch_size
         self.normalize = settings.embedding_normalize
         self.query_instruction = settings.embedding_query_instruction or ""
-        self._model = SentenceTransformer(
-            settings.embedding_model,
-            device=settings.embedding_device,
-        )
+        cache_key = (settings.embedding_model, settings.embedding_device)
+        with _SENTENCE_TRANSFORMER_CACHE_LOCK:
+            cached_model = _SENTENCE_TRANSFORMER_CACHE.get(cache_key)
+            if cached_model is None:
+                cached_model = SentenceTransformer(
+                    settings.embedding_model,
+                    device=settings.embedding_device,
+                )
+                _SENTENCE_TRANSFORMER_CACHE[cache_key] = cached_model
+            self._model = cached_model
         model_dimension = int(self._model.get_sentence_embedding_dimension())
         if model_dimension != self.dimension:
             raise ValueError(

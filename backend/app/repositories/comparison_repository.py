@@ -206,6 +206,19 @@ class ComparisonRepository:
         await self.session.flush()
         return stored
 
+    async def replace_changes_for_section_match(
+        self,
+        section_match_id: uuid.UUID,
+        changes: Iterable[DisclosureChange],
+    ) -> list[DisclosureChange]:
+        await self.session.execute(
+            delete(DisclosureChange).where(DisclosureChange.section_match_id == section_match_id)
+        )
+        stored = list(changes)
+        self.session.add_all(stored)
+        await self.session.flush()
+        return stored
+
     async def list_changes(
         self,
         comparison_id: uuid.UUID,

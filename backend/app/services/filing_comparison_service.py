@@ -12,7 +12,7 @@ from app.ai.reranker import create_reranker
 from app.ai.semantic_change import create_change_classifier
 from app.core.config import Settings
 from app.core.exceptions import DeltaLedgerError
-from app.db.models import Filing, FilingChunk, FilingSection
+from app.db.models import DisclosureChange, Filing, FilingChunk, FilingSection
 from app.repositories.comparison_repository import ComparisonRepository
 from app.repositories.filing_repository import FilingRepository
 from app.repositories.section_repository import SectionRepository
@@ -37,18 +37,32 @@ class ComparisonCreateResult:
 
 
 class FilingComparisonService:
-    def __init__(self, session: AsyncSession, settings: Settings) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        settings: Settings,
+        *,
+        comparisons: ComparisonRepository | None = None,
+        filings: FilingRepository | None = None,
+        sections: SectionRepository | None = None,
+        segmenter: PassageSegmentationService | None = None,
+        matcher: SectionMatchingService | None = None,
+        aligner: PassageAlignmentService | None = None,
+        change_detector: DisclosureChangeService | None = None,
+    ) -> None:
         self.session = session
         self.settings = settings
-        self.comparisons = ComparisonRepository(session)
-        self.filings = FilingRepository(session)
-        self.sections = SectionRepository(session)
+        self.comparisons = comparisons or ComparisonRepository(session)
+        self.filings = filings or FilingRepository(session)
+        self.sections = sections or SectionRepository(session)
         embeddings = create_embedding_service(settings)
         reranker = create_reranker(settings)
-        self.segmenter = PassageSegmentationService(settings)
-        self.matcher = SectionMatchingService(settings, embeddings, reranker)
-        self.aligner = PassageAlignmentService(settings, embeddings, reranker)
-        self.change_detector = DisclosureChangeService(settings, create_change_classifier(settings))
+        self.segmenter = segmenter or PassageSegmentationService(settings)
+        self.matcher = matcher or SectionMatchingService(settings, embeddings, reranker)
+        self.aligner = aligner or PassageAlignmentService(settings, embeddings, reranker)
+        self.change_detector = change_detector or DisclosureChangeService(
+            settings, create_change_classifier(settings)
+        )
 
     async def create_comparison(
         self,
@@ -149,6 +163,10 @@ class FilingComparisonService:
             stored_section_matches = await self.comparisons.replace_section_matches(
                 comparison.id, section_matches
             )
+            # Commit here so the section-matching result is durable and the
+            # transaction/connection isn't held open across the much longer
+            # passage-alignment and Gemini classification stages below.
+            await self.session.commit()
 
             await self.comparisons.set_status(comparison, "aligning_passages")
             section_by_id = {
@@ -166,6 +184,7 @@ class FilingComparisonService:
                 all_passage_matches.extend(
                     await self.comparisons.replace_passage_matches(section_match.id, matches)
                 )
+            await self.session.commit()
 
             await self.comparisons.set_status(comparison, "detecting_changes")
             passages = {
@@ -173,13 +192,14 @@ class FilingComparisonService:
                 for section in current_sections + previous_sections
                 for passage in await self._passages(section.id)
             }
-            changes = []
+            changes: list[DisclosureChange] = []
             for section_match in stored_section_matches:
                 section_passage_matches = [
                     match
                     for match in all_passage_matches
                     if match.section_match_id == section_match.id
                 ]
+                section_changes = []
                 for passage_match in section_passage_matches:
                     change = await self.change_detector.detect_change(
                         comparison_id=comparison.id,
@@ -191,8 +211,16 @@ class FilingComparisonService:
                         previous_section=section_by_id.get(section_match.previous_section_id),
                     )
                     if change is not None:
-                        changes.append(change)
-            stored_changes = await self.comparisons.replace_changes(comparison.id, changes)
+                        section_changes.append(change)
+                # Commit per section match so a mid-loop provider failure
+                # (e.g. Gemini quota) keeps every already-classified section's
+                # findings instead of losing the whole comparison's work.
+                changes.extend(
+                    await self.comparisons.replace_changes_for_section_match(
+                        section_match.id, section_changes
+                    )
+                )
+                await self.session.commit()
             metrics = {
                 "sections_matched": len(
                     [
@@ -210,7 +238,7 @@ class FilingComparisonService:
                     ]
                 ),
                 "passage_matches": len(all_passage_matches),
-                "findings_generated": len(stored_changes),
+                "findings_generated": len(changes),
                 "model_calls": len(all_passage_matches),
             }
             comparison.matching_model_name = self.matcher.embeddings.model_name
@@ -220,16 +248,24 @@ class FilingComparisonService:
             await self.comparisons.set_status(comparison, "completed", metrics=metrics)
             await self.session.commit()
         except Exception as exc:
-            await self.session.rollback()
-            comparison = await self.comparisons.get_comparison(comparison_id)
-            if comparison is not None:
-                await self.comparisons.set_status(
-                    comparison,
-                    "failed",
-                    error_code=exc.__class__.__name__,
-                    error_message=str(exc),
-                )
-                await self.session.commit()
+            try:
+                await self.session.rollback()
+            except Exception:
+                # The connection may already be dead (e.g. it went idle across
+                # a long provider retry/backoff). Recording the original
+                # failure matters more than this best-effort cleanup, so swallow
+                # it here and let the real exception propagate below.
+                pass
+            else:
+                comparison = await self.comparisons.get_comparison(comparison_id)
+                if comparison is not None:
+                    await self.comparisons.set_status(
+                        comparison,
+                        "failed",
+                        error_code=exc.__class__.__name__,
+                        error_message=str(exc),
+                    )
+                    await self.session.commit()
             raise
 
     async def _segment_sections(self, sections: list[FilingSection]) -> None:

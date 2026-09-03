@@ -54,3 +54,54 @@ def test_run_worker_coroutine_uses_asyncio_run_on_other_platforms(
 
     assert run_worker_coroutine(_return_value(3)) == 3
     assert len(calls) == 1
+
+
+class _FakeEngine:
+    def __init__(self) -> None:
+        self.dispose_calls = 0
+
+    async def dispose(self) -> None:
+        self.dispose_calls += 1
+
+
+def test_run_worker_coroutine_disposes_engine_after_success(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_engine = _FakeEngine()
+    monkeypatch.setattr("app.db.session.engine", fake_engine)
+
+    assert run_worker_coroutine(_return_value(5)) == 5
+    assert fake_engine.dispose_calls == 1
+
+
+def test_run_worker_coroutine_disposes_engine_after_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_engine = _FakeEngine()
+    monkeypatch.setattr("app.db.session.engine", fake_engine)
+
+    async def _raise() -> None:
+        raise ValueError("boom")
+
+    with pytest.raises(ValueError, match="boom"):
+        run_worker_coroutine(_raise())
+    assert fake_engine.dispose_calls == 1
+
+
+def test_run_worker_coroutine_disposes_engine_on_the_same_loop_it_used(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen_loops: list[object] = []
+
+    class _LoopCheckingEngine:
+        async def dispose(self) -> None:
+            seen_loops.append(asyncio.get_running_loop())
+
+    monkeypatch.setattr("app.db.session.engine", _LoopCheckingEngine())
+
+    async def _capture_loop() -> object:
+        return asyncio.get_running_loop()
+
+    used_loop = run_worker_coroutine(_capture_loop())
+
+    assert seen_loops == [used_loop]

@@ -23,6 +23,11 @@ _RETRYABLE_STATUS_CODES = {408, 409, 425, 429}
 class OpenAICompatibleClient:
     provider = "openai_compatible"
 
+    # Shared across every instance in this process: all chat-completion call
+    # sites (change/claim/contradiction classifiers) draw on the same Gemini
+    # request-rate quota, so pacing must be tracked globally, not per client.
+    _last_chat_call_monotonic: float | None = None
+
     def __init__(self, settings: Settings, *, provider_type: str) -> None:
         if not settings.ai_provider_api_key:
             raise DeltaLedgerError(
@@ -35,6 +40,7 @@ class OpenAICompatibleClient:
         self.retry_base_delay_seconds = settings.ai_provider_retry_base_delay_seconds
         self.retry_max_delay_seconds = settings.ai_provider_retry_max_delay_seconds
         self.retry_jitter_seconds = settings.ai_provider_retry_jitter_seconds
+        self.chat_delay_seconds = settings.ai_provider_chat_delay_seconds
         self.input_cost_per_million = settings.ai_provider_input_token_cost_usd_per_million
         self.output_cost_per_million = settings.ai_provider_output_token_cost_usd_per_million
         self.headers = {
@@ -88,6 +94,7 @@ class OpenAICompatibleClient:
         user_payload: dict[str, Any],
         response_model: type[T],
     ) -> tuple[T, InferenceMetadata, dict[str, Any]]:
+        await self._pace_chat_call()
         started = time.perf_counter()
         response, retry_count = await self._post(
             "/chat/completions",
@@ -173,7 +180,9 @@ class OpenAICompatibleClient:
 
             if response.status_code in _RETRYABLE_STATUS_CODES or response.status_code >= 500:
                 status_code = response.status_code
-                retry_after_seconds = _parse_retry_after(response.headers.get("retry-after"))
+                retry_after_seconds = _parse_structured_retry_delay(
+                    response
+                ) or _parse_retry_after(response.headers.get("retry-after"))
                 error_category = _error_category(status_code)
                 error_message = _safe_error_message(response)
                 if is_last_attempt:
@@ -209,6 +218,20 @@ class OpenAICompatibleClient:
             retry_after_seconds=retry_after_seconds,
             error_category=error_category,
         )
+
+    async def _pace_chat_call(self) -> None:
+        """Enforce a minimum gap since the last chat call, waiting only the
+        remainder if one is still owed. A call with nothing queued after it
+        (e.g. the last one in a loop) never sleeps on its own account.
+        """
+        if self.chat_delay_seconds <= 0:
+            return
+        last_call = OpenAICompatibleClient._last_chat_call_monotonic
+        if last_call is not None:
+            remaining = self.chat_delay_seconds - (time.monotonic() - last_call)
+            if remaining > 0:
+                await anyio.sleep(remaining)
+        OpenAICompatibleClient._last_chat_call_monotonic = time.monotonic()
 
     def _retry_delay(self, attempt: int, retry_after_seconds: float | None) -> float:
         if retry_after_seconds is not None:
@@ -298,6 +321,46 @@ def _parse_retry_after(value: str | None) -> float | None:
     if retry_at.tzinfo is None:
         retry_at = retry_at.replace(tzinfo=UTC)
     return max((retry_at - datetime.now(UTC)).total_seconds(), 0.0)
+
+
+def _parse_structured_retry_delay(response: httpx.Response) -> float | None:
+    """Prefer the provider's own retry hint over headers or exponential backoff.
+
+    Google's OpenAI-compatible endpoint reports 429 quota resets as a
+    ``google.rpc.RetryInfo`` protobuf (``retryDelay``, e.g. ``"15.69s"``)
+    inside the JSON error body rather than an HTTP ``Retry-After`` header.
+    """
+    try:
+        payload = response.json()
+    except ValueError:
+        return None
+    if not isinstance(payload, dict):
+        return None
+    error = payload.get("error")
+    if not isinstance(error, dict):
+        return None
+    details = error.get("details")
+    if not isinstance(details, list):
+        return None
+    for detail in details:
+        if not isinstance(detail, dict):
+            continue
+        type_name = detail.get("@type")
+        if isinstance(type_name, str) and type_name.endswith("RetryInfo"):
+            delay = detail.get("retryDelay")
+            if isinstance(delay, str):
+                return _parse_duration_seconds(delay)
+    return None
+
+
+def _parse_duration_seconds(value: str) -> float | None:
+    value = value.strip()
+    if value.endswith("s"):
+        value = value[:-1]
+    try:
+        return max(float(value), 0.0)
+    except ValueError:
+        return None
 
 
 def _message_content(response: dict[str, Any]) -> str:

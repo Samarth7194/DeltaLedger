@@ -11,10 +11,18 @@ from app.ai.embeddings import (
     EmbeddingService,
     SentenceTransformerEmbeddingProvider,
     _coerce_hf_vectors,
+    _reset_sentence_transformer_cache,
     create_embedding_service,
 )
 from app.ai.reranker import DeterministicFakeReranker
 from app.core.config import Settings
+
+
+@pytest.fixture(autouse=True)
+def _clear_sentence_transformer_cache():
+    _reset_sentence_transformer_cache()
+    yield
+    _reset_sentence_transformer_cache()
 
 
 class _FakeVector:
@@ -236,6 +244,18 @@ async def test_sentence_transformers_document_embedding_validates_1024_dimension
     assert instances[0].encode_kwargs == [
         {"batch_size": 16, "normalize_embeddings": True, "convert_to_numpy": True}
     ]
+
+
+def test_sentence_transformers_reuses_cached_model_for_same_model_and_device(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    instances = _install_fake_sentence_transformer(monkeypatch)
+
+    first = create_embedding_service(_sentence_transformer_settings())
+    second = create_embedding_service(_sentence_transformer_settings())
+
+    assert len(instances) == 1
+    assert first.provider._model is second.provider._model
 
 
 def test_sentence_transformers_dimension_mismatch_fails_clearly(

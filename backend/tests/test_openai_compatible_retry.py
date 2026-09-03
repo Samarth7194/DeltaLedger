@@ -1,15 +1,18 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime, timedelta
 from email.utils import format_datetime
 
 import httpx
 import pytest
+from pydantic import BaseModel
 
 from app.ai.openai_compatible import (
     OpenAICompatibleClient,
     ProviderRequestError,
     _parse_retry_after,
+    _parse_structured_retry_delay,
 )
 from app.core.config import Settings
 
@@ -78,6 +81,47 @@ def _embedding_payload(values: list[float]) -> dict[str, object]:
         "data": [{"index": 0, "embedding": values}],
         "usage": {"prompt_tokens": 1, "total_tokens": 1},
     }
+
+
+class _EchoResult(BaseModel):
+    value: str
+
+
+def _chat_response(value: str = "ok") -> dict[str, object]:
+    return {
+        "id": "chatcmpl-test",
+        "model": "test-chat-model",
+        "choices": [{"message": {"content": json.dumps({"value": value})}}],
+        "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+    }
+
+
+def _quota_exceeded_payload(retry_delay: str = "15.693241900s") -> dict[str, object]:
+    return {
+        "error": {
+            "code": 429,
+            "message": "Quota exceeded for metric: generate_content_free_tier_requests.",
+            "status": "RESOURCE_EXHAUSTED",
+            "details": [
+                {"@type": "type.googleapis.com/google.rpc.QuotaFailure"},
+                {
+                    "@type": "type.googleapis.com/google.rpc.RetryInfo",
+                    "retryDelay": retry_delay,
+                },
+            ],
+        }
+    }
+
+
+async def _chat_json(client: OpenAICompatibleClient) -> _EchoResult:
+    result, _metadata, _raw = await client.chat_json(
+        model="test-chat-model",
+        prompt_version="test-v1",
+        system_prompt="echo",
+        user_payload={},
+        response_model=_EchoResult,
+    )
+    return result
 
 
 @pytest.mark.asyncio
@@ -254,3 +298,103 @@ def test_parse_retry_after_accepts_seconds_and_http_dates() -> None:
 
     assert parsed is not None
     assert 0.0 <= parsed <= 11.0
+
+
+def test_parse_structured_retry_delay_extracts_google_retry_info() -> None:
+    response = _FakeResponse(429, _quota_exceeded_payload("15.693241900s"))
+
+    assert _parse_structured_retry_delay(response) == pytest.approx(15.693241900)
+
+
+def test_parse_structured_retry_delay_returns_none_without_retry_info() -> None:
+    assert _parse_structured_retry_delay(_FakeResponse(429, {"error": {"message": "nope"}})) is None
+    assert _parse_structured_retry_delay(_FakeResponse(429, {})) is None
+    assert _parse_structured_retry_delay(_FakeResponse(429, text="not json")) is None
+
+
+@pytest.mark.asyncio
+async def test_post_prefers_structured_retry_delay_over_header_and_backoff(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _FakeAsyncClient.responses = [
+        _FakeResponse(
+            429,
+            _quota_exceeded_payload("15.69s"),
+            headers={"retry-after": "999"},
+        ),
+        _FakeResponse(200, _chat_response()),
+    ]
+    sleep_calls: list[float] = []
+
+    async def _record_sleep(seconds: float) -> None:
+        sleep_calls.append(seconds)
+
+    monkeypatch.setattr("app.ai.openai_compatible.anyio.sleep", _record_sleep)
+    monkeypatch.setattr("app.ai.openai_compatible.httpx.AsyncClient", _FakeAsyncClient)
+    monkeypatch.setattr(OpenAICompatibleClient, "_last_chat_call_monotonic", None)
+
+    client = OpenAICompatibleClient(_settings(), provider_type="disclosure_change_classifier")
+    result = await _chat_json(client)
+
+    assert result.value == "ok"
+    assert sleep_calls == [15.69]
+
+
+@pytest.mark.asyncio
+async def test_chat_json_paces_a_second_immediate_call_but_not_a_lone_call(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _FakeAsyncClient.responses = [
+        _FakeResponse(200, _chat_response("first")),
+        _FakeResponse(200, _chat_response("second")),
+    ]
+    sleep_calls: list[float] = []
+
+    async def _record_sleep(seconds: float) -> None:
+        sleep_calls.append(seconds)
+
+    monkeypatch.setattr("app.ai.openai_compatible.anyio.sleep", _record_sleep)
+    monkeypatch.setattr("app.ai.openai_compatible.httpx.AsyncClient", _FakeAsyncClient)
+    monkeypatch.setattr(OpenAICompatibleClient, "_last_chat_call_monotonic", None)
+
+    client = OpenAICompatibleClient(
+        _settings(ai_provider_chat_delay_seconds=5.0),
+        provider_type="disclosure_change_classifier",
+    )
+
+    first = await _chat_json(client)
+    assert first.value == "first"
+    assert sleep_calls == []
+
+    second = await _chat_json(client)
+    assert second.value == "second"
+    assert len(sleep_calls) == 1
+    assert 0.0 < sleep_calls[0] <= 5.0
+
+
+@pytest.mark.asyncio
+async def test_chat_json_does_not_pace_when_delay_is_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _FakeAsyncClient.responses = [
+        _FakeResponse(200, _chat_response("first")),
+        _FakeResponse(200, _chat_response("second")),
+    ]
+    sleep_calls: list[float] = []
+
+    async def _record_sleep(seconds: float) -> None:
+        sleep_calls.append(seconds)
+
+    monkeypatch.setattr("app.ai.openai_compatible.anyio.sleep", _record_sleep)
+    monkeypatch.setattr("app.ai.openai_compatible.httpx.AsyncClient", _FakeAsyncClient)
+    monkeypatch.setattr(OpenAICompatibleClient, "_last_chat_call_monotonic", None)
+
+    client = OpenAICompatibleClient(
+        _settings(ai_provider_chat_delay_seconds=0.0),
+        provider_type="disclosure_change_classifier",
+    )
+
+    await _chat_json(client)
+    await _chat_json(client)
+
+    assert sleep_calls == []
