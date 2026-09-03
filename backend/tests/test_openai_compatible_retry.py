@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from app.ai.openai_compatible import (
     OpenAICompatibleClient,
     ProviderRequestError,
+    StructuredOutputError,
     _find_retry_delay,
     _parse_retry_after,
     _parse_structured_retry_delay,
@@ -93,11 +94,25 @@ class _EchoResult(BaseModel):
     value: str
 
 
+class _TwoFieldResult(BaseModel):
+    value: str
+    reason: str
+
+
 def _chat_response(value: str = "ok") -> dict[str, object]:
     return {
         "id": "chatcmpl-test",
         "model": "test-chat-model",
         "choices": [{"message": {"content": json.dumps({"value": value})}}],
+        "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+    }
+
+
+def _raw_chat_response(content: str) -> dict[str, object]:
+    return {
+        "id": "chatcmpl-test",
+        "model": "test-chat-model",
+        "choices": [{"message": {"content": content}}],
         "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
     }
 
@@ -145,6 +160,19 @@ async def _chat_json(client: OpenAICompatibleClient) -> _EchoResult:
         response_model=_EchoResult,
     )
     return result
+
+
+async def _chat_json_two_field(
+    client: OpenAICompatibleClient,
+) -> tuple[_TwoFieldResult, object]:
+    result, metadata, _raw = await client.chat_json(
+        model="test-chat-model",
+        prompt_version="test-v1",
+        system_prompt="classify",
+        user_payload={},
+        response_model=_TwoFieldResult,
+    )
+    return result, metadata
 
 
 @pytest.mark.asyncio
@@ -523,3 +551,152 @@ async def test_chat_json_does_not_pace_when_delay_is_disabled(
     await _chat_json(client)
 
     assert sleep_calls == []
+
+
+@pytest.mark.asyncio
+async def test_chat_json_repairs_missing_required_field_and_succeeds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reproduces the real Apple-run failure: gemini-3.5-flash-lite returns
+    otherwise-valid JSON that drops one required field (materiality_reason
+    in production; `reason` here). A single repair round trip, carrying
+    concise feedback about what was missing, should recover it without
+    the caller ever seeing an error."""
+    _FakeAsyncClient.responses = [
+        _FakeResponse(200, _raw_chat_response(json.dumps({"value": "ok"}))),
+        _FakeResponse(200, _raw_chat_response(json.dumps({"value": "ok", "reason": "fixed"}))),
+    ]
+    monkeypatch.setattr("app.ai.openai_compatible.anyio.sleep", _no_sleep)
+    monkeypatch.setattr("app.ai.openai_compatible.httpx.AsyncClient", _FakeAsyncClient)
+    monkeypatch.setattr(OpenAICompatibleClient, "_last_chat_call_monotonic", None)
+    _FakeAsyncClient.calls = []
+
+    client = OpenAICompatibleClient(_settings(), provider_type="disclosure_change_classifier")
+    result, metadata = await _chat_json_two_field(client)
+
+    assert result.value == "ok"
+    assert result.reason == "fixed"
+    assert metadata.success is True
+    assert metadata.parse_status == "valid"
+    # Exactly one repair round trip: the initial request plus one retry.
+    assert len(_FakeAsyncClient.calls) == 2
+    repair_messages = _FakeAsyncClient.calls[1]["json"]["messages"]
+    assert repair_messages[0]["content"] == "classify"
+    assert repair_messages[1]["role"] == "user"
+    assert repair_messages[2] == {
+        "role": "assistant",
+        "content": json.dumps({"value": "ok"}),
+    }
+    assert repair_messages[3]["role"] == "user"
+    assert "reason" in repair_messages[3]["content"]
+    assert "Field required" in repair_messages[3]["content"]
+
+
+@pytest.mark.asyncio
+async def test_chat_json_raises_structured_output_error_when_repair_also_invalid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The repair budget is bounded: if the corrected response is still
+    invalid, this must fail cleanly with a useful message rather than
+    retrying forever or silently fabricating the missing field."""
+    _FakeAsyncClient.responses = [
+        _FakeResponse(200, _raw_chat_response(json.dumps({"value": "ok"}))),
+        _FakeResponse(200, _raw_chat_response(json.dumps({"value": "still missing"}))),
+    ]
+    monkeypatch.setattr("app.ai.openai_compatible.anyio.sleep", _no_sleep)
+    monkeypatch.setattr("app.ai.openai_compatible.httpx.AsyncClient", _FakeAsyncClient)
+    monkeypatch.setattr(OpenAICompatibleClient, "_last_chat_call_monotonic", None)
+    _FakeAsyncClient.calls = []
+
+    client = OpenAICompatibleClient(_settings(), provider_type="disclosure_change_classifier")
+
+    with pytest.raises(StructuredOutputError) as exc_info:
+        await _chat_json_two_field(client)
+
+    # Bounded: exactly the initial attempt plus one repair attempt, no more.
+    assert len(_FakeAsyncClient.calls) == 2
+    assert "2 attempt(s)" in str(exc_info.value)
+    assert "reason" in str(exc_info.value)
+    assert "Field required" in str(exc_info.value)
+    assert exc_info.value.metadata.success is False
+    assert exc_info.value.metadata.parse_status == "invalid"
+
+
+@pytest.mark.asyncio
+async def test_chat_json_valid_first_response_never_triggers_a_repair_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _FakeAsyncClient.responses = [
+        _FakeResponse(200, _raw_chat_response(json.dumps({"value": "ok", "reason": "fine"}))),
+    ]
+    monkeypatch.setattr("app.ai.openai_compatible.anyio.sleep", _no_sleep)
+    monkeypatch.setattr("app.ai.openai_compatible.httpx.AsyncClient", _FakeAsyncClient)
+    monkeypatch.setattr(OpenAICompatibleClient, "_last_chat_call_monotonic", None)
+    _FakeAsyncClient.calls = []
+
+    client = OpenAICompatibleClient(_settings(), provider_type="disclosure_change_classifier")
+    result, metadata = await _chat_json_two_field(client)
+
+    assert result.value == "ok"
+    assert result.reason == "fine"
+    assert len(_FakeAsyncClient.calls) == 1
+    assert metadata.parse_status == "valid"
+
+
+@pytest.mark.asyncio
+async def test_chat_json_disabling_repair_restores_immediate_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """AI_PROVIDER_STRUCTURED_OUTPUT_REPAIR_ATTEMPTS=0 must reproduce the
+    original fail-immediately behavior exactly (no extra request)."""
+    _FakeAsyncClient.responses = [
+        _FakeResponse(200, _raw_chat_response(json.dumps({"value": "ok"}))),
+    ]
+    monkeypatch.setattr("app.ai.openai_compatible.anyio.sleep", _no_sleep)
+    monkeypatch.setattr("app.ai.openai_compatible.httpx.AsyncClient", _FakeAsyncClient)
+    monkeypatch.setattr(OpenAICompatibleClient, "_last_chat_call_monotonic", None)
+    _FakeAsyncClient.calls = []
+
+    client = OpenAICompatibleClient(
+        _settings(ai_provider_structured_output_repair_attempts=0),
+        provider_type="disclosure_change_classifier",
+    )
+
+    with pytest.raises(StructuredOutputError):
+        await _chat_json_two_field(client)
+
+    assert len(_FakeAsyncClient.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_chat_json_429_retry_behavior_is_unchanged_by_structured_repair(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """HTTP-level 429/Retry-After handling inside _post() must keep working
+    exactly as before, independent of the new structured-output repair
+    loop -- a 429 followed by a valid response should not be mistaken for
+    a structured-output repair round trip."""
+    _FakeAsyncClient.responses = [
+        _FakeResponse(429, headers={"retry-after": "3"}),
+        _FakeResponse(200, _chat_response("ok")),
+    ]
+    sleep_calls: list[float] = []
+
+    async def _record_sleep(seconds: float) -> None:
+        sleep_calls.append(seconds)
+
+    monkeypatch.setattr("app.ai.openai_compatible.anyio.sleep", _record_sleep)
+    monkeypatch.setattr("app.ai.openai_compatible.httpx.AsyncClient", _FakeAsyncClient)
+    monkeypatch.setattr(OpenAICompatibleClient, "_last_chat_call_monotonic", None)
+    _FakeAsyncClient.calls = []
+
+    client = OpenAICompatibleClient(_settings(), provider_type="disclosure_change_classifier")
+    result = await _chat_json(client)
+
+    assert result.value == "ok"
+    # The retry-after-driven sleep proves this was _post's own internal
+    # 429 retry, not a structured-output repair round trip (which never
+    # sleeps on a Retry-After header and only fires after a JSON/schema
+    # validation failure, not a non-2xx status).
+    assert sleep_calls == [3.0]
+    assert len(_FakeAsyncClient.calls) == 2

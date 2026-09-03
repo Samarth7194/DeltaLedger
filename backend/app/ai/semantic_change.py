@@ -113,14 +113,23 @@ class OpenAICompatibleChangeClassifier:
             model=self.model_name,
             prompt_version=self.prompt_version,
             system_prompt=(
-                "Classify SEC filing disclosure changes. Return only JSON matching: "
-                "change_type, summary, explanation, changed_spans, confidence, "
-                "risk_category, materiality_reason. Use change_type from the "
-                "request allowed_labels. Use risk_category exactly as one of: "
-                "liquidity, revenue_guidance, litigation, other. Use "
-                "changed_spans as an array of objects, not strings; each object "
-                "should include text and side when available. Do not make legal "
-                "conclusions."
+                "Classify SEC filing disclosure changes. Return only a single JSON "
+                "object with ALL of the following fields present -- every field "
+                "below is REQUIRED in every response, with no field ever omitted:\n"
+                "- change_type: one of the request's allowed_labels\n"
+                "- summary: a short plain-language summary of the change\n"
+                "- explanation: why the change was classified this way\n"
+                "- changed_spans: an array of objects, not strings; each object "
+                "should include text and side when available\n"
+                "- confidence: a number between 0.0 and 1.0\n"
+                "- risk_category: exactly one of liquidity, revenue_guidance, "
+                "litigation, other\n"
+                "- materiality_reason: a short explanation of why this change is, "
+                "or is not, material. This field is REQUIRED even when the change "
+                "is minor, the reasoning is brief, or materiality_reason overlaps "
+                "with explanation -- never omit it.\n"
+                "Do not make legal conclusions. Do not include any text, "
+                "commentary, or markdown outside the single JSON object."
             ),
             user_payload=request.model_dump(),
             response_model=ChangeClassificationResult,

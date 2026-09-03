@@ -42,6 +42,9 @@ class OpenAICompatibleClient:
         self.retry_max_delay_seconds = settings.ai_provider_retry_max_delay_seconds
         self.retry_jitter_seconds = settings.ai_provider_retry_jitter_seconds
         self.chat_delay_seconds = settings.ai_provider_chat_delay_seconds
+        self.structured_output_repair_attempts = (
+            settings.ai_provider_structured_output_repair_attempts
+        )
         self.input_cost_per_million = settings.ai_provider_input_token_cost_usd_per_million
         self.output_cost_per_million = settings.ai_provider_output_token_cost_usd_per_million
         self.headers = {
@@ -95,29 +98,78 @@ class OpenAICompatibleClient:
         user_payload: dict[str, Any],
         response_model: type[T],
     ) -> tuple[T, InferenceMetadata, dict[str, Any]]:
-        await self._pace_chat_call()
+        """Request structured JSON and validate it against `response_model`.
+
+        A response that fails JSON/schema validation is not immediately
+        fatal: the provider occasionally returns output that is otherwise
+        correct but drops one required field. Rather than fail the whole
+        (expensive, upstream) workflow over one flaky response, this asks
+        the same model to correct its own output -- with concise, specific
+        feedback about what was missing/invalid -- for a small, bounded
+        number of attempts (`ai_provider_structured_output_repair_attempts`,
+        0 disables repair and restores the original fail-immediately
+        behavior). This is independent of `_post`'s own 429/503 retry
+        handling: each attempt here is a full request that goes through
+        that retry logic on its own.
+        """
         started = time.perf_counter()
-        response, retry_count = await self._post(
-            "/chat/completions",
-            {
-                "model": model,
-                "response_format": {"type": "json_object"},
-                "messages": [
-                    {"role": "system", "content": system_prompt},
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": json.dumps(user_payload, sort_keys=True, default=str)},
+        ]
+        last_issue = ""
+        for repair_attempt in range(self.structured_output_repair_attempts + 1):
+            await self._pace_chat_call()
+            response, retry_count = await self._post(
+                "/chat/completions",
+                {
+                    "model": model,
+                    "response_format": {"type": "json_object"},
+                    "messages": messages,
+                },
+            )
+            raw_content = _message_content(response)
+            try:
+                parsed_payload = json.loads(raw_content)
+                parsed = response_model.model_validate(parsed_payload)
+            except (json.JSONDecodeError, ValidationError) as exc:
+                last_issue = _describe_structured_output_error(exc)
+                if repair_attempt >= self.structured_output_repair_attempts:
+                    metadata = metadata_from_usage(
+                        provider=self.provider,
+                        provider_type=self.provider_type,
+                        model=model,
+                        model_version=_response_model_name(response, model),
+                        prompt_version=prompt_version,
+                        latency_ms=(time.perf_counter() - started) * 1000,
+                        success=False,
+                        parse_status="invalid",
+                        retry_count=retry_count,
+                        usage=(
+                            response.get("usage")
+                            if isinstance(response.get("usage"), dict)
+                            else None
+                        ),
+                        input_cost_per_million=self.input_cost_per_million,
+                        output_cost_per_million=self.output_cost_per_million,
+                        error_type=exc.__class__.__name__,
+                    )
+                    raise StructuredOutputError(
+                        "Provider returned invalid structured output after "
+                        f"{repair_attempt + 1} attempt(s): {last_issue}",
+                        metadata,
+                    ) from exc
+                messages = [
+                    *messages,
+                    {"role": "assistant", "content": raw_content},
                     {
                         "role": "user",
-                        "content": json.dumps(user_payload, sort_keys=True, default=str),
+                        "content": _STRUCTURED_OUTPUT_REPAIR_INSTRUCTION.format(
+                            issues=last_issue
+                        ),
                     },
-                ],
-            },
-        )
-        raw_content = _message_content(response)
-        try:
-            parsed_payload = json.loads(raw_content)
-            parsed = response_model.model_validate(parsed_payload)
-            parse_status = "valid"
-            error_type = None
-        except (json.JSONDecodeError, ValidationError) as exc:
+                ]
+                continue
             metadata = metadata_from_usage(
                 provider=self.provider,
                 provider_type=self.provider_type,
@@ -125,34 +177,16 @@ class OpenAICompatibleClient:
                 model_version=_response_model_name(response, model),
                 prompt_version=prompt_version,
                 latency_ms=(time.perf_counter() - started) * 1000,
-                success=False,
-                parse_status="invalid",
+                success=True,
+                parse_status="valid",
                 retry_count=retry_count,
                 usage=response.get("usage") if isinstance(response.get("usage"), dict) else None,
                 input_cost_per_million=self.input_cost_per_million,
                 output_cost_per_million=self.output_cost_per_million,
-                error_type=exc.__class__.__name__,
+                error_type=None,
             )
-            raise StructuredOutputError(
-                "Provider returned invalid structured output.",
-                metadata,
-            ) from exc
-        metadata = metadata_from_usage(
-            provider=self.provider,
-            provider_type=self.provider_type,
-            model=model,
-            model_version=_response_model_name(response, model),
-            prompt_version=prompt_version,
-            latency_ms=(time.perf_counter() - started) * 1000,
-            success=True,
-            parse_status=parse_status,
-            retry_count=retry_count,
-            usage=response.get("usage") if isinstance(response.get("usage"), dict) else None,
-            input_cost_per_million=self.input_cost_per_million,
-            output_cost_per_million=self.output_cost_per_million,
-            error_type=error_type,
-        )
-        return parsed, metadata, response
+            return parsed, metadata, response
+        raise AssertionError("chat_json loop exited without returning or raising")
 
     async def _post(self, path: str, payload: dict[str, Any]) -> tuple[dict[str, Any], int]:
         model = payload.get("model") if isinstance(payload.get("model"), str) else None
@@ -240,6 +274,31 @@ class OpenAICompatibleClient:
         backoff = self.retry_base_delay_seconds * (2**attempt)
         jitter = random.uniform(0, self.retry_jitter_seconds) if self.retry_jitter_seconds else 0.0
         return min(backoff + jitter, self.retry_max_delay_seconds)
+
+
+_STRUCTURED_OUTPUT_REPAIR_INSTRUCTION = (
+    "Your previous JSON response was invalid: {issues} Return corrected JSON "
+    "only, from the same disclosure evidence given above, that matches the "
+    "required schema exactly. Do not omit any required field. Do not include "
+    "any text outside the JSON object."
+)
+
+
+def _describe_structured_output_error(exc: Exception) -> str:
+    """Summarize a validation failure concisely enough to feed back to the
+    model as repair instructions, without dumping the full raw payload.
+    """
+    if isinstance(exc, ValidationError):
+        parts = []
+        for error in exc.errors():
+            location = ".".join(str(segment) for segment in error.get("loc", ())) or "<root>"
+            parts.append(f"{location}: {error.get('msg', 'invalid value')}")
+        if parts:
+            return "; ".join(parts)
+        return "The JSON did not match the required schema."
+    if isinstance(exc, json.JSONDecodeError):
+        return f"The response was not valid JSON ({exc.msg})."
+    return "The response did not match the required schema."
 
 
 class StructuredOutputError(DeltaLedgerError):

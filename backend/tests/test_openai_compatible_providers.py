@@ -157,9 +157,11 @@ async def test_openai_compatible_chat_request_omits_deprecated_sampling_params(
     assert payload["model"] == "gemini-3.6-flash"
     assert payload["response_format"] == {"type": "json_object"}
     system_prompt = payload["messages"][0]["content"]
-    assert "request allowed_labels" in system_prompt
+    assert "allowed_labels" in system_prompt
     assert "liquidity, revenue_guidance, litigation, other" in system_prompt
-    assert "changed_spans as an array of objects" in system_prompt
+    assert "changed_spans: an array of objects" in system_prompt
+    assert "materiality_reason" in system_prompt
+    assert "REQUIRED" in system_prompt
     assert "temperature" not in payload
     assert "top_p" not in payload
     assert "top_k" not in payload

@@ -87,6 +87,7 @@ class Settings(BaseSettings):
     ai_provider_retry_max_delay_seconds: float = 60.0
     ai_provider_retry_jitter_seconds: float = 0.5
     ai_provider_chat_delay_seconds: float = 0.0
+    ai_provider_structured_output_repair_attempts: int = 1
     ai_provider_input_token_cost_usd_per_million: float | None = None
     ai_provider_output_token_cost_usd_per_million: float | None = None
 
@@ -283,6 +284,10 @@ class Settings(BaseSettings):
             "AI_PROVIDER_CHAT_DELAY_SECONDS",
             self.ai_provider_chat_delay_seconds,
         )
+        if self.ai_provider_structured_output_repair_attempts < 0:
+            raise ValueError(
+                "AI_PROVIDER_STRUCTURED_OUTPUT_REPAIR_ATTEMPTS must be greater than or equal to 0."
+            )
         if self.ai_provider_retry_max_delay_seconds < self.ai_provider_retry_base_delay_seconds:
             raise ValueError(
                 "AI_PROVIDER_RETRY_MAX_DELAY_SECONDS must be greater than or equal to "
