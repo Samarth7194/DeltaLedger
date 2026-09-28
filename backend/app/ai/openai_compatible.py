@@ -12,7 +12,7 @@ import anyio
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from app.ai.inference import InferenceMetadata, metadata_from_usage
+from app.ai.inference import InferenceMetadata, metadata_from_usage, record_usage
 from app.core.config import Settings
 from app.core.exceptions import DeltaLedgerError
 
@@ -128,7 +128,8 @@ class OpenAICompatibleClient:
                     "messages": messages,
                 },
             )
-            raw_content = _message_content(response)
+            record_usage(response.get("usage") if isinstance(response.get("usage"), dict) else None)
+            raw_content = _message_content_or_placeholder(response)
             try:
                 parsed_payload = json.loads(raw_content)
                 parsed = response_model.model_validate(parsed_payload)
@@ -193,6 +194,7 @@ class OpenAICompatibleClient:
         status_code: int | None = None
         retry_after_seconds: float | None = None
         error_category = "unknown_error"
+        error_subtype: str | None = None
         error_message = "Unknown provider error"
         for attempt in range(self.max_retries):
             is_last_attempt = attempt == self.max_retries - 1
@@ -206,7 +208,9 @@ class OpenAICompatibleClient:
             except httpx.HTTPError as exc:
                 status_code = None
                 retry_after_seconds = None
-                error_category = "network_error"
+                is_timeout = isinstance(exc, httpx.TimeoutException)
+                error_category = "timeout" if is_timeout else "network_error"
+                error_subtype = error_category
                 error_message = f"{exc.__class__.__name__}: {exc}"
                 if is_last_attempt:
                     break
@@ -219,8 +223,12 @@ class OpenAICompatibleClient:
                     response
                 ) or _parse_retry_after(response.headers.get("retry-after"))
                 error_category = _error_category(status_code)
+                error_subtype = _error_subtype(status_code, response, retry_after_seconds)
                 error_message = _safe_error_message(response)
-                if is_last_attempt:
+                if is_last_attempt or error_subtype == QUOTA_EXHAUSTED_DAILY:
+                    # A daily quota does not recover within any backoff this
+                    # client would use, so waiting and re-asking only burns
+                    # time; fail now and let the batch be retried later.
                     break
                 await anyio.sleep(self._retry_delay(attempt, retry_after_seconds))
                 continue
@@ -239,6 +247,7 @@ class OpenAICompatibleClient:
                     retry_count=attempt,
                     retry_after_seconds=None,
                     error_category=_error_category(exc.response.status_code),
+                    error_subtype="provider_rejected",
                 ) from exc
             return response.json(), attempt
 
@@ -252,6 +261,7 @@ class OpenAICompatibleClient:
             retry_count=self.max_retries,
             retry_after_seconds=retry_after_seconds,
             error_category=error_category,
+            error_subtype=error_subtype,
         )
 
     async def _pace_chat_call(self) -> None:
@@ -325,6 +335,7 @@ class ProviderRequestError(DeltaLedgerError):
         retry_count: int,
         retry_after_seconds: float | None,
         error_category: str,
+        error_subtype: str | None = None,
     ) -> None:
         super().__init__(message)
         self.provider = provider
@@ -334,6 +345,48 @@ class ProviderRequestError(DeltaLedgerError):
         self.retry_count = retry_count
         self.retry_after_seconds = retry_after_seconds
         self.error_category = error_category
+        # Finer classification when the provider response allows it (e.g.
+        # short-term rate limit vs. daily quota); see _error_subtype.
+        self.error_subtype = error_subtype or error_category
+
+    @property
+    def is_retryable(self) -> bool:
+        """Whether trying the same work again later can succeed."""
+        return self.error_category in RETRYABLE_ERROR_CATEGORIES
+
+
+RATE_LIMITED_SHORT_TERM = "rate_limited_short_term"
+QUOTA_EXHAUSTED_DAILY = "quota_exhausted_daily"
+RESOURCE_EXHAUSTED = "resource_exhausted"
+RETRYABLE_ERROR_CATEGORIES = frozenset({"rate_limited", "network_error", "timeout", "server_error"})
+
+_DAILY_QUOTA_PATTERN = re.compile(r"per[\s_-]?day|daily", re.IGNORECASE)
+_SHORT_TERM_PATTERN = re.compile(r"per[\s_-]?minute|per[\s_-]?second", re.IGNORECASE)
+_SHORT_TERM_RETRY_SECONDS = 120.0
+
+
+def _error_subtype(
+    status_code: int | None,
+    response: httpx.Response,
+    retry_after_seconds: float | None,
+) -> str:
+    """Best-effort, response-based refinement of the error category.
+
+    For 429 this separates a short-term rate limit (per-minute style quota, or
+    a short retry hint) from daily quota exhaustion and from a generic
+    resource-exhausted response. It only reads what the response says and
+    never assumes how much quota remains.
+    """
+    if status_code != 429:
+        return _error_category(status_code)
+    text = response.text or ""
+    if _DAILY_QUOTA_PATTERN.search(text):
+        return QUOTA_EXHAUSTED_DAILY
+    if _SHORT_TERM_PATTERN.search(text) or (
+        retry_after_seconds is not None and retry_after_seconds <= _SHORT_TERM_RETRY_SECONDS
+    ):
+        return RATE_LIMITED_SHORT_TERM
+    return RESOURCE_EXHAUSTED
 
 
 def _error_category(status_code: int | None) -> str:
@@ -481,6 +534,21 @@ def _message_content(response: dict[str, Any]) -> str:
     if not isinstance(content, str):
         raise DeltaLedgerError("OpenAI-compatible chat response content was not a string.")
     return content
+
+
+def _message_content_or_placeholder(response: dict[str, Any]) -> str:
+    """Message content, or a placeholder when the response has none.
+
+    A refusal, safety block, or empty completion is an unusable *output*, not
+    a provider outage: it must flow through the same validation/repair path
+    as malformed JSON (and end as a StructuredOutputError for that item)
+    instead of escaping as an unrelated exception that would fail a whole
+    batch. The placeholder is deliberately not valid JSON.
+    """
+    try:
+        return _message_content(response)
+    except DeltaLedgerError:
+        return "(empty or refused response)"
 
 
 def _response_model_name(response: dict[str, Any], fallback: str) -> str:

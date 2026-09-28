@@ -10,6 +10,7 @@ from app.db.models import DisclosureChange
 from app.repositories.comparison_repository import ComparisonRepository
 from app.repositories.financial_repository import FinancialRepository
 from app.repositories.section_repository import SectionRepository
+from app.services.claim_batch_extraction_service import ClaimBatchExtractionService
 from app.services.financial_claim_extraction_service import FinancialClaimExtractionService
 from app.services.financial_claim_verification_service import FinancialClaimVerificationService
 
@@ -27,6 +28,20 @@ class FinancialVerificationService:
             create_claim_extractor(settings.claim_extractor_provider, settings),
         )
         self.verifier = FinancialClaimVerificationService(session, settings)
+        self.batch_extractor = ClaimBatchExtractionService(session, settings, self.extractor)
+
+    async def extract_claims_for_comparison(
+        self,
+        comparison_id: uuid.UUID,
+        *,
+        analysis_run_id: uuid.UUID | None = None,
+    ) -> dict[str, int]:
+        """Extract claims for every passage of a comparison's disclosure
+        changes as durable, resumable batches (see ClaimBatchExtractionService).
+        Idempotent: already-stored claims are reused, never duplicated."""
+        return await self.batch_extractor.extract_for_comparison(
+            comparison_id, analysis_run_id=analysis_run_id
+        )
 
     async def extract_claims_for_filing(self, filing_id: uuid.UUID) -> dict[str, int]:
         lock_acquired = await self.repo.try_acquire_verification_lock(filing_id)
@@ -53,7 +68,17 @@ class FinancialVerificationService:
         await self.session.commit()
         return verification
 
-    async def verify_claims_for_comparison(self, comparison_id: uuid.UUID) -> dict[str, int]:
+    async def verify_claims_for_comparison(
+        self,
+        comparison_id: uuid.UUID,
+        *,
+        extract: bool = True,
+    ) -> dict[str, int]:
+        """Verify every claim of a comparison against XBRL facts.
+
+        `extract=False` skips claim extraction - for callers (the analysis
+        workflow) that already ran it as the resumable batched stage
+        (`extract_claims_for_comparison`) and must not repeat it here."""
         lock_acquired = await self.repo.try_acquire_verification_lock(comparison_id)
         if not lock_acquired:
             return {"claims": 0, "verifications": 0, "status": 0}
@@ -61,11 +86,12 @@ class FinancialVerificationService:
             comparison = await self.comparisons.get_comparison(comparison_id)
             if comparison is None:
                 raise ValueError(f"Comparison not found: {comparison_id}")
-            changes = await self.comparisons.list_changes(comparison_id, limit=500)
             claim_count = 0
-            for change in changes:
-                claim_count += len(await self._extract_from_change(change, "current"))
-                claim_count += len(await self._extract_from_change(change, "previous"))
+            if extract:
+                changes = await self.comparisons.list_changes(comparison_id, limit=500)
+                for change in changes:
+                    claim_count += len(await self._extract_from_change(change, "current"))
+                    claim_count += len(await self._extract_from_change(change, "previous"))
             claims = await self.repo.list_claims(comparison_id=comparison_id, limit=1000)
             verification_count = 0
             for claim in claims:

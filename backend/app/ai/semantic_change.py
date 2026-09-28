@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Literal, Protocol
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
-from app.ai.openai_compatible import OpenAICompatibleClient
+from app.ai.batching import canonical_hash, estimate_payload_tokens, estimate_tokens
+from app.ai.openai_compatible import OpenAICompatibleClient, StructuredOutputError
 from app.core.config import Settings
 
 ChangeType = Literal["added", "removed", "strengthened", "weakened", "no_material_change"]
@@ -30,6 +32,14 @@ class ChangeClassificationResult(BaseModel):
     inference_metadata: dict[str, object] = Field(default_factory=dict)
 
 
+class BatchClassificationResponse(BaseModel):
+    """Envelope of a multi-item response. Items stay raw dicts on purpose: each
+    is validated on its own (see `classify_batch`), so one malformed item
+    cannot fail the whole response."""
+
+    items: list[dict[str, object]]
+
+
 class ChangeClassifierProvider(Protocol):
     model_name: str
     model_version: str
@@ -38,6 +48,27 @@ class ChangeClassifierProvider(Protocol):
     async def classify(
         self, request: ChangeClassificationRequest
     ) -> ChangeClassificationResult: ...
+
+
+class BatchChangeClassifierProvider(ChangeClassifierProvider, Protocol):
+    """A classifier that can classify several items in one provider request."""
+
+    batch_prompt_version: str
+    batch_fixed_overhead_tokens: int
+
+    async def classify_batch(
+        self, items: Sequence[tuple[str, ChangeClassificationRequest]]
+    ) -> dict[str, ChangeClassificationResult | None]: ...
+
+
+def change_request_tokens(request: ChangeClassificationRequest) -> int:
+    """Estimated input tokens one item adds to a multi-item request."""
+    return (
+        estimate_tokens(request.previous_text)
+        + estimate_tokens(request.current_text)
+        + estimate_payload_tokens(request.deterministic_signals)
+        + estimate_payload_tokens(request.section_metadata)
+    )
 
 
 class DeterministicFakeChangeClassifier:
@@ -97,40 +128,131 @@ class DeterministicFakeChangeClassifier:
         )
 
 
+_RESULT_FIELDS_PROMPT = (
+    "- change_type: one of the request's allowed_labels\n"
+    "- summary: a short plain-language summary of the change\n"
+    "- explanation: why the change was classified this way\n"
+    "- changed_spans: an array of objects, not strings; each object "
+    "should include text and side when available\n"
+    "- confidence: a number between 0.0 and 1.0\n"
+    "- risk_category: exactly one of liquidity, revenue_guidance, "
+    "litigation, other\n"
+    "- materiality_reason: a short explanation of why this change is, "
+    "or is not, material. This field is REQUIRED even when the change "
+    "is minor, the reasoning is brief, or materiality_reason overlaps "
+    "with explanation -- never omit it.\n"
+)
+_BATCH_SYSTEM_PROMPT = (
+    "Classify SEC filing disclosure changes. The request holds several "
+    "independent items, each with its own item_id. Classify every item on its "
+    "own; never let one item influence another. Return only a single JSON "
+    'object of the form {"items": [...]} with exactly one entry per input '
+    "item, in any order. Each entry must copy that item's item_id exactly as "
+    "given and must contain ALL of the following fields -- every field is "
+    "REQUIRED in every entry, with no field ever omitted:\n"
+    "- item_id: the item's id, copied exactly\n"
+    + _RESULT_FIELDS_PROMPT
+    + "Do not make legal conclusions. Do not include any text, commentary, or "
+    "markdown outside the single JSON object."
+)
+
+
+_SINGLE_SYSTEM_PROMPT = (
+    "Classify SEC filing disclosure changes. Return only a single JSON "
+    "object with ALL of the following fields present -- every field "
+    "below is REQUIRED in every response, with no field ever omitted:\n"
+    + _RESULT_FIELDS_PROMPT
+    + "Do not make legal conclusions. Do not include any text, "
+    "commentary, or markdown outside the single JSON object."
+)
+
+
+# Hash of the actual prompt text. It is folded into the version strings below
+# so that editing a prompt without remembering to bump its version still
+# invalidates everything keyed on the version: the reuse cache, the recorded
+# `prompt_version` provenance, and the durable batch identities.
+_PROMPT_FINGERPRINT = canonical_hash([_SINGLE_SYSTEM_PROMPT, _BATCH_SYSTEM_PROMPT])
+
+
 class OpenAICompatibleChangeClassifier:
-    prompt_version = "disclosure-change-json-v1"
+    prompt_version = f"disclosure-change-json-v1+{_PROMPT_FINGERPRINT[:8]}"
+    batch_prompt_version = f"disclosure-change-batch-json-v1+{_PROMPT_FINGERPRINT[:8]}"
+    prompt_fingerprint = _PROMPT_FINGERPRINT
 
     def __init__(self, settings: Settings) -> None:
         self.model_name = settings.change_classifier_model
         self.model_version = settings.change_classifier_model
+        self.batch_fixed_overhead_tokens = estimate_tokens(_BATCH_SYSTEM_PROMPT)
         self._client = OpenAICompatibleClient(
             settings,
             provider_type="disclosure_change_classifier",
         )
 
+    async def classify_batch(
+        self, items: Sequence[tuple[str, ChangeClassificationRequest]]
+    ) -> dict[str, ChangeClassificationResult | None]:
+        """Classify several items in one request.
+
+        Returns one entry per requested item_id: a validated result, or None
+        when the provider gave nothing usable *for that item* (missing,
+        duplicated, unknown id, or schema-invalid) - the caller retries just
+        those items individually. Provider-level failures (rate limit /
+        outage after the client's own backoff) raise ProviderRequestError and
+        are not swallowed here.
+        """
+        requested = [item_id for item_id, _ in items]
+        outcomes: dict[str, ChangeClassificationResult | None] = dict.fromkeys(requested)
+        if not items:
+            return outcomes
+        try:
+            response, metadata, raw = await self._client.chat_json(
+                model=self.model_name,
+                prompt_version=self.batch_prompt_version,
+                system_prompt=_BATCH_SYSTEM_PROMPT,
+                user_payload={
+                    "allowed_labels": list(items[0][1].allowed_labels),
+                    "items": [
+                        {
+                            "item_id": item_id,
+                            **request.model_dump(exclude={"allowed_labels"}),
+                        }
+                        for item_id, request in items
+                    ],
+                },
+                response_model=BatchClassificationResponse,
+            )
+        except StructuredOutputError:
+            # Envelope unusable even after repair: nothing is attributable to
+            # any item, so every item falls back to an individual request.
+            return outcomes
+        inference_metadata = {
+            **metadata.model_dump(),
+            "response_id": raw.get("id"),
+            "batch_size": len(items),
+        }
+        by_id: dict[str, list[dict[str, object]]] = {}
+        for entry in response.items:
+            item_id = entry.get("item_id")
+            if isinstance(item_id, str):
+                by_id.setdefault(item_id, []).append(entry)
+        for item_id in requested:
+            entries = by_id.get(item_id, [])
+            if len(entries) != 1:
+                continue  # missing or ambiguous (duplicated) -> retry alone
+            payload = {key: value for key, value in entries[0].items() if key != "item_id"}
+            try:
+                result = ChangeClassificationResult.model_validate(payload)
+            except ValidationError:
+                continue
+            result.inference_metadata = inference_metadata
+            outcomes[item_id] = result
+        return outcomes
+
     async def classify(self, request: ChangeClassificationRequest) -> ChangeClassificationResult:
         result, metadata, raw = await self._client.chat_json(
             model=self.model_name,
             prompt_version=self.prompt_version,
-            system_prompt=(
-                "Classify SEC filing disclosure changes. Return only a single JSON "
-                "object with ALL of the following fields present -- every field "
-                "below is REQUIRED in every response, with no field ever omitted:\n"
-                "- change_type: one of the request's allowed_labels\n"
-                "- summary: a short plain-language summary of the change\n"
-                "- explanation: why the change was classified this way\n"
-                "- changed_spans: an array of objects, not strings; each object "
-                "should include text and side when available\n"
-                "- confidence: a number between 0.0 and 1.0\n"
-                "- risk_category: exactly one of liquidity, revenue_guidance, "
-                "litigation, other\n"
-                "- materiality_reason: a short explanation of why this change is, "
-                "or is not, material. This field is REQUIRED even when the change "
-                "is minor, the reasoning is brief, or materiality_reason overlaps "
-                "with explanation -- never omit it.\n"
-                "Do not make legal conclusions. Do not include any text, "
-                "commentary, or markdown outside the single JSON object."
-            ),
+            system_prompt=_SINGLE_SYSTEM_PROMPT,
             user_payload=request.model_dump(),
             response_model=ChangeClassificationResult,
         )

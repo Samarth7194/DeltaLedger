@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
@@ -22,6 +26,74 @@ class InferenceMetadata(BaseModel):
     output_tokens: int | None = None
     total_tokens: int | None = None
     estimated_cost_usd: float | None = None
+
+
+@dataclass
+class UsageTotals:
+    """Provider-reported token usage summed over the requests made inside a
+    `collect_usage()` block.
+
+    Only values the provider actually reported are summed. A field stays None
+    (never 0, never an estimate) when no request reported it, so "unknown" is
+    distinguishable from "zero".
+    """
+
+    requests: int = 0
+    requests_reporting_usage: int = 0
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    total_tokens: int | None = None
+
+    def add(self, usage: dict[str, Any] | None) -> None:
+        self.requests += 1
+        if not isinstance(usage, dict):
+            return
+        input_tokens = _int_or_none(usage.get("prompt_tokens"))
+        output_tokens = _int_or_none(usage.get("completion_tokens"))
+        total_tokens = _int_or_none(usage.get("total_tokens"))
+        if input_tokens is None and output_tokens is None and total_tokens is None:
+            return
+        self.requests_reporting_usage += 1
+        self.input_tokens = _add_optional(self.input_tokens, input_tokens)
+        self.output_tokens = _add_optional(self.output_tokens, output_tokens)
+        self.total_tokens = _add_optional(self.total_tokens, total_tokens)
+
+    def resolved_total(self) -> int | None:
+        """Reported total, else input + output when both were reported."""
+        if self.total_tokens is not None:
+            return self.total_tokens
+        if self.input_tokens is not None and self.output_tokens is not None:
+            return self.input_tokens + self.output_tokens
+        return None
+
+
+_usage_collector: ContextVar[UsageTotals | None] = ContextVar("usage_collector", default=None)
+
+
+@contextmanager
+def collect_usage() -> Iterator[UsageTotals]:
+    """Collect provider-reported token usage of every chat request made (in
+    this task) while the block is active - including repair attempts and
+    requests whose output later failed validation, since those cost tokens too.
+    """
+    totals = UsageTotals()
+    token = _usage_collector.set(totals)
+    try:
+        yield totals
+    finally:
+        _usage_collector.reset(token)
+
+
+def record_usage(usage: dict[str, Any] | None) -> None:
+    totals = _usage_collector.get()
+    if totals is not None:
+        totals.add(usage)
+
+
+def _add_optional(current: int | None, value: int | None) -> int | None:
+    if value is None:
+        return current
+    return value if current is None else current + value
 
 
 def metadata_from_usage(

@@ -68,6 +68,27 @@ class FinancialClaimExtractionService:
             },
             metric_names,
         )
+        return await self.persist_extractions(
+            filing_id=filing_id,
+            source_section_id=source_section.id,
+            passage_id=passage.id if passage is not None else None,
+            extracted=extracted,
+            comparison_id=comparison_id,
+            disclosure_change_id=disclosure_change_id,
+        )
+
+    async def persist_extractions(
+        self,
+        *,
+        filing_id: uuid.UUID,
+        source_section_id: uuid.UUID,
+        passage_id: uuid.UUID | None,
+        extracted: list[FinancialClaimExtraction],
+        comparison_id: uuid.UUID | None = None,
+        disclosure_change_id: uuid.UUID | None = None,
+    ) -> list[FinancialClaim]:
+        """Store extracted claims, idempotently (a claim already stored for
+        the same filing/passage/text/metric is reused, never duplicated)."""
         claims = []
         for item in extracted:
             metric = (
@@ -79,8 +100,8 @@ class FinancialClaimExtractionService:
                 filing_id=filing_id,
                 comparison_id=comparison_id,
                 disclosure_change_id=disclosure_change_id,
-                source_section_id=source_section.id,
-                source_passage_id=passage.id if passage is not None else None,
+                source_section_id=source_section_id,
+                source_passage_id=passage_id,
                 claim_text=item.claim_text,
                 canonical_metric_name=item.canonical_metric_name,
                 metric_definition_id=metric.id if metric is not None else None,
@@ -111,8 +132,15 @@ class FinancialClaimExtractionService:
         allowed_metrics: list[str],
     ) -> list[FinancialClaimExtraction]:
         deterministic = await self._deterministic_extract(text)
-        model_outputs = await self.extractor.extract_claims(text, section_metadata, allowed_metrics)
-        return deterministic or model_outputs
+        if deterministic:
+            # The model result was only ever used when the deterministic pass
+            # found nothing (`deterministic or model_outputs`), so asking it
+            # here could never change the outcome - it was a wasted request.
+            return deterministic
+        return await self.extractor.extract_claims(text, section_metadata, allowed_metrics)
+
+    async def deterministic_extract(self, text: str) -> list[FinancialClaimExtraction]:
+        return await self._deterministic_extract(text)
 
     async def _deterministic_extract(self, text: str) -> list[FinancialClaimExtraction]:
         claims: list[FinancialClaimExtraction] = []
