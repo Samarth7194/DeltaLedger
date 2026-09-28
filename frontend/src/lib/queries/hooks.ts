@@ -140,6 +140,17 @@ export function useResumeAnalysis(analysisRunId: string) {
   });
 }
 
+export function useRetryAnalysis(analysisRunId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.retryAnalysis(analysisRunId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.analysis(analysisRunId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.analysisEvents(analysisRunId) });
+    }
+  });
+}
+
 export function useCancelAnalysis(analysisRunId: string) {
   const queryClient = useQueryClient();
   return useMutation({

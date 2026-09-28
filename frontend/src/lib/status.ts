@@ -57,11 +57,13 @@ const labels: Record<string, string> = {
   completed: "Completed",
   completed_with_warnings: "Completed With Warnings",
   failed: "Failed",
+  requires_review: "Needs Review",
   cancelled: "Cancelled",
   verified: "Verified",
   approximately_verified: "Approximately Verified",
   unresolved: "Unresolved",
   contradicted: "Differs From Official Data",
+  critical: "Critical",
   high: "High",
   medium: "Medium",
   low: "Low",
@@ -83,10 +85,19 @@ export function statusTone(value?: string | null) {
   if (!value) {
     return "neutral";
   }
-  if (["failed", "rejected", "high", "contradicted"].includes(value)) {
+  if (["failed", "rejected", "high", "critical", "contradicted"].includes(value)) {
     return "danger";
   }
-  if (["awaiting_human_review", "needs_changes", "uncertain", "medium"].includes(value)) {
+  if (
+    [
+      "awaiting_human_review",
+      "needs_changes",
+      "uncertain",
+      "medium",
+      "requires_review",
+      "completed_with_warnings"
+    ].includes(value)
+  ) {
     return "warning";
   }
   if (["completed", "verified", "approved", "low", "processed"].includes(value)) {

@@ -84,11 +84,67 @@ export type AnalysisRun = {
   failure_node: string | null;
 };
 
+/** One durable batch ("part") of a batched stage. `actual_*` are provider-reported and null when unreported. */
+export type AnalysisStagePart = {
+  index: number;
+  status: string;
+  item_count: number;
+  estimated_input_tokens: number;
+  actual_input_tokens: number | null;
+  actual_output_tokens: number | null;
+  actual_total_tokens: number | null;
+  provider_calls: number;
+  retry_count: number;
+  successful_items: number;
+  zero_result_items: number;
+  requires_review_items: number;
+  last_provider_error_type: string | null;
+  retry_after_seconds: number | null;
+  last_provider_error_at: string | null;
+};
+
+/**
+ * Progress of one analysis stage. For a batched stage, `completed_units` of
+ * `total_units` are completed parts (e.g. "Disclosure Classification 8/17");
+ * both are null for stages that are not batched. Derived from persisted
+ * state, never from elapsed time. `configured_input_budget` /
+ * `effective_input_budget` are this project's own per-request planning limits,
+ * not the provider's quota (which is unknown).
+ */
+export type AnalysisStageProgress = {
+  stage: string;
+  label: string;
+  status: "pending" | "processing" | "completed" | "failed" | "requires_review";
+  batched: boolean;
+  retryable?: boolean | null;
+  completed_units: number | null;
+  total_units: number | null;
+  current_unit: number | null;
+  unit_label: string | null;
+  provider_calls: number | null;
+  retries: number | null;
+  estimated_input_tokens?: number | null;
+  actual_input_tokens?: number | null;
+  actual_output_tokens?: number | null;
+  actual_total_tokens?: number | null;
+  configured_input_budget?: number | null;
+  effective_input_budget?: number | null;
+  successful_items?: number | null;
+  zero_result_items?: number | null;
+  requires_review_items?: number | null;
+  last_provider_error_type?: string | null;
+  retry_after_seconds?: number | null;
+  last_provider_error_at?: string | null;
+  parts?: AnalysisStagePart[];
+};
+
 export type AnalysisProgress = {
   status: string;
   current_node: string | null;
   completed_nodes: string[];
   progress_percent: number;
+  retryable?: boolean | null;
+  stages?: AnalysisStageProgress[];
 };
 
 export type AnalysisWorkflowEvent = {

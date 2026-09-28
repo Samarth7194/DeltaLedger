@@ -1,9 +1,6 @@
 "use client";
 
-import { FileText } from "lucide-react";
-import Link from "next/link";
-
-import { Badge } from "@/components/ui/badge";
+import { ReportListCard } from "@/components/reports/report-list-card";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { PageHeader } from "@/components/ui/product";
 import { EmptyState, ErrorState, SkeletonRows } from "@/components/ui/state";
@@ -21,24 +18,18 @@ export default function ReportsPage() {
         description="Completed workflow reports collect disclosure changes, claim verification, potential inconsistencies, and review context."
       />
       <Panel>
-        <PanelHeader title="Completed Analyses" eyebrow="Report library" />
+        <PanelHeader
+          title="Completed Analyses"
+          eyebrow="Report library"
+          detail="Each entry is a generated analyst report: executive summary and high-priority findings, backed by the same evidence trail as the underlying run."
+        />
         {analyses.isLoading ? <SkeletonRows rows={6} /> : null}
         {analyses.error ? <ErrorState error={analyses.error} /> : null}
         {!analyses.isLoading && !analyses.error ? (
           data.length ? (
             <div className="grid gap-3 md:grid-cols-2">
               {data.map((run) => (
-                <Link
-                  key={run.id}
-                  href={`/analyses/${run.id}`}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-white/10 bg-white/[0.04] p-4 outline-none transition hover:border-ledger-200/30 hover:bg-white/[0.07] focus-visible:ring-2 focus-visible:ring-ledger-500"
-                >
-                  <span className="inline-flex items-center gap-2 font-semibold text-ink-950">
-                    <FileText aria-hidden="true" className="h-4 w-4 text-ledger-200" />
-                    Report for run {run.id.slice(0, 8)}
-                  </span>
-                  <Badge value={run.status} />
-                </Link>
+                <ReportListCard key={run.id} run={run} />
               ))}
             </div>
           ) : (

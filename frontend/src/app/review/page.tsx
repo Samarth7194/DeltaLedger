@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import { ClipboardCheck } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
+import { ReviewQueueCard } from "@/components/review/review-queue-card";
+import { Metric } from "@/components/ui/metric";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { PageHeader } from "@/components/ui/product";
 import { EmptyState, ErrorState, SkeletonRows } from "@/components/ui/state";
@@ -17,35 +18,46 @@ export default function ReviewQueuePage() {
       <PageHeader
         eyebrow="Analyst workstation"
         title="Review Queue"
-        description="Inspect workflow runs that require human judgment before findings or reports move forward."
+        description="Runs paused at a review gate, with the potential inconsistencies behind each one surfaced up front so you know what needs judgment before you open it."
       />
+
+      {!analyses.isLoading && !analyses.error ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Metric
+            label="Runs Awaiting Review"
+            value={data.length}
+            detail="Paused at the analyst gate"
+            tone={data.length ? "warning" : "success"}
+            icon={<ClipboardCheck className="h-4 w-4" />}
+          />
+          <Metric
+            label="Review SLA"
+            value="Manual"
+            detail="No auto-approval - every run below needs a decision"
+          />
+        </div>
+      ) : null}
+
       <Panel>
-        <PanelHeader title="Awaiting Human Review" eyebrow="Review gates" />
-        {analyses.isLoading ? <SkeletonRows rows={6} /> : null}
+        <PanelHeader
+          title="Awaiting Human Review"
+          eyebrow="Review gates"
+          detail="Sorted by workflow order. Each card previews its highest-severity finding; open a run for full evidence and to approve, reject, or edit."
+        />
+        {analyses.isLoading ? <SkeletonRows rows={4} /> : null}
         {analyses.error ? <ErrorState error={analyses.error} /> : null}
         {!analyses.isLoading && !analyses.error ? (
           data.length ? (
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-3 lg:grid-cols-2">
               {data.map((run) => (
-                <Link
-                  key={run.id}
-                  href={`/analyses/${run.id}`}
-                  className="block rounded-md border border-amber-300/25 bg-amber-400/10 p-4 outline-none transition hover:bg-amber-400/15 focus-visible:ring-2 focus-visible:ring-ledger-500"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <div className="font-mono text-sm font-semibold text-amber-100">Run {run.id.slice(0, 8)}</div>
-                      <div className="mt-1 text-sm text-ink-700">
-                        {run.current_filing_id.slice(0, 8)} compared with {run.comparison_filing_id.slice(0, 8)}
-                      </div>
-                    </div>
-                    <Badge value={run.status} />
-                  </div>
-                </Link>
+                <ReviewQueueCard key={run.id} run={run} />
               ))}
             </div>
           ) : (
-            <EmptyState title="No review required" detail="There are no workflow runs at a human-review gate." />
+            <EmptyState
+              title="No review required"
+              detail="There are no workflow runs paused at a human-review gate right now."
+            />
           )
         ) : null}
       </Panel>

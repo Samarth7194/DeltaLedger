@@ -53,6 +53,12 @@ export const api = {
       `/analyses/${analysisRunId}/resume`,
       { method: "POST" }
     ),
+  /** Continue the SAME failed run from its first incomplete part (never creates a run). */
+  retryAnalysis: (analysisRunId: string) =>
+    request<{ analysis_run_id: string; job_id: string; status: string }>(
+      `/analyses/${analysisRunId}/retry`,
+      { method: "POST" }
+    ),
   report: (analysisRunId: string) =>
     request<AnalysisReport>(`/analyses/${analysisRunId}/report`),
   disclosureChanges: (comparisonId: string, params?: ApiListParams) =>

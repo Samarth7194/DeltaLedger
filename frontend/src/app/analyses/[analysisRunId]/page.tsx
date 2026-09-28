@@ -1,9 +1,11 @@
 "use client";
 
-import { AlertTriangle, Ban, Clock3, FileSearch, RefreshCcw } from "lucide-react";
+import { AlertTriangle, Ban, Clock3, RefreshCcw } from "lucide-react";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { RecoveryNotice } from "@/components/analyses/analysis-recovery";
+import { AnalysisStageProgress } from "@/components/analyses/analysis-stage-progress";
 import { WorkflowEvents } from "@/components/analyses/workflow-events";
 import { WorkflowProgress } from "@/components/analyses/workflow-progress";
 import { InconsistencyList } from "@/components/contradictions/inconsistency-list";
@@ -30,6 +32,7 @@ import {
   useFinancialVerifications,
   useReport,
   useResumeAnalysis,
+  useRetryAnalysis,
   useReviewRequest,
   useWorkflowReview
 } from "@/lib/queries/hooks";
@@ -55,6 +58,8 @@ export default function AnalysisWorkspacePage() {
   const review = useReviewRequest(analysisRunId, analysis.data?.status === "awaiting_human_review");
   const workflowReview = useWorkflowReview(analysisRunId);
   const resume = useResumeAnalysis(analysisRunId);
+  const retry = useRetryAnalysis(analysisRunId);
+  const [resumeRequested, setResumeRequested] = useState(false);
   const cancel = useCancelAnalysis(analysisRunId);
   const report = useReport(analysisRunId, Boolean(analysis.data?.report_id || activeTab === "report"));
   const comparisonId = analysis.data?.comparison_id;
@@ -63,6 +68,22 @@ export default function AnalysisWorkspacePage() {
   const verifications = useFinancialVerifications(comparisonId);
   const contradictions = useContradictions(comparisonId, { limit: 100 });
   const evidence = useContradictionEvidence(evidenceFindingId);
+
+  const runStatus = analysis.data?.status;
+  const refetchAnalysis = analysis.refetch;
+  useEffect(() => {
+    // After "Resume Analysis" the run stays `failed` until the worker picks it
+    // up; poll briefly so the page follows it, and stop once it is running.
+    if (!resumeRequested) {
+      return;
+    }
+    if (runStatus !== "failed") {
+      setResumeRequested(false);
+      return;
+    }
+    const timer = setInterval(() => void refetchAnalysis(), 3_000);
+    return () => clearInterval(timer);
+  }, [resumeRequested, runStatus, refetchAnalysis]);
 
   if (analysis.isLoading) {
     return <SkeletonRows rows={8} />;
@@ -105,13 +126,28 @@ export default function AnalysisWorkspacePage() {
         </div>
       </PageHeader>
 
-      {run.failure_message ? (
-        <Panel className="border-red-300/25 bg-red-500/10">
-          <div className="flex gap-3 text-red-100">
-            <AlertTriangle aria-hidden="true" className="mt-0.5 h-5 w-5" />
+      <RecoveryNotice
+        run={run}
+        resuming={retry.isPending}
+        resumeRequested={resumeRequested}
+        resumeError={retry.error instanceof Error ? retry.error.message : null}
+        onResume={() =>
+          retry.mutate(undefined, {
+            onSuccess: () => setResumeRequested(true)
+          })
+        }
+      />
+
+      {run.progress.stages?.some((stage) => stage.status === "requires_review") ? (
+        <Panel className="border-amber-300/30 bg-amber-400/10">
+          <div className="flex gap-3 text-amber-100">
+            <AlertTriangle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />
             <div>
-              <h3 className="font-semibold">Analysis failed</h3>
-              <p className="mt-1 text-sm text-red-100/80">{run.failure_message}</p>
+              <h3 className="font-semibold">Some passages need review</h3>
+              <p className="mt-1 text-sm text-amber-100/85">
+                The model could not analyse some passages. They are flagged for an analyst and the report carries a
+                data-quality warning.
+              </p>
             </div>
           </div>
         </Panel>
@@ -133,6 +169,14 @@ export default function AnalysisWorkspacePage() {
               tone={count(run.counts.contradictions) ? "warning" : "neutral"}
             />
           </div>
+          <Panel>
+            <PanelHeader
+              title="Analysis Progress"
+              eyebrow={labelFor(run.current_node)}
+              detail="Completed parts are saved as they finish, so an interrupted run continues from the first incomplete part."
+            />
+            <AnalysisStageProgress progress={run.progress} />
+          </Panel>
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
             <Panel>
               <PanelHeader title="Workflow Progress" eyebrow={labelFor(run.current_node)} />
