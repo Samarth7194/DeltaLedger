@@ -27,6 +27,7 @@ from app.db.models.workflow import (
     AnalysisReport,
     AnalysisReviewRequest,
     AnalysisRun,
+    AnalysisStageBatch,
     AnalysisWorkflowEvent,
 )
 from app.db.models.xbrl import XbrlFact
@@ -36,6 +37,7 @@ __all__ = [
     "AnalysisReport",
     "AnalysisReviewRequest",
     "AnalysisRun",
+    "AnalysisStageBatch",
     "AnalysisWorkflowEvent",
     "ClaimFactCandidate",
     "ClaimVerification",

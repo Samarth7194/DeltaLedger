@@ -7,6 +7,8 @@ from urllib.parse import urlparse
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.db_url import to_sync_database_url
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
@@ -35,9 +37,20 @@ class Settings(BaseSettings):
     database_pool_size: int = 5
     database_max_overflow: int = 10
     database_pool_timeout_seconds: float = 30.0
+    database_pool_recycle_seconds: float = 300.0
     redis_url: str = "redis://localhost:6379/0"
     redis_connect_timeout_seconds: float = 5.0
     redis_socket_timeout_seconds: float = 5.0
+    # Dramatiq actor time limits, in seconds. The full analysis workflow
+    # (run_analysis_workflow_task/resume_analysis_workflow_task) runs BGE
+    # embedding, potentially hundreds of paced Gemini classification calls,
+    # claim extraction/verification, and contradiction analysis in one
+    # actor invocation, so it needs a much longer ceiling than every other
+    # (short, single-stage) worker task. Kept separate and configurable
+    # rather than raising every actor's limit, so a genuinely hung short
+    # task still gets killed quickly.
+    worker_default_time_limit_seconds: float = 30 * 60.0
+    analysis_workflow_time_limit_seconds: float = 3 * 60 * 60.0
 
     object_storage_provider: Literal["filesystem", "minio"] = "filesystem"
     object_storage_local_root: str = "./data/object-storage"
@@ -88,6 +101,15 @@ class Settings(BaseSettings):
     ai_provider_retry_jitter_seconds: float = 0.5
     ai_provider_chat_delay_seconds: float = 0.0
     ai_provider_structured_output_repair_attempts: int = 1
+    # Resumable batch processing for the expensive AI stages (disclosure
+    # classification, financial-claim extraction). A batch is a durable,
+    # bounded unit of work; see app/ai/batching.py for how it is sized.
+    ai_batch_max_items: int = 8
+    ai_batch_input_token_budget: int = 12000
+    ai_batch_token_safety_margin: float = 0.25
+    # False keeps the durable batches (resume/progress) but sends one
+    # provider request per item instead of one multi-item request.
+    ai_batch_multi_item_requests: bool = True
     ai_provider_input_token_cost_usd_per_million: float | None = None
     ai_provider_output_token_cost_usd_per_million: float | None = None
 
@@ -193,6 +215,17 @@ class Settings(BaseSettings):
             "DATABASE_POOL_TIMEOUT_SECONDS",
             self.database_pool_timeout_seconds,
         )
+        _require_non_negative(
+            "DATABASE_POOL_RECYCLE_SECONDS",
+            self.database_pool_recycle_seconds,
+        )
+        _require_positive_int(
+            "WORKER_DEFAULT_TIME_LIMIT_SECONDS", int(self.worker_default_time_limit_seconds)
+        )
+        _require_positive_int(
+            "ANALYSIS_WORKFLOW_TIME_LIMIT_SECONDS",
+            int(self.analysis_workflow_time_limit_seconds),
+        )
         _require_unit_interval("SECTION_MATCH_MIN_SCORE", self.section_match_min_score)
         _require_unit_interval("PASSAGE_ALIGNMENT_MIN_SCORE", self.passage_alignment_min_score)
         _require_weight_sum(
@@ -288,6 +321,10 @@ class Settings(BaseSettings):
             raise ValueError(
                 "AI_PROVIDER_STRUCTURED_OUTPUT_REPAIR_ATTEMPTS must be greater than or equal to 0."
             )
+        _require_positive_int("AI_BATCH_MAX_ITEMS", self.ai_batch_max_items)
+        _require_positive_int("AI_BATCH_INPUT_TOKEN_BUDGET", self.ai_batch_input_token_budget)
+        if not 0.0 <= self.ai_batch_token_safety_margin < 0.9:
+            raise ValueError("AI_BATCH_TOKEN_SAFETY_MARGIN must be at least 0 and below 0.9.")
         if self.ai_provider_retry_max_delay_seconds < self.ai_provider_retry_base_delay_seconds:
             raise ValueError(
                 "AI_PROVIDER_RETRY_MAX_DELAY_SECONDS must be greater than or equal to "
@@ -418,9 +455,7 @@ def _database_name(url: str) -> str:
 
 
 def _sync_database_url(url: str) -> str:
-    parsed = urlparse(url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1))
-    query = parsed.query.replace("ssl=require", "sslmode=require")
-    return parsed._replace(query=query).geturl()
+    return to_sync_database_url(url)
 
 
 def _require_host(url: str, expected: str, name: str) -> None:

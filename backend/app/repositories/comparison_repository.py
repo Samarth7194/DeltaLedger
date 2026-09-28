@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from datetime import UTC, datetime
 from typing import Any
 
@@ -116,6 +116,29 @@ class ComparisonRepository:
             comparison.completed_at = now
         await self.session.flush()
 
+    async def set_matching_state(
+        self,
+        comparison: FilingComparison,
+        *,
+        fingerprint: str | None,
+        section_match_count: int = 0,
+        passage_match_count: int = 0,
+    ) -> None:
+        """Record (or clear, with fingerprint=None) that this comparison's
+        persisted section/passage matches are complete for `fingerprint`.
+
+        Lives in processing_metrics (already the comparison's run metadata)
+        rather than a parallel table. Clearing is done in the same transaction
+        that wipes the matches, so a valid marker never outlives its matches.
+        """
+        state = {
+            "matching_fingerprint": fingerprint,
+            "matching_section_match_count": section_match_count,
+            "matching_passage_match_count": passage_match_count,
+        }
+        comparison.processing_metrics = {**(comparison.processing_metrics or {}), **state}
+        await self.session.flush()
+
     async def replace_section_matches(
         self,
         comparison_id: uuid.UUID,
@@ -218,6 +241,83 @@ class ComparisonRepository:
         self.session.add_all(stored)
         await self.session.flush()
         return stored
+
+    async def upsert_change_for_passage_match(
+        self,
+        passage_match_id: uuid.UUID,
+        change: DisclosureChange,
+    ) -> DisclosureChange:
+        """Persist one passage's classification immediately, independent of
+        whether the rest of its section has finished.
+
+        Committing this (by the caller, right after) rather than batching a
+        whole section's results is what lets a retry interrupted mid-section
+        (e.g. by a Dramatiq time limit) reuse everything classified before
+        the interrupt instead of redoing the entire section.
+        """
+        await self.session.execute(
+            delete(DisclosureChange).where(DisclosureChange.passage_match_id == passage_match_id)
+        )
+        self.session.add(change)
+        await self.session.flush()
+        return change
+
+    async def list_reusable_change_results(
+        self,
+        comparison_id: uuid.UUID,
+        *,
+        model_name: str | None,
+        prompt_version: str | None,
+        additional_prompt_versions: Sequence[str] = (),
+    ) -> list[tuple[str | None, str | None, dict[str, object]]]:
+        """Prior successful ("hybrid") classifications for this comparison,
+        as (previous_text, current_text, original_model_output) triples.
+
+        Must be called BEFORE replace_section_matches()/cascade-delete wipes
+        them, e.g. when resuming a comparison that failed partway through a
+        previous attempt. Scoped to the current model/prompt version(s) so a
+        classifier config change is never silently masked by stale reuse.
+        `additional_prompt_versions` lets results from an equivalent prompt
+        (e.g. the multi-item variant) count as reusable too.
+        """
+        prompt_versions = [prompt_version, *additional_prompt_versions]
+        stmt = select(
+            DisclosureChange.previous_text,
+            DisclosureChange.current_text,
+            DisclosureChange.original_model_output,
+        ).where(
+            DisclosureChange.comparison_id == comparison_id,
+            DisclosureChange.detection_method.in_(("hybrid", "hybrid_cached")),
+            DisclosureChange.model_name == model_name,
+            DisclosureChange.prompt_version.in_(prompt_versions),
+        )
+        rows = await self.session.execute(stmt)
+        return [(row[0], row[1], row[2]) for row in rows]
+
+    async def list_failed_change_placeholders(
+        self,
+        comparison_id: uuid.UUID,
+        *,
+        model_name: str | None,
+    ) -> list[tuple[str | None, str | None, dict[str, object]]]:
+        """Prior requires_review placeholders (passages the model could not
+        classify) as (previous_text, current_text, stored_error_output).
+
+        Like list_reusable_change_results, must be read before a comparison
+        re-run wipes them. Used to treat an already-completed batch as final
+        rather than re-asking the provider for its unclassifiable items.
+        """
+        stmt = select(
+            DisclosureChange.previous_text,
+            DisclosureChange.current_text,
+            DisclosureChange.original_model_output,
+        ).where(
+            DisclosureChange.comparison_id == comparison_id,
+            DisclosureChange.detection_method == "model_output_failed",
+            DisclosureChange.model_name == model_name,
+        )
+        rows = await self.session.execute(stmt)
+        return [(row[0], row[1], row[2]) for row in rows]
 
     async def list_changes(
         self,

@@ -4,9 +4,11 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     CheckConstraint,
     DateTime,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -66,6 +68,11 @@ WORKFLOW_REVIEW_STATUSES = (
     "uncertain",
 )
 REPORT_STATUSES = ("draft", "finalized")
+STAGE_BATCH_STATUSES = ("pending", "processing", "completed", "failed")
+# Stages that run as durable batches (see app/ai/batching.py). Not a DB
+# constraint: adding a batched stage must not need a migration.
+BATCH_STAGE_DISCLOSURE_COMPARISON = "disclosure_comparison"
+BATCH_STAGE_FINANCIAL_CLAIMS = "financial_claims"
 
 
 def _sql_tuple(values: tuple[str, ...]) -> str:
@@ -232,3 +239,84 @@ class AnalysisReport(UuidPrimaryKeyMixin, TimestampMixin, Base):
     generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     finalized_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
+class AnalysisStageBatch(UuidPrimaryKeyMixin, TimestampMixin, Base):
+    """One durable, bounded batch ("part") of an expensive AI stage.
+
+    Holds progress and identity only - never prompts, responses or secrets.
+    The results themselves live in the stage's own tables (disclosure
+    changes, financial claims), which is what a resumed run reuses.
+    """
+
+    __tablename__ = "analysis_stage_batches"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN " + _sql_tuple(STAGE_BATCH_STATUSES),
+            name="analysis_stage_batch_status",
+        ),
+        CheckConstraint("batch_index >= 1", name="analysis_stage_batch_index"),
+        UniqueConstraint(
+            "analysis_run_id",
+            "stage",
+            "batch_index",
+            name="uq_analysis_stage_batch_index",
+        ),
+        Index("ix_analysis_stage_batches_run_stage_status", "analysis_run_id", "stage", "status"),
+    )
+
+    analysis_run_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("analysis_runs.id", ondelete="CASCADE"), nullable=False
+    )
+    stage: Mapped[str] = mapped_column(String(48), nullable=False)
+    batch_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    total_batches: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16), default="pending", server_default="pending", nullable=False
+    )
+    input_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    item_ids: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default="[]", nullable=False
+    )
+    item_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    estimated_input_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
+    model_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    prompt_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    provider_call_count: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
+    )
+    retry_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_error_category: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    last_error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Per-item outcomes, keyed by each item's content-hash identity. Written
+    # in the SAME transaction that marks the batch completed, so a completed
+    # batch always carries its own durable results: a resumed run can rebuild
+    # them from here even if the stage's own tables were wiped in the
+    # meantime (a comparison re-run cascades away its disclosure changes).
+    item_results: Mapped[dict[str, object]] = mapped_column(
+        JSONB, default=dict, server_default="{}", nullable=False
+    )
+    # Item accounting: analysed with a result / analysed and legitimately
+    # empty / could not be analysed after repair+retry (needs an analyst).
+    successful_items: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
+    )
+    zero_result_items: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
+    )
+    requires_review_items: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
+    )
+    # Provider-reported usage summed over every request spent on this batch
+    # (including retries). NULL means the provider never reported it.
+    actual_input_tokens: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    actual_output_tokens: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    actual_total_tokens: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    # Safe metadata of the last provider failure (never headers or bodies).
+    last_provider_error_type: Mapped[str | None] = mapped_column(String(48), nullable=True)
+    last_retry_after_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    last_provider_error_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
