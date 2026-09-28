@@ -39,7 +39,7 @@ class Filing(UuidPrimaryKeyMixin, TimestampMixin, Base):
 
     company_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("companies.id"),
+        ForeignKey("companies.id", ondelete="CASCADE"),
         nullable=False,
     )
     accession_number: Mapped[str] = mapped_column(String(32), nullable=False)
@@ -86,7 +86,7 @@ class FilingSection(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
 
     filing_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("filings.id"),
+        ForeignKey("filings.id", ondelete="CASCADE"),
         nullable=False,
     )
     section_type: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -96,7 +96,7 @@ class FilingSection(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
     section_title: Mapped[str] = mapped_column(String(512), nullable=False)
     section_order: Mapped[int] = mapped_column(Integer, nullable=False)
     parent_section_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("filing_sections.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("filing_sections.id", ondelete="SET NULL"), nullable=True
     )
     raw_text: Mapped[str] = mapped_column(Text, nullable=False)
     normalized_text: Mapped[str] = mapped_column(Text, nullable=False)
@@ -135,10 +135,20 @@ class FilingChunk(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
         UniqueConstraint("filing_section_id", "chunk_index", name="uq_filing_chunks_section_index"),
         Index("ix_filing_chunks_section_index", "filing_section_id", "chunk_index"),
         Index("ix_filing_chunks_metadata_gin", "metadata", postgresql_using="gin"),
+        Index("ix_filing_chunks_content_hash", "content_hash"),
+        Index("ix_filing_chunks_search_vector_gin", "search_vector", postgresql_using="gin"),
+        # Approximate nearest-neighbour index for cosine search (see migration 0001).
+        Index(
+            "ix_filing_chunks_embedding_hnsw",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_with={"m": 16, "ef_construction": 64},
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ),
     )
 
     filing_section_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("filing_sections.id"), nullable=False
+        UUID(as_uuid=True), ForeignKey("filing_sections.id", ondelete="CASCADE"), nullable=False
     )
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     text: Mapped[str] = mapped_column(Text, nullable=False)
@@ -181,12 +191,12 @@ class FilingTable(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
 
     filing_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("filings.id"),
+        ForeignKey("filings.id", ondelete="CASCADE"),
         nullable=False,
     )
     filing_section_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("filing_sections.id"),
+        ForeignKey("filing_sections.id", ondelete="SET NULL"),
         nullable=True,
     )
     table_index: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -219,7 +229,7 @@ class FilingProcessingStage(UuidPrimaryKeyMixin, TimestampMixin, Base):
 
     filing_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("filings.id"),
+        ForeignKey("filings.id", ondelete="CASCADE"),
         nullable=False,
     )
     stage_name: Mapped[str] = mapped_column(String(64), nullable=False)

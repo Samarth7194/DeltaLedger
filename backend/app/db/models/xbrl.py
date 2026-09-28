@@ -29,12 +29,12 @@ class XbrlFact(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
 
     company_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("companies.id"),
+        ForeignKey("companies.id", ondelete="CASCADE"),
         nullable=False,
     )
     filing_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("filings.id"),
+        ForeignKey("filings.id", ondelete="SET NULL"),
         nullable=True,
     )
     taxonomy: Mapped[str] = mapped_column(String(64), nullable=False)

@@ -40,13 +40,13 @@ class FilingComparison(UuidPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     company_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("companies.id"), nullable=False
+        UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False
     )
     current_filing_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("filings.id"), nullable=False
+        UUID(as_uuid=True), ForeignKey("filings.id", ondelete="CASCADE"), nullable=False
     )
     comparison_filing_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("filings.id"), nullable=False
+        UUID(as_uuid=True), ForeignKey("filings.id", ondelete="CASCADE"), nullable=False
     )
     status: Mapped[str] = mapped_column(String(32), default="queued", server_default="queued")
     comparison_version: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -187,7 +187,7 @@ class DisclosureChange(UuidPrimaryKeyMixin, TimestampMixin, Base):
         UUID(as_uuid=True), ForeignKey("section_matches.id", ondelete="CASCADE"), nullable=False
     )
     passage_match_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("passage_matches.id", ondelete="CASCADE"), nullable=True
+        UUID(as_uuid=True), ForeignKey("passage_matches.id", ondelete="SET NULL"), nullable=True
     )
     change_type: Mapped[str] = mapped_column(String(32), nullable=False)
     risk_category: Mapped[str] = mapped_column(String(64), nullable=False)
