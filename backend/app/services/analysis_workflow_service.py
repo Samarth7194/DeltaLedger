@@ -24,7 +24,9 @@ from app.repositories.comparison_repository import ComparisonRepository
 from app.repositories.contradiction_repository import ContradictionRepository
 from app.repositories.filing_repository import FilingRepository
 from app.repositories.financial_repository import FinancialRepository
+from app.repositories.stage_batch_repository import StageBatchRepository
 from app.repositories.workflow_repository import WorkflowRepository
+from app.services.analysis_completeness import ReadinessReport, evaluate_readiness
 from app.services.analysis_report_service import AnalysisReportService
 from app.services.contradiction_analysis_service import ContradictionAnalysisService
 from app.services.filing_comparison_service import FilingComparisonError, FilingComparisonService
@@ -412,7 +414,10 @@ class AnalysisWorkflowService:
                 )
             except FilingComparisonError as exc:
                 raise WorkflowError("validation_error", exc.code, exc.message) from exc
-            await service.process_comparison(result.comparison_id)
+            await service.process_comparison(
+                result.comparison_id,
+                analysis_run_id=uuid.UUID(state["analysis_run_id"]),
+            )
             comparison = await self.comparisons.get_comparison(result.comparison_id)
             if comparison is None or comparison.status != "completed":
                 raise WorkflowError(
@@ -438,13 +443,30 @@ class AnalysisWorkflowService:
 
     async def _extract_financial_claims(self, state: AnalysisState) -> AnalysisState:
         async def work() -> AnalysisState:
-            claims = await self.financial.list_claims(
-                comparison_id=uuid.UUID(str(state["comparison_id"])),
-                limit=1000,
+            comparison_id = uuid.UUID(str(state["comparison_id"]))
+            # Resumable, token-budgeted batches: a retry continues from the
+            # first incomplete batch (see ClaimBatchExtractionService).
+            metrics = await FinancialVerificationService(
+                self.session, self.settings
+            ).extract_claims_for_comparison(
+                comparison_id,
+                analysis_run_id=uuid.UUID(state["analysis_run_id"]),
             )
+            claims = await self.financial.list_claims(comparison_id=comparison_id, limit=1000)
+            warnings = list(state.get("warnings", []))
+            if metrics.get("claim_items_requires_review"):
+                warnings.append(
+                    f"Claim extraction could not analyse "
+                    f"{metrics['claim_items_requires_review']} passage(s); they need review."
+                )
             return {
                 "financial_claim_ids": [str(claim.id) for claim in claims],
-                "counts": {**state.get("counts", {}), "financial_claims_existing": len(claims)},
+                "warnings": warnings,
+                "counts": {
+                    **state.get("counts", {}),
+                    "financial_claims_existing": len(claims),
+                    "financial_claim_extraction": metrics,
+                },
             }
 
         return await self._node("extract_financial_claims", state, "extracting_claims", work)
@@ -452,8 +474,11 @@ class AnalysisWorkflowService:
     async def _verify_financial_claims(self, state: AnalysisState) -> AnalysisState:
         async def work() -> AnalysisState:
             service = FinancialVerificationService(self.session, self.settings)
+            # Extraction already ran as the previous, batched node; this stage
+            # is deterministic XBRL verification only.
             metrics = await service.verify_claims_for_comparison(
-                uuid.UUID(str(state["comparison_id"]))
+                uuid.UUID(str(state["comparison_id"])),
+                extract=False,
             )
             verifications = await self.financial.list_verifications(
                 comparison_id=uuid.UUID(str(state["comparison_id"]))
@@ -541,8 +566,63 @@ class AnalysisWorkflowService:
 
         return await self._node("validate_evidence", state, "validating_evidence", work)
 
+    async def _require_ready(
+        self,
+        state: AnalysisState,
+        *,
+        for_report: bool = False,
+    ) -> ReadinessReport:
+        """Centralised completeness guard (see analysis_completeness).
+
+        Raises unless every upstream stage is genuinely finished - not merely
+        "some batches completed" - so the analysis can never advance to human
+        review or the final report with required work outstanding.
+        """
+        run_id = uuid.UUID(state["analysis_run_id"])
+        comparison_id = state.get("comparison_id")
+        comparison = (
+            await self.comparisons.get_comparison(uuid.UUID(str(comparison_id)))
+            if comparison_id
+            else None
+        )
+        counts = state.get("counts", {})
+        claim_metrics = counts.get("financial_claim_extraction")
+        review_status = None
+        if for_report:
+            result = state.get("review_result")
+            if isinstance(result, dict) and result.get("status"):
+                review_status = str(result["status"])
+            else:
+                latest = await self.workflow.get_latest_review(run_id)
+                review_status = latest.status if latest is not None else None
+        readiness = evaluate_readiness(
+            completed_nodes=state.get("completed_nodes", []),
+            batches=await StageBatchRepository(self.session).stage_progress(run_id),
+            comparison_status=comparison.status if comparison is not None else None,
+            comparison_metrics=comparison.processing_metrics if comparison is not None else None,
+            claim_metrics=claim_metrics if isinstance(claim_metrics, dict) else None,
+            verification_complete=bool(state.get("financial_verification_complete")),
+            contradiction_complete=bool(state.get("contradiction_analysis_complete")),
+            evidence_valid=bool(state.get("evidence_valid")),
+            for_report=for_report,
+            requires_human_review=bool(state.get("requires_human_review")),
+            review_status=review_status,
+        )
+        if not readiness.is_ready:
+            raise WorkflowError(
+                "incomplete_analysis",
+                "analysis_incomplete",
+                f"Analysis is incomplete and cannot advance: {readiness.summary()}",
+            )
+        return readiness
+
     async def _prioritize_findings(self, state: AnalysisState) -> AnalysisState:
         async def work() -> AnalysisState:
+            readiness = await self._require_ready(state)
+            warnings = list(state.get("warnings", []))
+            for note in readiness.data_quality:
+                if note not in warnings:
+                    warnings.append(note)
             findings = await self.contradictions.list_findings(
                 comparison_id=uuid.UUID(str(state["comparison_id"])),
                 limit=1000,
@@ -561,6 +641,7 @@ class AnalysisWorkflowService:
             )
             return {
                 "requires_human_review": requires_review,
+                "warnings": warnings,
                 "counts": {**state.get("counts", {}), "review_priorities": priorities},
             }
 
@@ -623,6 +704,9 @@ class AnalysisWorkflowService:
 
     async def _generate_report(self, state: AnalysisState) -> AnalysisState:
         async def work() -> AnalysisState:
+            # Re-checked here (not only before review): after a human-review
+            # resume this is the last gate before the report exists.
+            await self._require_ready(state, for_report=True)
             report = await AnalysisReportService(self.session, self.settings).generate_report(
                 uuid.UUID(state["analysis_run_id"])
             )
@@ -682,12 +766,24 @@ class AnalysisWorkflowService:
             attempt_number=attempt,
             event_payload={"status": status},
         )
-        await self.session.flush()
+        # Commit AND close here: this session is shared across every node in
+        # the run, and a node's own work() can hold it for a long time (BGE
+        # inference, Gemini calls with pacing/backoff). Releasing the
+        # connection before work() starts means it is never left open (and
+        # idle) for that duration, where a provider like Neon could drop it.
+        await self.session.commit()
+        await self.session.close()
         try:
             result = await work()
             duration_ms = int((time.perf_counter() - started) * 1000)
             completed_nodes = _append_node(state.get("completed_nodes", []), node_name)
             result = {**result, "completed_nodes": completed_nodes}
+            # `run` was detached by the close() above (and work() itself may
+            # have closed/reopened the session further); re-fetch it before
+            # mutating processing_metrics below, so that write is tracked by
+            # the session and actually persisted instead of silently
+            # discarded on a stale detached object.
+            run = await self._require_run(uuid.UUID(state["analysis_run_id"]))
             await self.workflow.add_event(
                 analysis_run_id=run.id,
                 event_type="node_completed",
@@ -701,7 +797,7 @@ class AnalysisWorkflowService:
                 "completed_nodes": completed_nodes,
                 "last_node_duration_ms": {node_name: duration_ms},
             }
-            await self.session.flush()
+            await self.session.commit()
             return result
         except WorkflowError as exc:
             exc.node = exc.node or node_name

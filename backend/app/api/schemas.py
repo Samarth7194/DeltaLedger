@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -423,11 +423,72 @@ class AnalysisCreateResponse(BaseModel):
     job_id: str
 
 
+class AnalysisStagePartResponse(BaseModel):
+    """One durable batch ("part") of a batched stage. Token fields are
+    estimates (`estimated_*`) or provider-reported values (`actual_*`, None
+    when the provider reported nothing - never filled with an estimate)."""
+
+    index: int
+    status: str
+    item_count: int
+    estimated_input_tokens: int
+    actual_input_tokens: int | None = None
+    actual_output_tokens: int | None = None
+    actual_total_tokens: int | None = None
+    provider_calls: int
+    retry_count: int
+    successful_items: int
+    zero_result_items: int
+    requires_review_items: int
+    last_provider_error_type: str | None = None
+    retry_after_seconds: float | None = None
+    last_provider_error_at: datetime | None = None
+
+
+class AnalysisStageProgressResponse(BaseModel):
+    """Progress of one analysis stage. For a batched stage `completed_units`
+    of `total_units` are completed parts ("Disclosure Classification 8/17");
+    they are None for stages that are not batched. Never time-derived.
+
+    `status` is pending | processing | completed | failed | requires_review.
+    `retryable` (failed only) says whether running the analysis again can
+    succeed. `configured_input_budget` / `effective_input_budget` are this
+    project's own per-request planning limits, NOT the provider's quota,
+    which is unknown."""
+
+    stage: str
+    label: str
+    status: str
+    batched: bool
+    retryable: bool | None = None
+    completed_units: int | None = None
+    total_units: int | None = None
+    current_unit: int | None = None
+    unit_label: str | None = None
+    provider_calls: int | None = None
+    retries: int | None = None
+    estimated_input_tokens: int | None = None
+    actual_input_tokens: int | None = None
+    actual_output_tokens: int | None = None
+    actual_total_tokens: int | None = None
+    configured_input_budget: int | None = None
+    effective_input_budget: int | None = None
+    successful_items: int | None = None
+    zero_result_items: int | None = None
+    requires_review_items: int | None = None
+    last_provider_error_type: str | None = None
+    retry_after_seconds: float | None = None
+    last_provider_error_at: datetime | None = None
+    parts: list[AnalysisStagePartResponse] = []
+
+
 class AnalysisProgressResponse(BaseModel):
     status: str
     current_node: str | None
     completed_nodes: list[str]
     progress_percent: int
+    retryable: bool | None = None
+    stages: list[AnalysisStageProgressResponse] = []
 
 
 class AnalysisRunResponse(BaseModel):

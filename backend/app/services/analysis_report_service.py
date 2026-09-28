@@ -21,7 +21,9 @@ from app.db.models import (
     Filing,
     FinancialClaim,
 )
+from app.db.models.workflow import BATCH_STAGE_FINANCIAL_CLAIMS
 from app.repositories.contradiction_repository import ContradictionRepository
+from app.repositories.stage_batch_repository import StageBatchRepository, StageProgress
 from app.repositories.workflow_repository import WorkflowRepository
 
 
@@ -80,6 +82,10 @@ class AnalysisReportService:
             if finding.severity in {"high", "critical"} and finding.review_status != "rejected"
         ]
         limitations = _limitations(verifications, findings, run)
+        data_quality = _data_quality(
+            changes, await StageBatchRepository(self.session).stage_progress(run.id)
+        )
+        limitations = [*limitations, *data_quality["notes"]]
         manifest = _evidence_manifest(changes, verifications, findings, evidence)
         payload = {
             "company": {
@@ -108,6 +114,9 @@ class AnalysisReportService:
             "contradiction_summary": contradiction_summary,
             "high_priority_findings": high_priority,
             "limitations": limitations,
+            # Work the model could not analyse. The report is still produced
+            # (everything else is analysed), but it must say so.
+            "data_quality": data_quality,
             "evidence_manifest": manifest,
         }
         content_hash = hashlib.sha256(
@@ -121,6 +130,7 @@ class AnalysisReportService:
                 disclosure_summary,
                 verification_summary,
                 contradiction_summary,
+                data_quality,
             ),
             comparison_summary=payload["comparison_summary"],
             disclosure_change_summary=disclosure_summary,
@@ -198,14 +208,46 @@ def _evidence_manifest(
     }
 
 
+def _data_quality(
+    changes: list[DisclosureChange],
+    batches: dict[str, StageProgress],
+) -> dict[str, Any]:
+    """Counts (and notes) of source items the model never successfully
+    analysed. Read from persisted results/ledger, never recomputed."""
+    disclosure_review = sum(1 for change in changes if change.change_type == "requires_review")
+    claims = batches.get(BATCH_STAGE_FINANCIAL_CLAIMS)
+    claim_review = claims.requires_review_items if claims is not None else 0
+    notes: list[str] = []
+    if disclosure_review:
+        notes.append(
+            f"{disclosure_review} disclosure passage(s) could not be classified by the model "
+            "and are flagged requires_review; they are not analysed."
+        )
+    if claim_review:
+        notes.append(
+            f"{claim_review} passage(s) could not be claim-extracted by the model; "
+            "financial claims from them are missing."
+        )
+    return {
+        "complete": not notes,
+        "disclosure_passages_requires_review": disclosure_review,
+        "claim_passages_requires_review": claim_review,
+        "notes": notes,
+    }
+
+
 def _summary(
     disclosure_summary: dict[str, int],
     verification_summary: dict[str, int],
     contradiction_summary: dict[str, Any],
+    data_quality: dict[str, Any] | None = None,
 ) -> str:
-    return (
+    text = (
         "Analysis completed with "
         f"{sum(disclosure_summary.values())} disclosure changes, "
         f"{sum(verification_summary.values())} financial claim verifications, and "
         f"{contradiction_summary.get('total_candidates', 0)} potential inconsistency candidates."
     )
+    if data_quality and data_quality.get("notes"):
+        text += " Data-quality warning: " + " ".join(data_quality["notes"])
+    return text

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import logging
 import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai.batching import BatchingConfig
 from app.api.schemas import (
     AnalysisCreateRequest,
     AnalysisCreateResponse,
@@ -19,13 +21,16 @@ from app.api.schemas import (
 )
 from app.core.auth import AuthPrincipal, require_role
 from app.db.session import get_session
+from app.repositories.stage_batch_repository import StageBatchRepository, is_retryable_error_type
 from app.repositories.workflow_repository import WorkflowRepository
+from app.services.analysis_progress import build_stage_progress, current_stage_fraction
 from app.services.analysis_workflow_service import AnalysisWorkflowService, WorkflowError
 from app.workers.tasks import (
     enqueue_resume_analysis_workflow,
     enqueue_run_analysis_workflow,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/analyses")
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 AnalystDep = Annotated[AuthPrincipal, Depends(require_role("analyst"))]
@@ -73,7 +78,7 @@ async def list_analyses(
         limit=limit,
         offset=offset,
     )
-    data = [await _run_response(repo, run) for run in runs]
+    data = [await _run_response(session, repo, run) for run in runs]
     return ResponseEnvelope(
         data=[item.model_dump() for item in data],
         meta=_meta(request, {"limit": limit, "offset": offset}),
@@ -91,7 +96,9 @@ async def get_analysis(
     run = await repo.get_run(analysis_run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Analysis run not found.")
-    return ResponseEnvelope(data=(await _run_response(repo, run)).model_dump(), meta=_meta(request))
+    return ResponseEnvelope(
+        data=(await _run_response(session, repo, run)).model_dump(), meta=_meta(request)
+    )
 
 
 @router.get("/{analysis_run_id}/events")
@@ -186,6 +193,53 @@ async def resume_analysis(
     )
 
 
+@router.post("/{analysis_run_id}/retry", status_code=status.HTTP_202_ACCEPTED)
+async def retry_analysis(
+    analysis_run_id: uuid.UUID,
+    request: Request,
+    session: SessionDep,
+    _principal: ReviewerDep,
+) -> ResponseEnvelope:
+    """Continue the SAME failed run from its first incomplete part.
+
+    Re-enqueues the existing run (never creates one): completed batches are
+    skipped by the workflow itself. Only a failed run whose failure is
+    retryable is accepted - a running, completed, cancelled or
+    awaiting-review run, or a failure that re-running cannot fix, is refused.
+    """
+    repo = WorkflowRepository(session)
+    run = await repo.get_run(analysis_run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Analysis run not found.")
+    if run.status != "failed":
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Only a failed analysis can be resumed. "
+                "A run awaiting human review is resumed from its review."
+                if run.status == "awaiting_human_review"
+                else "Only a failed analysis can be resumed."
+            ),
+        )
+    response = await _run_response(session, repo, run)
+    if response.progress.retryable is not True:
+        raise HTTPException(
+            status_code=422,
+            detail="This failure cannot be fixed by running the analysis again.",
+        )
+    job_id = enqueue_run_analysis_workflow(run.id)
+    await repo.add_event(
+        analysis_run_id=run.id,
+        event_type="workflow_resumed",
+        event_payload={"reason": "retry_after_failure", "previous_failure_code": run.failure_code},
+    )
+    await session.commit()
+    return ResponseEnvelope(
+        data={"analysis_run_id": run.id, "job_id": job_id, "status": run.status},
+        meta=_meta(request),
+    )
+
+
 @router.get("/{analysis_run_id}/report")
 async def get_analysis_report(
     analysis_run_id: uuid.UUID,
@@ -211,12 +265,14 @@ async def cancel_analysis(
     except WorkflowError as exc:
         raise HTTPException(status_code=422, detail=_error_detail(exc)) from exc
     return ResponseEnvelope(
-        data=(await _run_response(WorkflowRepository(session), run)).model_dump(),
+        data=(await _run_response(session, WorkflowRepository(session), run)).model_dump(),
         meta=_meta(request),
     )
 
 
-async def _run_response(repo: WorkflowRepository, run: object) -> AnalysisRunResponse:
+async def _run_response(
+    session: AsyncSession, repo: WorkflowRepository, run: object
+) -> AnalysisRunResponse:
     review = await repo.get_latest_review(run.id)
     report = await repo.get_report(run.id)
     metrics = run.processing_metrics or {}
@@ -224,6 +280,16 @@ async def _run_response(repo: WorkflowRepository, run: object) -> AnalysisRunRes
         str(item) for item in metrics.get("completed_nodes", []) if isinstance(item, str)
     ]
     warnings = [str(item) for item in metrics.get("warnings", [])]
+    stages = build_stage_progress(
+        completed_nodes=completed_nodes,
+        current_node=run.current_node,
+        run_status=run.status,
+        failure_node=run.failure_node,
+        batches=await _batch_progress(session, run.id),
+        failure_code=run.failure_code,
+        batching=BatchingConfig.from_settings(_settings()),
+    )
+    failed_stage = next((stage for stage in stages if stage["status"] == "failed"), None)
     return AnalysisRunResponse(
         id=run.id,
         company_id=run.company_id,
@@ -242,7 +308,11 @@ async def _run_response(repo: WorkflowRepository, run: object) -> AnalysisRunRes
             "status": run.status,
             "current_node": run.current_node,
             "completed_nodes": completed_nodes,
-            "progress_percent": _progress_percent(completed_nodes, run.status),
+            "progress_percent": _progress_percent(
+                completed_nodes, run.status, current_stage_fraction(stages)
+            ),
+            "retryable": _run_retryable(run, failed_stage),
+            "stages": stages,
         },
         counts={key: value for key, value in metrics.items() if key != "completed_nodes"},
         warnings=warnings,
@@ -250,6 +320,28 @@ async def _run_response(repo: WorkflowRepository, run: object) -> AnalysisRunRes
         failure_message=run.failure_message,
         failure_node=run.failure_node,
     )
+
+
+def _run_retryable(run: object, failed_stage: dict | None) -> bool | None:
+    """For a failed run: can running it again succeed? None otherwise."""
+    if run.status != "failed":
+        return None
+    if failed_stage is not None:
+        return failed_stage["retryable"]
+    return is_retryable_error_type(run.failure_code)
+
+
+async def _batch_progress(session: AsyncSession, analysis_run_id: uuid.UUID) -> dict:
+    """Batch progress for a run. Optional enrichment, so it must never take
+    the run endpoint down: it is read inside a savepoint (a deployment that
+    has not yet applied the stage-batches migration degrades to "no batch
+    detail" instead of failing the request or poisoning its transaction)."""
+    try:
+        async with session.begin_nested():
+            return await StageBatchRepository(session).stage_progress(analysis_run_id)
+    except Exception:
+        logger.warning("could not read stage batch progress", exc_info=True)
+        return {}
 
 
 def _event(event: object) -> AnalysisWorkflowEventResponse:
@@ -299,12 +391,17 @@ def _report(report: object) -> AnalysisReportResponse:
     )
 
 
-def _progress_percent(completed_nodes: list[str], run_status: str) -> int:
+def _progress_percent(
+    completed_nodes: list[str], run_status: str, partial_stage_fraction: float = 0.0
+) -> int:
+    """Overall progress from real work only: finished workflow nodes, plus the
+    completed fraction of the batched stage currently running (from durable
+    batch counts). Never derived from elapsed time."""
     if run_status in {"completed", "completed_with_warnings"}:
         return 100
-    if run_status in {"failed", "cancelled"}:
-        return min(99, int((len(completed_nodes) / 12) * 100))
-    return min(95, int((len(completed_nodes) / 12) * 100))
+    done = len(completed_nodes) + max(0.0, min(partial_stage_fraction, 1.0))
+    ceiling = 99 if run_status in {"failed", "cancelled"} else 95
+    return min(ceiling, int((done / 12) * 100))
 
 
 def _error_detail(exc: WorkflowError) -> dict[str, str | None]:

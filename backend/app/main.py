@@ -9,11 +9,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import api_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
+from app.core.runtime_report import log_runtime_config
 
 
 def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging(settings.log_level, json_logs=settings.log_json)
+    log_runtime_config(settings, "api", structlog.get_logger("deltaledger.startup"))
 
     app = FastAPI(
         title=settings.app_name,

@@ -42,6 +42,7 @@ EXPECTED_TABLES = {
     "analysis_workflow_events",
     "analysis_review_requests",
     "analysis_reports",
+    "analysis_stage_batches",
     "audit_events",
 }
 
@@ -77,6 +78,7 @@ async def run_doctor(*, initialize_checkpoint: bool = False) -> dict[str, Any]:
 
     checks: list[DoctorCheck] = [
         _configuration_check(settings),
+        _runtime_check(settings),
         _provider_check(settings),
         await _database_check(settings),
         await _redis_check(settings),
@@ -90,6 +92,38 @@ async def run_doctor(*, initialize_checkpoint: bool = False) -> dict[str, Any]:
         "app_profile": settings.app_profile,
         "checks": [check.as_dict() for check in checks],
     }
+
+
+def _expected_alembic_head() -> str | None:
+    """The migration head this code expects the database to be at (read from the
+    migration scripts, so it never goes stale when a migration is added)."""
+    from pathlib import Path
+
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    backend = Path(__file__).resolve().parents[2]
+    config = Config(str(backend / "alembic.ini"))
+    config.set_main_option("script_location", str(backend / "alembic"))
+    heads = ScriptDirectory.from_config(config).get_heads()
+    return heads[0] if len(heads) == 1 else None
+
+
+def _runtime_check(settings: Settings) -> DoctorCheck:
+    """Credential-free runtime summary (the same one the API and worker log at
+    startup) and its configuration problems."""
+    from app.core.runtime_report import runtime_notes, runtime_summary
+
+    notes = runtime_notes(settings, "worker")
+    status = "blocked" if any(n.level == "error" for n in notes) else (
+        "warning" if notes else "ok"
+    )
+    return DoctorCheck(
+        "runtime",
+        status,
+        "; ".join(n.message for n in notes) or "batching, providers and limits are consistent",
+        runtime_summary(settings, "worker"),
+    )
 
 
 def _configuration_check(settings: Settings) -> DoctorCheck:
@@ -184,6 +218,7 @@ async def _database_check(settings: Settings) -> DoctorCheck:
     missing_tables = sorted(EXPECTED_TABLES - tables)
     checks = {
         "alembic_current": current_revision,
+        "alembic_expected_head": _expected_alembic_head(),
         "vector_extension_version": vector_version,
         "missing_tables": missing_tables,
         "embedding_column": chunk_columns.get("embedding"),
@@ -194,7 +229,7 @@ async def _database_check(settings: Settings) -> DoctorCheck:
         "server_version": str(version).splitlines()[0] if version else None,
     }
     ok = (
-        current_revision == "0006_phase6_workflow"
+        current_revision == _expected_alembic_head()
         and vector_version is not None
         and not missing_tables
         and chunk_columns.get("embedding") == "vector(1024)"
