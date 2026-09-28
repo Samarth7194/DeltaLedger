@@ -49,16 +49,21 @@ services:
         sync: false
       - key: SEC_USER_AGENT
         sync: false
-      - key: ALLOW_FAKE_MODELS_IN_PRODUCTION
-        value: "true"
       # --- AI pipeline: the API and the worker MUST use identical values -------------
       # (compare the `config_fingerprint` in both services' startup logs, or run
       #  `python -m app.cli.production_doctor`).
+      # Fake providers are refused in production; there is deliberately no
+      # ALLOW_FAKE_MODELS_IN_PRODUCTION override here.
+      # Embeddings: hosted BGE-large (see docs/deployment.md, "Embeddings on Render").
+      # The local sentence_transformers provider is NOT used on Render: it needs the
+      # `[ai]` extra (torch) and ~2 GB of RAM, which the starter plan does not have.
       - key: EMBEDDING_PROVIDER
-        sync: false
+        value: huggingface_inference
       - key: EMBEDDING_MODEL
-        sync: false
+        value: BAAI/bge-large-en-v1.5
       - key: EMBEDDING_MODEL_NAME
+        value: BAAI/bge-large-en-v1.5
+      - key: HF_TOKEN
         sync: false
       - key: CHANGE_CLASSIFIER_PROVIDER
         sync: false
@@ -137,16 +142,21 @@ services:
         sync: false
       - key: SEC_USER_AGENT
         sync: false
-      - key: ALLOW_FAKE_MODELS_IN_PRODUCTION
-        value: "true"
       # --- AI pipeline: the API and the worker MUST use identical values -------------
       # (compare the `config_fingerprint` in both services' startup logs, or run
       #  `python -m app.cli.production_doctor`).
+      # Fake providers are refused in production; there is deliberately no
+      # ALLOW_FAKE_MODELS_IN_PRODUCTION override here.
+      # Embeddings: hosted BGE-large (see docs/deployment.md, "Embeddings on Render").
+      # The local sentence_transformers provider is NOT used on Render: it needs the
+      # `[ai]` extra (torch) and ~2 GB of RAM, which the starter plan does not have.
       - key: EMBEDDING_PROVIDER
-        sync: false
+        value: huggingface_inference
       - key: EMBEDDING_MODEL
-        sync: false
+        value: BAAI/bge-large-en-v1.5
       - key: EMBEDDING_MODEL_NAME
+        value: BAAI/bge-large-en-v1.5
+      - key: HF_TOKEN
         sync: false
       - key: CHANGE_CLASSIFIER_PROVIDER
         sync: false

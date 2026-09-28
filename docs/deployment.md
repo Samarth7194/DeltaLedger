@@ -95,6 +95,79 @@ ALLOW_FAKE_MODELS_IN_PRODUCTION=false
 
 Set `HF_TOKEN` through secret storage when using Hugging Face inference.
 
+Fake providers are refused when `APP_PROFILE=production`. `render.yaml` no longer
+sets `ALLOW_FAKE_MODELS_IN_PRODUCTION`; every provider must be a real one.
+
+## Embeddings on Render
+
+**Decision: production embeddings use the hosted Hugging Face inference provider
+(`EMBEDDING_PROVIDER=huggingface_inference`) with the same model,
+`BAAI/bge-large-en-v1.5` (1024 dimensions). Render does not run the local
+`sentence_transformers` provider.**
+
+Why not install the `[ai]` extra on Render (option a):
+
+- `sentence_transformers` pulls in PyTorch, and `bge-large-en-v1.5` weights are
+  about 1.3 GB on disk. Loading it needs roughly 2 GB of RAM on top of the
+  Python process. Render's starter instance is documented at 512 MB (verify
+  against your plan in the Render dashboard); a larger instance would work but
+  costs more than the whole rest of the stack, for a model that is only run once
+  per filing.
+- The API process also embeds retrieval queries, so both services would each need
+  the model resident.
+- Model download on every cold deploy slows deploys and depends on Hugging Face
+  availability at boot.
+
+What the hosted provider changes:
+
+- Nothing in the schema: the column stays `Vector(1024)` and the model name string
+  stored on each chunk (`embedding_model`) is the same value as the local
+  provider writes. The pipeline skips chunks that already have an embedding with
+  the same model name and version, so **chunks embedded locally are reused, not
+  re-embedded**.
+- That is only safe if hosted and local vectors are interchangeable. **This has
+  not been verified in this repository.** BGE models use CLS pooling; the hosted
+  provider mean-pools if the endpoint returns token-level vectors
+  (`_coerce_hf_vectors`), which would produce different vectors. Before
+  relying on a mixed database, run the parity check below. If parity fails,
+  re-embed with a single provider (clear `embedding`, `embedding_model`,
+  `embedding_version`, `embedded_at` on `filing_chunks`, then re-run processing).
+- The provider's default base URL (`api-inference.huggingface.co`) is the legacy
+  serverless endpoint. Hugging Face has been moving inference to its newer
+  "Inference Providers" router; confirm the endpoint and model are still served for
+  your token, or set `HF_INFERENCE_BASE_URL`. NOT VERIFIED FROM REPOSITORY.
+
+### Parity check (manual, needs `HF_TOKEN`)
+
+Run once from a machine that has the `[ai]` extra installed
+(`python -m pip install -e ".[ai]"`):
+
+```python
+import asyncio, math
+from app.core.config import Settings
+from app.ai.embeddings import (
+    HuggingFaceInferenceEmbeddingProvider,
+    SentenceTransformerEmbeddingProvider,
+)
+
+texts = ["Liquidity remains sufficient to fund operations for the next twelve months."]
+hosted = HuggingFaceInferenceEmbeddingProvider(Settings(embedding_provider="huggingface_inference"))
+local = SentenceTransformerEmbeddingProvider(Settings(embedding_provider="sentence_transformers"))
+a = asyncio.run(hosted.embed_documents(texts))[0]
+b = asyncio.run(local.embed_documents(texts))[0]
+dot = sum(x * y for x, y in zip(a, b))
+print("cosine:", dot / (math.sqrt(sum(x * x for x in a)) * math.sqrt(sum(y * y for y in b))))
+```
+
+Treat a cosine above roughly 0.99 as compatible. Anything lower means the two
+providers must not share one database.
+
+### Local embeddings
+
+Running the worker on your own machine with `EMBEDDING_PROVIDER=sentence_transformers`
+is still supported (install the `[ai]` extra). The Dockerfile and `render.yaml`
+do not install it.
+
 SEC:
 
 ```text
@@ -185,6 +258,12 @@ Container default:
 docker build -t deltaledger-api backend
 docker run --env-file .env -p 8000:8000 deltaledger-api
 ```
+
+The image runs as an unprivileged user (`app`, uid 10001) and declares a
+`HEALTHCHECK` against `/api/v1/health` (liveness only). It does not install the
+`[ai]` extra, so it cannot run the local `sentence_transformers` provider. The
+image has not been built in this repository's CI; `docker build` was not run when
+these changes were made.
 
 Liveness health check:
 
