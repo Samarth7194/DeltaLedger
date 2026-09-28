@@ -1,35 +1,33 @@
 from __future__ import annotations
 
-import os
-import subprocess
-
 import pytest
 from sqlalchemy import create_engine, text
+
+from app.core.db_url import to_sync_database_url
 
 pytestmark = [pytest.mark.integration, pytest.mark.postgres, pytest.mark.slow]
 
 
-def test_clean_database_migrates_to_head_and_schema_objects_exist(test_database_url: str) -> None:
-    from app.core.config import get_settings
+def test_clean_database_migrates_to_head_and_schema_objects_exist(
+    safe_test_database_url: str,
+) -> None:
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
 
-    get_settings().require_safe_test_database()
-    sync_url = test_database_url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
-    env = {
-        **os.environ,
-        "DATABASE_URL": test_database_url,
-        "ALEMBIC_DATABASE_URL": sync_url,
-    }
-    subprocess.run(["python", "-m", "alembic", "downgrade", "base"], check=True, env=env)
-    subprocess.run(["python", "-m", "alembic", "upgrade", "head"], check=True, env=env)
-    current = subprocess.run(
-        ["python", "-m", "alembic", "current"],
-        check=True,
-        env=env,
-        text=True,
-        capture_output=True,
+    from tests.conftest import BACKEND_DIR, run_alembic
+
+    test_database_url = safe_test_database_url
+    sync_url = to_sync_database_url(test_database_url)
+    run_alembic("downgrade", "base", test_database_url=test_database_url)
+    run_alembic("upgrade", "head", test_database_url=test_database_url)
+    current = run_alembic(
+        "current", test_database_url=test_database_url, text=True, capture_output=True
     )
 
-    assert "0006_phase6_workflow" in current.stdout
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    (head,) = ScriptDirectory.from_config(config).get_heads()
+    assert head in current.stdout
 
     engine = create_engine(sync_url)
     with engine.connect() as connection:
@@ -125,6 +123,7 @@ def test_clean_database_migrates_to_head_and_schema_objects_exist(test_database_
         "analysis_workflow_events",
         "analysis_review_requests",
         "analysis_reports",
+        "analysis_stage_batches",
     } <= tables
     assert {"original_model_output", "reviewer_edits", "reviewed_by", "reviewed_at"} <= (
         disclosure_columns

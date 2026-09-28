@@ -4,6 +4,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.core.config import Settings
+from app.db.models import DisclosureChange, FilingComparison, SectionMatch
 from app.db.session import get_session
 from app.main import create_app
 from app.repositories.comparison_repository import ComparisonRepository
@@ -11,6 +12,102 @@ from app.services.filing_comparison_service import FilingComparisonService
 from tests.integration_helpers import create_comparison_corpus
 
 pytestmark = [pytest.mark.integration, pytest.mark.postgres]
+
+
+@pytest.mark.asyncio
+async def test_reusable_change_results_are_scoped_to_model_and_prompt_version(
+    integration_session,
+) -> None:
+    """The retry-resumability fix: a prior classification is only eligible
+    for reuse when it was produced by the exact same classifier
+    model/prompt version as the current attempt. A stale row from a
+    different model or prompt version must never be silently reused."""
+    corpus = await create_comparison_corpus(integration_session)
+    comparison = FilingComparison(
+        company_id=corpus["company_id"],
+        current_filing_id=corpus["current_filing_id"],
+        comparison_filing_id=corpus["comparison_filing_id"],
+        comparison_version="test-v1",
+        status="matching_sections",
+        processing_metrics={},
+    )
+    integration_session.add(comparison)
+    await integration_session.flush()
+
+    section_match = SectionMatch(
+        comparison_id=comparison.id,
+        current_section_id=corpus["current_section_id"],
+        previous_section_id=corpus["previous_section_id"],
+        match_type="exact_structural",
+        combined_score=0.9,
+        confidence=0.9,
+        match_reason={},
+    )
+    integration_session.add(section_match)
+    await integration_session.flush()
+
+    def _change(*, previous_text, current_text, model_name, model_version, prompt_version):
+        return DisclosureChange(
+            comparison_id=comparison.id,
+            section_match_id=section_match.id,
+            change_type="weakened",
+            risk_category="liquidity",
+            previous_text=previous_text,
+            current_text=current_text,
+            changed_spans=[],
+            change_summary="s",
+            change_explanation="e",
+            materiality_score=0.5,
+            confidence=0.8,
+            detection_method="hybrid",
+            supporting_evidence={},
+            materiality_components={},
+            original_model_output={
+                "change_type": "weakened",
+                "summary": "s",
+                "explanation": "e",
+                "changed_spans": [],
+                "confidence": 0.8,
+                "risk_category": "liquidity",
+                "materiality_reason": "mr",
+            },
+            model_name=model_name,
+            model_version=model_version,
+            prompt_version=prompt_version,
+        )
+
+    matching = _change(
+        previous_text="matching previous",
+        current_text="matching current",
+        model_name="gemini-3.5-flash-lite",
+        model_version="gemini-3.5-flash-lite",
+        prompt_version="disclosure-change-json-v2",
+    )
+    stale_prompt_version = _change(
+        previous_text="stale previous",
+        current_text="stale current",
+        model_name="gemini-3.5-flash-lite",
+        model_version="gemini-3.5-flash-lite",
+        prompt_version="disclosure-change-json-v1",
+    )
+    stale_model = _change(
+        previous_text="other model previous",
+        current_text="other model current",
+        model_name="gemini-2.5-flash",
+        model_version="gemini-2.5-flash",
+        prompt_version="disclosure-change-json-v2",
+    )
+    integration_session.add_all([matching, stale_prompt_version, stale_model])
+    await integration_session.commit()
+
+    repo = ComparisonRepository(integration_session)
+    reusable = await repo.list_reusable_change_results(
+        comparison.id,
+        model_name="gemini-3.5-flash-lite",
+        prompt_version="disclosure-change-json-v2",
+    )
+
+    assert reusable == [("matching previous", "matching current", matching.original_model_output)]
 
 
 @pytest.mark.asyncio

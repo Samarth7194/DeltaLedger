@@ -174,6 +174,22 @@ def test_analysis_api_contract_matches_frontend_consumed_shape(monkeypatch) -> N
     detail_payload = detail_response.json()["data"]
     assert detail_payload["id"] == str(RUN_ID)
     assert detail_payload["progress"]["progress_percent"] > 0
+    # Per-stage progress the frontend can render ("Disclosure Comparison 8/14"),
+    # derived from real state. This fake run has no batch rows and a fake
+    # session, so batched stages report status only - no invented counts.
+    stages = {stage["stage"]: stage for stage in detail_payload["progress"]["stages"]}
+    assert list(stages) == [
+        "disclosure_comparison",
+        "financial_claims",
+        "xbrl_verification",
+        "contradiction_analysis",
+        "human_review",
+        "final_report",
+    ]
+    assert stages["disclosure_comparison"]["status"] == "completed"
+    assert stages["disclosure_comparison"]["total_units"] is None
+    assert stages["human_review"]["status"] == "processing"
+    assert stages["final_report"]["status"] == "pending"
     assert "checkpoint_thread_id" not in detail_payload
     assert events_response.json()["data"][0]["node_name"] == "run_disclosure_comparison"
     assert review_response.json()["data"]["status"] == "approved"
