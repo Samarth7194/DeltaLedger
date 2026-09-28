@@ -15,11 +15,14 @@ potential inconsistencies from reviewed conclusions.
 
 - Ingests SEC 10-Q filing HTML and company-facts/XBRL data.
 - Parses filings into sections, tables, passages, chunks, hashes, and citations.
-- Retrieves evidence with PostgreSQL full-text search, PGVector, RRF, and optional reranking.
-- Compares disclosure language across quarters.
+- Exposes a standalone hybrid search API (PostgreSQL full-text search + PGVector, RRF, optional reranking)
+  over stored filing chunks. The analysis workflow does not call it.
+- Compares disclosure language across quarters (BGE embedding similarity for section/passage matching,
+  then an LLM or deterministic classifier labels each change).
 - Extracts financial claims and verifies them against XBRL facts with Decimal arithmetic.
-- Flags potential narrative-data inconsistencies for analyst review.
-- Orchestrates analysis with LangGraph, PostgreSQL checkpointing, Redis, and Dramatiq.
+- Flags potential narrative-data inconsistencies for analyst review using rule-based detectors (no model).
+- Runs analysis as a linear LangGraph pipeline (one human-review interrupt, PostgreSQL checkpoints, resume)
+  on Dramatiq/Redis workers. It is not an agent loop.
 - Produces structured evidence-backed reports and offline evaluation artifacts.
 
 DeltaLedger is not a stock forecaster, trading system, investment advisor, or
@@ -66,12 +69,19 @@ flowchart TD
 
 ## AI, ML, And Financial Reasoning
 
-- NLP: filing sectioning, semantic comparison, claim extraction, risk/change classification.
-- Deep learning: transformer embeddings and optional cross-encoder reranking.
-- Retrieval: dense + lexical hybrid retrieval with reciprocal rank fusion.
-- Orchestration: LangGraph state machine with interrupt/resume.
+- Generative model (Gemini through an OpenAI-compatible endpoint, or a deterministic fake in CI): disclosure-change
+  classification and financial-claim extraction only.
+- Embeddings: `BAAI/bge-large-en-v1.5` (1024-d) for section/passage matching between filings and for the
+  standalone search API. An optional `BAAI/bge-reranker-base` cross-encoder (off by default) scores section
+  titles during matching and re-orders search results.
+- Retrieval: a standalone dense + lexical hybrid search API with reciprocal rank fusion. Not used by the
+  analysis workflow.
+- Contradictions: rule-based detectors over verified claims and matched passages. No model is involved.
+- Orchestration: linear LangGraph pipeline with one interrupt/resume gate.
 - Financial reasoning: deterministic XBRL fact resolution and Decimal calculations.
-- Evaluation: retrieval metrics, classification F1, calibration, false-positive-rate paths, and evidence metrics.
+- Reports: generated deterministically from stored findings (no model writes report text).
+- Evaluation: metric code for retrieval, classification F1, calibration, false-positive-rate paths, and
+  evidence quality. See "Evaluation" below for what the current numbers do and do not measure.
 
 The project uses model providers and deterministic CI-safe fakes; it does not
 claim models were trained from scratch.
@@ -83,6 +93,12 @@ Run the offline benchmark from `backend`:
 ```bash
 python -m app.cli.evaluate --suite all --offline --output-dir evaluation/reports
 ```
+
+The numbers in `backend/evaluation/reports` come from deterministic baseline classifiers run on small,
+author-written fixtures (40 change examples, 6 retrieval queries with hand-authored rankings, 6 evidence
+examples). They verify the metric code and guard against regressions; they are **not** measurements of Gemini
+or of the running retrieval system. Real-provider evaluation is documented in
+[docs/evaluation-suite.md](docs/evaluation-suite.md).
 
 Phase 8 reports candidate development metrics only when labelled data exists,
 the evaluator actually ran, and the denominator is non-zero. Missing metrics are

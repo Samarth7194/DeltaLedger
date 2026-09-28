@@ -59,18 +59,6 @@ def provider_manifest(settings: Settings) -> dict[str, object]:
             status="DETERMINISTIC_LOCAL",
             reason="Metric resolver is implemented as deterministic local logic.",
         ),
-        ProviderManifestEntry(
-            provider_type="contradiction_classifier",
-            provider=settings.contradiction_classifier_provider,
-            model=settings.contradiction_classifier_model,
-            version=settings.contradiction_policy_version,
-            prompt_version="phase5-test-v1"
-            if settings.contradiction_classifier_provider == "fake"
-            else "contradiction-classifier-json-v1",
-            timeout_seconds=settings.contradiction_classifier_timeout,
-            status=_provider_status(settings, settings.contradiction_classifier_provider),
-            reason=_provider_reason(settings, settings.contradiction_classifier_provider),
-        ),
     ]
     return {
         "environment": settings.environment,

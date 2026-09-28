@@ -77,10 +77,6 @@ def runtime_summary(settings: Settings, role: str) -> dict[str, Any]:
             settings.change_classifier_model,
         ],
         "claim_extractor": [settings.claim_extractor_provider, settings.claim_extractor_model],
-        "contradiction_classifier": [
-            settings.contradiction_classifier_provider,
-            settings.contradiction_classifier_model,
-        ],
         "batch_max_items": batching.max_items,
         "batch_input_token_budget": batching.input_token_budget,
         "batch_token_safety_margin": batching.safety_margin,
@@ -127,7 +123,6 @@ def runtime_notes(settings: Settings, role: str) -> list[RuntimeNote]:
     ai_providers = {
         "CHANGE_CLASSIFIER_PROVIDER": settings.change_classifier_provider,
         "CLAIM_EXTRACTOR_PROVIDER": settings.claim_extractor_provider,
-        "CONTRADICTION_CLASSIFIER_PROVIDER": settings.contradiction_classifier_provider,
     }
     if "openai_compatible" in ai_providers.values() and not settings.ai_provider_api_key:
         add(

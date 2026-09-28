@@ -28,7 +28,6 @@ async def test_phase5_contradiction_analysis_persists_idempotent_candidates_and_
     settings = Settings(
         app_profile="local-cloud",
         claim_extractor_provider="fake",
-        contradiction_classifier_provider="fake",
         xbrl_fact_min_score=0.75,
         xbrl_fact_ambiguity_margin=0.05,
     )

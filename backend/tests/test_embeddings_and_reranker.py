@@ -330,8 +330,6 @@ def test_production_profile_allows_local_sentence_transformer_embeddings() -> No
         change_classifier_model="gemini-3.6-flash",
         claim_extractor_provider="openai_compatible",
         claim_extractor_model="gemini-3.6-flash",
-        contradiction_classifier_provider="openai_compatible",
-        contradiction_classifier_model="gemini-3.6-flash",
         ai_provider_api_key="0123456789abcdef0123456789abcdef",
         ai_provider_base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
     )

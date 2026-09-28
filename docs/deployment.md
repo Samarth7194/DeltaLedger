@@ -89,7 +89,6 @@ RERANKER_ENABLED=true
 RERANKER_PROVIDER=...
 CHANGE_CLASSIFIER_PROVIDER=...
 CLAIM_EXTRACTOR_PROVIDER=...
-CONTRADICTION_CLASSIFIER_PROVIDER=...
 ALLOW_FAKE_MODELS_IN_PRODUCTION=false
 ```
 
@@ -370,8 +369,6 @@ CHANGE_CLASSIFIER_PROVIDER=openai_compatible
 CHANGE_CLASSIFIER_MODEL
 CLAIM_EXTRACTOR_PROVIDER=openai_compatible
 CLAIM_EXTRACTOR_MODEL
-CONTRADICTION_CLASSIFIER_PROVIDER=openai_compatible
-CONTRADICTION_CLASSIFIER_MODEL
 ALLOW_FAKE_MODELS_IN_PRODUCTION=false
 ```
 
@@ -388,10 +385,12 @@ CHANGE_CLASSIFIER_PROVIDER=openai_compatible
 CHANGE_CLASSIFIER_MODEL=gemini-2.5-flash
 CLAIM_EXTRACTOR_PROVIDER=openai_compatible
 CLAIM_EXTRACTOR_MODEL=gemini-2.5-flash
-CONTRADICTION_CLASSIFIER_PROVIDER=openai_compatible
-CONTRADICTION_CLASSIFIER_MODEL=gemini-2.5-flash
 ALLOW_FAKE_MODELS_IN_PRODUCTION=false
 ```
+
+Note: `gemini-embedding-001` vectors are not compatible with the `bge-large-en-v1.5` vectors
+already stored. Switching embedding model requires re-embedding every chunk; never mix models
+in one database.
 
 The OpenAI-compatible embedding adapter sends the configured
 `EMBEDDING_DIMENSION` as the embeddings `dimensions` request field. Keep this at
@@ -457,8 +456,7 @@ Required on BOTH services (see `render.yaml`): `DATABASE_URL`, `REDIS_URL`,
 object storage (`OBJECT_STORAGE_PROVIDER=minio` + `MINIO_*`, so both see the
 same filings), `WORKFLOW_CHECKPOINT_PROVIDER=postgres`, the embedding provider
 and model (`EMBEDDING_*`), the Gemini providers and models
-(`CHANGE_CLASSIFIER_*`, `CLAIM_EXTRACTOR_*`, `CONTRADICTION_CLASSIFIER_*`,
-`AI_PROVIDER_*`) and the batching limits (`AI_BATCH_*`). The worker also needs
+(`CHANGE_CLASSIFIER_*`, `CLAIM_EXTRACTOR_*`, `AI_PROVIDER_*`) and the batching limits (`AI_BATCH_*`). The worker also needs
 `ANALYSIS_WORKFLOW_TIME_LIMIT_SECONDS` (default 10800; a killed analysis
 resumes at its first incomplete part). Running the BGE embedding model locally
 in the worker needs enough memory for the model; otherwise use a hosted

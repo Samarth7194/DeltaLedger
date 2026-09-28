@@ -3,12 +3,6 @@ from __future__ import annotations
 import uuid
 from decimal import Decimal
 
-import pytest
-
-from app.ai.contradictions import (
-    ContradictionClassifierInput,
-    DeterministicFakeContradictionClassifier,
-)
 from app.core.config import Settings
 from app.db.models import ClaimVerification, FinancialClaim
 from app.services.contradiction_analysis_service import (
@@ -82,25 +76,6 @@ def test_magnitude_detector_flags_slight_wording_for_large_decline() -> None:
     assert finding.contradiction_type == "magnitude_understatement"
     assert finding.severity == "medium"
     assert "RULE_SLIGHT_LARGE_MOVEMENT" in finding.rule_ids
-
-
-@pytest.mark.asyncio
-async def test_fake_contradiction_classifier_is_schema_strict_and_low_confidence() -> None:
-    output = await DeterministicFakeContradictionClassifier().classify(
-        ContradictionClassifierInput(
-            narrative_claim="Demand remained strong.",
-            deterministic_signals={
-                "is_candidate": True,
-                "contradiction_type": "narrative_cross_section_inconsistency",
-            },
-            allowed_labels=["narrative_cross_section_inconsistency"],
-        )
-    )
-
-    assert output.is_candidate is True
-    assert output.contradiction_type == "narrative_cross_section_inconsistency"
-    assert output.severity == "low"
-    assert output.confidence == 0.50
 
 
 def _claim(

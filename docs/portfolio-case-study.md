@@ -35,10 +35,12 @@ and generates structured reports.
 
 ## Retrieval Architecture
 
-DeltaLedger uses dense embeddings, PostgreSQL full-text search, reciprocal rank
-fusion, and optional reranking. The retrieval evaluator measures Recall@K,
-Precision@K, MRR, nDCG, and hit rate for dense, lexical, hybrid, and reranked
-systems.
+DeltaLedger includes a standalone hybrid search API: dense embeddings,
+PostgreSQL full-text search, reciprocal rank fusion, and optional reranking. The
+analysis workflow does not call it (it matches sections and passages between two
+filings with BGE embeddings instead). The retrieval evaluator computes Recall@K,
+Precision@K, MRR, nDCG, and hit rate over hand-authored rankings for 6 queries
+(dense, lexical, hybrid, reranked); it does not exercise the live retrieval stack.
 
 ## Financial Verification
 
@@ -56,7 +58,9 @@ final report records evidence references.
 
 Phase 8 adds versioned datasets, deterministic evaluators, confidence
 calibration utilities, JSON/Markdown reports, and quality-gate support. Current
-metrics are development benchmarks and not production validation.
+checked-in metrics come from deterministic baseline classifiers on small
+author-written fixtures. They are development benchmarks, not measurements of the
+real Gemini provider and not production validation.
 
 ## Production Architecture
 

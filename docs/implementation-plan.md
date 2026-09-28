@@ -21,7 +21,7 @@
 
 - Parse filing HTML into sections, hierarchy, anchors, paragraphs, and tables where practical.
 - Implement section-aware chunking with offsets, overlap, hashes, parser version, and provenance.
-- Add embedding model interface, BGE-M3/local option, PGVector index, and retrieval APIs.
+- Add embedding model interface, BGE embedding option (implemented with `BAAI/bge-large-en-v1.5`; BGE-M3 was the original plan), PGVector index, and retrieval APIs.
 - Build initial filing viewer.
 - Tests: parser, chunk boundaries, source references, embedding persistence, retrieval filters.
 

@@ -13,7 +13,7 @@ def test_provider_manifest_labels_default_fake_configuration() -> None:
     assert entries["embedding"]["status"] == "FAKE_CI_PROVIDER"
     assert entries["disclosure_change_classifier"]["status"] == "FAKE_CI_PROVIDER"
     assert entries["financial_claim_extractor"]["status"] == "FAKE_CI_PROVIDER"
-    assert entries["contradiction_classifier"]["status"] == "FAKE_CI_PROVIDER"
+    assert "contradiction_classifier" not in entries  # contradictions are rule-based, no model
     assert entries["reranker"]["status"] == "NOT_CONFIGURED"
 
 

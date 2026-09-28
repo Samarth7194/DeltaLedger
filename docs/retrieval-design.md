@@ -29,6 +29,13 @@ chunker version, embedding model/version, and embedded timestamp.
 
 ## Hybrid Retrieval
 
+**Status: standalone API.** This pipeline is implemented in `RetrievalService` and exposed
+through `POST /api/v1/retrieval/search`, `/dense-search` and `/lexical-search`. The analysis
+workflow does not call it: section and passage matching between two filings uses BGE
+embeddings, lexical similarity and structure directly (see `section-matching.md`). The
+offline retrieval "ablation" in the evaluation suite scores hand-authored rankings for 6
+queries; it does not run this pipeline.
+
 Retrieval pipeline:
 
 1. Metadata filter by company, filing, form type, reporting period, and section category.
@@ -39,7 +46,7 @@ Retrieval pipeline:
 6. Return source-aware results with retrieval traces.
 
 Dense search uses cosine similarity through PGVector. The default configured embedding
-dimension is 1024 for BGE-M3. The embedding service validates model output dimensions
+dimension is 1024 for `BAAI/bge-large-en-v1.5`. The embedding service validates model output dimensions
 and fails clearly instead of truncating or padding vectors.
 
 Lexical search uses PostgreSQL `websearch_to_tsquery('english', query)` against a
@@ -62,7 +69,8 @@ Embedding providers:
 
 - `fake`: deterministic offline vectors for unit tests and ordinary local development.
 - `huggingface_inference`: hosted Hugging Face Inference Provider using `HF_TOKEN`.
-- `sentence_transformers`: optional local model provider for model smoke tests.
+- `sentence_transformers`: optional local model provider (needs the `[ai]` extra).
+- `openai_compatible`: hosted OpenAI-compatible embeddings endpoint.
 
 ## Integration Evidence
 
@@ -103,13 +111,7 @@ RUN_INTEGRATION_TESTS=1 RUN_POSTGRES_TESTS=1 python -m pytest -m "integration an
 
 ## Trace Data
 
-For each retrieval request, track:
-
-- Query text and normalized filters.
-- Candidate IDs.
-- Dense scores.
-- Lexical scores.
-- Fusion ranks.
-- Reranker scores.
-- Selected result IDs.
-- Embedding and reranker model versions.
+Each search result returned by the API carries: dense score, lexical score, fusion score,
+reranker score (when used), final score, and source metadata (including embedding model and
+version). Requests and rankings are not persisted per request; a full retrieval trace store is
+not implemented.

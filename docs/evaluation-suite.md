@@ -56,6 +56,24 @@ Metrics are emitted only when all of the following are true:
 
 Otherwise the metric value is `not_evaluated` or `no_data` with a reason.
 
+## What The Checked-In Numbers Mean
+
+Read the numbers in `backend/evaluation/reports` with these caveats:
+
+- **Phase 3 change detection** (accuracy 0.975 on 40 examples) is produced by
+  `DeterministicFakeChangeClassifier`, a rule-based baseline, on fixtures written by the
+  project author. It is a regression check on the metric code, not a measurement of Gemini.
+- **Retrieval** metrics are computed from rankings stored inside
+  `datasets/retrieval/examples.json` (6 hand-authored queries). They do not exercise
+  `RetrievalService` or PGVector.
+- **Evidence quality** uses 6 examples.
+- **Phase 4** metrics that need model or verifier predictions are `not_evaluated` unless
+  a real-provider run (below) has supplied them.
+- **Phase 5** has no negative controls, so no false-positive rate exists.
+
+Real-provider quality is measured separately with `python -m app.cli.evaluate_providers`
+and written to `backend/evaluation/results/`.
+
 ## Offline Suites
 
 - Retrieval: Recall@K, Precision@K, MRR, nDCG, hit rate, and ablation tables for

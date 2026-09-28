@@ -11,10 +11,6 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.ai.contradictions import (
-    ContradictionClassifierProvider,
-    create_contradiction_classifier,
-)
 from app.core.config import Settings
 from app.db.models import (
     ClaimVerification,
@@ -95,21 +91,14 @@ class MagnitudePolicy:
 
 
 class ContradictionAnalysisService:
-    def __init__(
-        self,
-        session: AsyncSession,
-        settings: Settings,
-        classifier: ContradictionClassifierProvider | None = None,
-    ) -> None:
+    # Contradiction findings come only from the rule-based detectors below (numerical,
+    # magnitude, temporal, cross-section narrative). No model is called here.
+    def __init__(self, session: AsyncSession, settings: Settings) -> None:
         self.session = session
         self.settings = settings
         self.repo = ContradictionRepository(session)
         self.financial_repo = FinancialRepository(session)
         self.comparisons = ComparisonRepository(session)
-        self.classifier = classifier or create_contradiction_classifier(
-            settings.contradiction_classifier_provider,
-            settings,
-        )
         self.numerical = NumericalContradictionDetector(settings)
         self.magnitude = MagnitudeContradictionDetector(settings)
         self.temporal = TemporalNarrativeInconsistencyDetector(settings)

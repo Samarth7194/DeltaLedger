@@ -138,8 +138,6 @@ def _fake_production_settings(**overrides) -> SimpleNamespace:
         "change_classifier_model": "gemini-3.5-flash-lite",
         "claim_extractor_provider": "openai_compatible",
         "claim_extractor_model": "gemini-3.5-flash-lite",
-        "contradiction_classifier_provider": "fake",
-        "contradiction_classifier_model": "none",
         "ai_provider_base_url": "https://api.openai.com/v1",
         "ai_provider_max_retries": 5,
         "ai_provider_chat_delay_seconds": 15.0,

@@ -73,10 +73,6 @@ services:
         sync: false
       - key: CLAIM_EXTRACTOR_MODEL
         sync: false
-      - key: CONTRADICTION_CLASSIFIER_PROVIDER
-        sync: false
-      - key: CONTRADICTION_CLASSIFIER_MODEL
-        sync: false
       - key: AI_PROVIDER_BASE_URL
         sync: false
       - key: AI_PROVIDER_API_KEY
@@ -165,10 +161,6 @@ services:
       - key: CLAIM_EXTRACTOR_PROVIDER
         sync: false
       - key: CLAIM_EXTRACTOR_MODEL
-        sync: false
-      - key: CONTRADICTION_CLASSIFIER_PROVIDER
-        sync: false
-      - key: CONTRADICTION_CLASSIFIER_MODEL
         sync: false
       - key: AI_PROVIDER_BASE_URL
         sync: false

@@ -135,7 +135,6 @@ def _fake(**overrides) -> SimpleNamespace:
     base = {
         "change_classifier_provider": "fake",
         "claim_extractor_provider": "fake",
-        "contradiction_classifier_provider": "fake",
         "ai_provider_api_key": None,
         "analysis_workflow_time_limit_seconds": 10800.0,
         "worker_default_time_limit_seconds": 1800.0,

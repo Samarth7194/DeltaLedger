@@ -4,10 +4,6 @@ import json
 
 import pytest
 
-from app.ai.contradictions import (
-    ContradictionClassifierInput,
-    create_contradiction_classifier,
-)
 from app.ai.embeddings import create_embedding_service
 from app.ai.financial_claims import create_claim_extractor
 from app.ai.semantic_change import ChangeClassificationRequest, create_change_classifier
@@ -202,39 +198,6 @@ async def test_openai_compatible_claim_extractor_parses_claims(monkeypatch) -> N
     assert len(claims) == 1
     assert claims[0].canonical_metric_name == "revenue"
     assert claims[0].original_output["inference_metadata"]["model"] == "test-claim-model"
-
-
-@pytest.mark.asyncio
-async def test_openai_compatible_contradiction_classifier_parses_output(monkeypatch) -> None:
-    _Client.payloads = [
-        _chat_payload(
-            {
-                "is_candidate": True,
-                "contradiction_type": "numerical_claim_contradiction",
-                "summary": "Claim differs from calculated value.",
-                "explanation": "The reported percentage does not match.",
-                "severity": "medium",
-                "confidence": 0.72,
-                "limitations": [],
-            }
-        )
-    ]
-    _Client.requests = []
-    monkeypatch.setattr("app.ai.openai_compatible.httpx.AsyncClient", _Client)
-    classifier = create_contradiction_classifier(
-        "openai_compatible",
-        _settings(contradiction_classifier_model="test-contradiction-model"),
-    )
-
-    result = await classifier.classify(
-        ContradictionClassifierInput(
-            narrative_claim="Revenue increased 20%.",
-            allowed_labels=["numerical_claim_contradiction"],
-        )
-    )
-
-    assert result.is_candidate is True
-    assert result.inference_metadata["provider_type"] == "contradiction_classifier"
 
 
 @pytest.mark.asyncio

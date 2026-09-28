@@ -1,5 +1,19 @@
 # Limitations
 
+## Current Status (read this first)
+
+- The hybrid search pipeline (dense + full-text + RRF + optional rerank) is a standalone API.
+  The analysis workflow does not use it.
+- Contradiction findings come from rule-based detectors only. No model is involved.
+- The generative model is used for two things: disclosure-change classification and claim
+  extraction. Report text is deterministic.
+- The workflow is a linear LangGraph pipeline with one human-review interrupt, not an agent loop.
+- Checked-in evaluation numbers are deterministic-baseline results on small author-written
+  fixtures. They are not measurements of the real LLM or of the live retrieval stack.
+- The parser has been validated on one full real 10-Q plus synthetic reduced fixtures.
+- Token counts in the chunker are whitespace words, not embedding-model tokens, so a chunk
+  can exceed the embedding model's input limit for number-heavy text.
+
 ## MVP Limits
 
 - Limited to 5 US public companies.

@@ -88,7 +88,6 @@ def _fake_provider_names(settings: Settings) -> list[str]:
         "EMBEDDING_PROVIDER": settings.embedding_provider,
         "CHANGE_CLASSIFIER_PROVIDER": settings.change_classifier_provider,
         "CLAIM_EXTRACTOR_PROVIDER": settings.claim_extractor_provider,
-        "CONTRADICTION_CLASSIFIER_PROVIDER": settings.contradiction_classifier_provider,
     }
     if settings.reranker_enabled:
         providers["RERANKER_PROVIDER"] = settings.reranker_provider

@@ -154,9 +154,6 @@ class Settings(BaseSettings):
     claim_percentage_point_tolerance: float = 0.10
     financial_verification_version: str = "phase4-v1"
     contradiction_policy_version: str = "phase5-v1"
-    contradiction_classifier_provider: str = "fake"
-    contradiction_classifier_model: str = "deterministic-contradiction-classifier-v1"
-    contradiction_classifier_timeout: float = 30.0
     contradiction_small_percent_threshold: float = 1.0
     contradiction_large_percent_threshold: float = 15.0
     contradiction_small_percentage_point_threshold: float = 0.5
@@ -270,10 +267,6 @@ class Settings(BaseSettings):
         _require_non_negative(
             "CLAIM_PERCENTAGE_POINT_TOLERANCE",
             self.claim_percentage_point_tolerance,
-        )
-        _require_non_negative(
-            "CONTRADICTION_CLASSIFIER_TIMEOUT",
-            self.contradiction_classifier_timeout,
         )
         _require_non_negative(
             "CONTRADICTION_SMALL_PERCENT_THRESHOLD",
@@ -419,7 +412,6 @@ class Settings(BaseSettings):
                 "EMBEDDING_PROVIDER": self.embedding_provider,
                 "CHANGE_CLASSIFIER_PROVIDER": self.change_classifier_provider,
                 "CLAIM_EXTRACTOR_PROVIDER": self.claim_extractor_provider,
-                "CONTRADICTION_CLASSIFIER_PROVIDER": self.contradiction_classifier_provider,
             }
             if self.reranker_enabled:
                 fake_fields["RERANKER_PROVIDER"] = self.reranker_provider
@@ -438,7 +430,6 @@ class Settings(BaseSettings):
             self.embedding_provider,
             self.change_classifier_provider,
             self.claim_extractor_provider,
-            self.contradiction_classifier_provider,
         }
         if self.reranker_enabled:
             providers.add(self.reranker_provider)

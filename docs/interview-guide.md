@@ -12,11 +12,16 @@ Free-form LLM answers can miss period/unit issues, invent citations, or do
 arithmetic unreliably. DeltaLedger uses models for semantic tasks but keeps
 retrieval provenance, XBRL fact resolution, and calculations deterministic.
 
-## Why Hybrid Retrieval?
+## Why Hybrid Search (And Where Is It Used)?
 
 Dense retrieval captures semantic similarity; lexical retrieval preserves exact
 terms, accounting concepts, and issuer language. RRF combines both, and
 reranking can improve ordering for review.
+
+Be precise about scope: hybrid search is a standalone API
+(`/api/v1/retrieval/*`). The analysis workflow does not call it; it uses BGE
+embeddings to match sections and passages between two filings. Its offline
+"ablation" scores hand-authored rankings for 6 queries, not the live system.
 
 ## Why PostgreSQL + PGVector + FTS?
 
@@ -51,7 +56,9 @@ for review.
 
 DeltaLedger preserves evidence, uses deterministic filters for numerical
 claims, routes high-severity candidates through human review, and evaluates
-false-positive-rate paths where negative controls exist.
+false-positive-rate paths where negative controls exist. Contradiction findings
+are rule-based (no model). The current Phase 5 fixture has no negative controls,
+so no false-positive rate is reported for it.
 
 ## Why Human Review?
 
@@ -61,7 +68,9 @@ and checkpointed resume.
 
 ## Why LangGraph And Dramatiq?
 
-LangGraph models the analysis as resumable workflow state. Dramatiq provides
+LangGraph models the analysis as resumable workflow state: a linear 12-node
+pipeline with one human-review interrupt and durable checkpoints. It is not an
+agent loop and nothing in it chooses its own next step. Dramatiq provides
 background execution and retry behavior. The API process stays separate from
 long-running analysis work.
 
@@ -75,7 +84,10 @@ Production requires PostgreSQL checkpointing.
 
 Offline benchmark suites validate versioned datasets and calculate retrieval,
 classification, calibration, evidence, and safety metrics. Missing labels or
-predictions are reported as `not_evaluated` or `no_data`.
+predictions are reported as `not_evaluated` or `no_data`. The checked-in numbers
+come from deterministic baseline classifiers on small author-written fixtures;
+they are not a measurement of Gemini. Real-provider results live in
+`backend/evaluation/results` (see docs/evaluation-suite.md).
 
 ## What Happens With 1,000 Companies?
 
@@ -113,6 +125,6 @@ object-storage keys by tenant.
 
 ## Current Limitations
 
-The system is not deployed remotely yet, benchmarks are compact, multi-tenant
+This repository does not assert a verified live deployment, benchmarks are compact, multi-tenant
 authorization is future work, and potential inconsistencies require analyst
 review. It is not an investment advisor or fraud detector.
