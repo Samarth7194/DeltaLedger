@@ -231,3 +231,44 @@ Phase 4 adds marker-gated PostgreSQL API coverage in
 XBRL fact candidate persistence, versioned verification idempotency, derived
 gross margin calculation, and financial-claim API reads/review against real
 database rows.
+
+## Analysis stage progress
+
+`GET /api/v1/analyses` and `GET /api/v1/analyses/{id}` include
+`progress.stages`, one entry per stage in workflow order (Disclosure
+Comparison, Financial Claims, XBRL Verification, Contradiction Analysis, Human
+Review, Final Report):
+
+```json
+{"stage": "disclosure_comparison", "label": "Disclosure Classification",
+ "status": "processing", "batched": true, "retryable": null,
+ "completed_units": 8, "total_units": 17, "current_unit": 9,
+ "unit_label": "parts", "provider_calls": 9, "retries": 0,
+ "estimated_input_tokens": 68000, "actual_input_tokens": 31200,
+ "actual_output_tokens": null, "actual_total_tokens": null,
+ "configured_input_budget": 12000, "effective_input_budget": 9000,
+ "successful_items": 64, "zero_result_items": 0, "requires_review_items": 0,
+ "last_provider_error_type": null, "retry_after_seconds": null,
+ "last_provider_error_at": null, "parts": [{"index": 1, "status": "completed"}]}
+```
+
+`completed_units`/`total_units` are completed and total durable batches for the
+batched stages (Disclosure Comparison, Financial Claims) and `null` for the
+others; `total_units` is `null` until the stage has planned its batches.
+`status` is `pending`, `processing`, `completed`, `failed` (with `retryable`
+saying whether running again can help) or `requires_review` (the stage finished
+but some items could not be analysed). `actual_*` token fields are
+provider-reported and `null` when the provider reported nothing;
+`estimated_input_tokens` is our estimate; the two budget fields are this
+project's own planning limits, not the provider's quota. Nothing here is
+estimated from elapsed time.
+
+### Resuming a failed analysis
+
+`POST /api/v1/analyses/{id}/retry` (reviewer role) re-enqueues the **same** run
+after a failure - it never creates a run. It returns `202` with the run id and
+job id, and is refused with `422` unless the run is `failed` and its failure is
+retryable (`progress.retryable` is `true`); a run awaiting human review is
+resumed from its review instead (`POST /analyses/{id}/resume`). Completed
+batches are never repeated: the workflow continues from the first incomplete
+part.

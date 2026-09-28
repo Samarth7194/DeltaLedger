@@ -51,6 +51,43 @@ services:
         sync: false
       - key: ALLOW_FAKE_MODELS_IN_PRODUCTION
         value: "true"
+      # --- AI pipeline: the API and the worker MUST use identical values -------------
+      # (compare the `config_fingerprint` in both services' startup logs, or run
+      #  `python -m app.cli.production_doctor`).
+      - key: EMBEDDING_PROVIDER
+        sync: false
+      - key: EMBEDDING_MODEL
+        sync: false
+      - key: EMBEDDING_MODEL_NAME
+        sync: false
+      - key: CHANGE_CLASSIFIER_PROVIDER
+        sync: false
+      - key: CHANGE_CLASSIFIER_MODEL
+        sync: false
+      - key: CLAIM_EXTRACTOR_PROVIDER
+        sync: false
+      - key: CLAIM_EXTRACTOR_MODEL
+        sync: false
+      - key: CONTRADICTION_CLASSIFIER_PROVIDER
+        sync: false
+      - key: CONTRADICTION_CLASSIFIER_MODEL
+        sync: false
+      - key: AI_PROVIDER_BASE_URL
+        sync: false
+      - key: AI_PROVIDER_API_KEY
+        sync: false
+      - key: AI_PROVIDER_CHAT_DELAY_SECONDS
+        sync: false
+      - key: AI_BATCH_MAX_ITEMS
+        value: "8"
+      - key: AI_BATCH_INPUT_TOKEN_BUDGET
+        value: "12000"
+      - key: AI_BATCH_TOKEN_SAFETY_MARGIN
+        value: "0.25"
+      - key: AI_BATCH_MULTI_ITEM_REQUESTS
+        value: "true"
+      - key: ANALYSIS_WORKFLOW_TIME_LIMIT_SECONDS
+        value: "10800"
 
   - type: worker
     name: deltaledger-worker
@@ -102,3 +139,40 @@ services:
         sync: false
       - key: ALLOW_FAKE_MODELS_IN_PRODUCTION
         value: "true"
+      # --- AI pipeline: the API and the worker MUST use identical values -------------
+      # (compare the `config_fingerprint` in both services' startup logs, or run
+      #  `python -m app.cli.production_doctor`).
+      - key: EMBEDDING_PROVIDER
+        sync: false
+      - key: EMBEDDING_MODEL
+        sync: false
+      - key: EMBEDDING_MODEL_NAME
+        sync: false
+      - key: CHANGE_CLASSIFIER_PROVIDER
+        sync: false
+      - key: CHANGE_CLASSIFIER_MODEL
+        sync: false
+      - key: CLAIM_EXTRACTOR_PROVIDER
+        sync: false
+      - key: CLAIM_EXTRACTOR_MODEL
+        sync: false
+      - key: CONTRADICTION_CLASSIFIER_PROVIDER
+        sync: false
+      - key: CONTRADICTION_CLASSIFIER_MODEL
+        sync: false
+      - key: AI_PROVIDER_BASE_URL
+        sync: false
+      - key: AI_PROVIDER_API_KEY
+        sync: false
+      - key: AI_PROVIDER_CHAT_DELAY_SECONDS
+        sync: false
+      - key: AI_BATCH_MAX_ITEMS
+        value: "8"
+      - key: AI_BATCH_INPUT_TOKEN_BUDGET
+        value: "12000"
+      - key: AI_BATCH_TOKEN_SAFETY_MARGIN
+        value: "0.25"
+      - key: AI_BATCH_MULTI_ITEM_REQUESTS
+        value: "true"
+      - key: ANALYSIS_WORKFLOW_TIME_LIMIT_SECONDS
+        value: "10800"

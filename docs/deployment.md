@@ -362,3 +362,29 @@ Then verify:
 - Worker idle: verify `REDIS_URL` matches API/worker configuration.
 - Frontend API errors: verify `NEXT_PUBLIC_API_BASE_URL` and CORS origins.
 - SEC errors: verify `SEC_USER_AGENT` includes real contact information.
+
+## Hosted worker readiness
+
+The API and the Dramatiq worker are separate processes and must agree on
+everything that affects results. Both log a credential-free `runtime_config`
+line at startup (API on boot, worker on worker boot) containing hosts, models,
+batching limits, prompt versions and a `config_fingerprint`; **the two
+fingerprints must be equal**. `python -m app.cli.production_doctor` prints the
+same summary (`runtime` check) plus database/Redis/storage/checkpoint checks,
+and now validates the database against the migration head read from the
+migration scripts (including `analysis_stage_batches`).
+
+Required on BOTH services (see `render.yaml`): `DATABASE_URL`, `REDIS_URL`,
+object storage (`OBJECT_STORAGE_PROVIDER=minio` + `MINIO_*`, so both see the
+same filings), `WORKFLOW_CHECKPOINT_PROVIDER=postgres`, the embedding provider
+and model (`EMBEDDING_*`), the Gemini providers and models
+(`CHANGE_CLASSIFIER_*`, `CLAIM_EXTRACTOR_*`, `CONTRADICTION_CLASSIFIER_*`,
+`AI_PROVIDER_*`) and the batching limits (`AI_BATCH_*`). The worker also needs
+`ANALYSIS_WORKFLOW_TIME_LIMIT_SECONDS` (default 10800; a killed analysis
+resumes at its first incomplete part). Running the BGE embedding model locally
+in the worker needs enough memory for the model; otherwise use a hosted
+embedding provider - and keep it identical on both services, since a model
+change invalidates reusable matching.
+
+Apply migrations before starting either service (`python -m alembic upgrade
+head`, already the API's `preDeployCommand`).

@@ -259,3 +259,89 @@ flowchart TD
   Inconsistency --> Human[Human review]
   Human --> Final[Analyst report]
 ```
+
+## Resumable, token-budgeted batch processing
+
+The two AI-heavy stages - disclosure change classification and financial-claim
+extraction - run as durable **batches** ("parts"). Deterministic work (section
+and passage matching, deterministic claim extraction, XBRL verification,
+contradiction detection, the final report) is not batched: it makes no provider
+calls, so there is nothing to bound or resume.
+
+- **Sizing** (`app/ai/batching.py`): items are packed in order into batches
+  bounded by `AI_BATCH_MAX_ITEMS` and by `AI_BATCH_INPUT_TOKEN_BUDGET` reduced
+  by `AI_BATCH_TOKEN_SAFETY_MARGIN`. Tokens are a conservative character-based
+  estimate (3 chars/token) because no tokenizer for the provider's models is
+  available; no model context size is hard-coded.
+- **Ledger**: `analysis_stage_batches` records, per run and stage, each batch's
+  index, total, status (`pending`/`processing`/`completed`/`failed`), stable
+  identity hash (stage + model + prompt version + ordered item identities),
+  item count, estimated input tokens, provider-call and retry counts, and a
+  short scrubbed error. It holds progress only; results live in
+  `disclosure_changes` / `financial_claims`.
+- **Resume**: a batch and its results are stored in one transaction. On a
+  retry, batches whose identity hash still matches and are `completed` are not
+  sent to the provider again; work restarts at the first incomplete batch. A
+  model or prompt version change alters the hash and invalidates reuse.
+- **Requests**: with `AI_BATCH_MULTI_ITEM_REQUESTS=true` a batch is one
+  multi-item request whose items carry an explicit `item_id`; each item is
+  validated independently and an unusable item is retried alone (and, for
+  disclosure changes, ends as a `requires_review` placeholder) without
+  affecting its neighbours. A rate limit after the client's own backoff stops
+  only the current batch.
+- **Progress**: `GET /analyses/{id}` returns `progress.stages` (see
+  `docs/api.md`), derived from batch counts - never from elapsed time.
+- The final report is assembled deterministically from persisted structured
+  outputs (counts and evidence ids) and never sends raw comparison text to a
+  model, so it has no prompt to bound or summarize hierarchically.
+
+### Durability guarantees of the batch ledger
+
+- **Content-safe identity.** A batch's `input_hash` covers the stage, model,
+  prompt version, a fingerprint of the shared request context (allowed
+  labels/metrics, response schema, prompt text hash) and each item's identity,
+  which embeds a canonical hash of that item's input content. Same ids with
+  changed text, a different model, prompt or schema all produce a different
+  batch, so nothing stale is reused. No raw prompts or text are stored.
+- **Atomic completion.** A batch's outputs, its per-item outcome records
+  (`item_results`, `successful_items` / `zero_result_items` /
+  `requires_review_items`), its token usage and its `completed` mark are one
+  flush and one commit. A completed batch therefore always carries its own
+  durable results, so a resumed run can rebuild them even if the stage's tables
+  were wiped by a comparison re-run - completed parts are never re-sent.
+- **Item outcomes.** `success` (result produced), `zero_result` (analysed, none
+  found) and `requires_review` (never analysed after repair/retry - nothing is
+  fabricated) are distinct and durable. A stage with `requires_review` items
+  reports `requires_review`, and the final report carries a data-quality
+  warning.
+- **Failure metadata.** A failed batch records `last_provider_error_type`
+  (`rate_limited_short_term`, `quota_exhausted_daily`, `resource_exhausted`,
+  `timeout`, `network_error`, `server_error`, `provider_rejected`),
+  `last_retry_after_seconds` and `last_provider_error_at`, plus items that
+  resolved before the failure. A daily quota fails fast instead of burning
+  retries; other retryable errors use the client's bounded backoff.
+- **Token usage.** Provider-reported `actual_input/output/total_tokens` are
+  summed per batch (retries included); they stay NULL when the provider reports
+  nothing. `estimated_input_tokens` is our own estimate. The configured and
+  effective (after safety margin) per-request budgets are our planning limits,
+  not the provider's account quota, which is not observable here.
+- **Completeness guard.** `analysis_completeness.evaluate_readiness` is called
+  before human review and again before the report. The analysis advances only
+  when every planned batch is completed (counts match the recorded plan), the
+  deterministic stages finished, and any required review has an outcome.
+
+### Reusing BGE matching on resume
+
+Section matching and passage alignment are local, slow and deterministic. Their
+persisted results are reused when a fingerprint of everything that determines
+them is unchanged: the filing pair, each section's content hash, order and chunk
+embedding provenance, the embedding model name/version, and the matching
+configuration (thresholds, weights, reranker, segmentation version). The
+fingerprint and the counts of persisted matches are stored in the comparison's
+`processing_metrics` and verified against the database on reuse; the marker is
+cleared in the same transaction that wipes old matches and rewritten only after
+every section is aligned, so an interrupted recompute is never mistaken for
+complete matching. Reuse also keeps already-classified disclosure changes,
+since nothing cascades them away. Candidates are ordered by document position
+(with a content-based tiebreak), so batch plans do not depend on database row
+order.
