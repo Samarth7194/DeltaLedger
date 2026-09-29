@@ -155,8 +155,27 @@ def load_change_examples() -> list[dict[str, Any]]:
     return list(load_json(TEST_FIXTURE_ROOT / "comparison" / "phase3_examples.json"))
 
 
-def load_claim_examples() -> list[dict[str, Any]]:
-    return list(load_json(TEST_FIXTURE_ROOT / "financial_claims" / "phase4_examples.json"))
+CLAIM_SPLIT_PATH = EVALUATION_ROOT / "datasets" / "phase4_extraction_split.json"
+CLAIM_SPLITS = ("all", "dev", "held_out")
+
+
+def load_claim_examples(split: str = "all") -> list[dict[str, Any]]:
+    """The 60 phase4_fixture sentences, or just one fixed half of them.
+
+    The dev/held-out assignment (`phase4_extraction_split.json`) was written
+    once, before any prompt change, specifically so the held-out half is
+    never looked at while diagnosing or fixing a prompt - only used for one
+    final before/after comparison. `split="all"` (the default) is what every
+    other caller in this module wants; only the CLI's `--claim-split` passes
+    "dev" or "held_out".
+    """
+    examples = list(load_json(TEST_FIXTURE_ROOT / "financial_claims" / "phase4_examples.json"))
+    if split == "all":
+        return examples
+    if split not in CLAIM_SPLITS:
+        raise EvaluationConfigError(f"Unknown claim split {split!r}; use one of {CLAIM_SPLITS}.")
+    allowed_ids = set(load_json(CLAIM_SPLIT_PATH)[f"{split}_ids"])
+    return [example for example in examples if example["id"] in allowed_ids]
 
 
 def dataset_version(name: str) -> str:
@@ -276,6 +295,7 @@ def _new_results(
     modes: dict[str, str],
     change_classifier: ChangeClassifierProvider | None,
     claim_extractor: ClaimExtractorProvider | None,
+    claim_split: str = "all",
 ) -> dict[str, Any]:
     host = urlparse(settings.ai_provider_base_url).hostname
     return {
@@ -309,6 +329,7 @@ def _new_results(
                 "name": "phase4_fixture",
                 "version": dataset_version("phase4"),
                 "provenance": "author-written fixture (tests/fixtures/financial_claims)",
+                "split": claim_split,
             },
         },
         "tasks": {
@@ -978,6 +999,7 @@ async def run_live_evaluation(
     claim_extractor: ClaimExtractorProvider | None,
     tasks: tuple[str, ...] = ALL_TASKS,
     mode: str = "auto",
+    claim_split: str = "all",
     output_path: Path,
     resume: bool = False,
     max_requests: int | None = None,
@@ -1012,6 +1034,7 @@ async def run_live_evaluation(
             modes=modes,
             change_classifier=change_classifier,
             claim_extractor=claim_extractor,
+            claim_split=claim_split,
         )
 
     control = RunControl(
@@ -1044,10 +1067,13 @@ async def run_live_evaluation(
             definitions = load_seed_metric_definitions()
             allowed_metrics = [definition.canonical_name for definition in definitions]
             deterministic = build_deterministic_extractor(settings, definitions)
-            examples = load_claim_examples()
+            examples = load_claim_examples(claim_split)
             await _seed_claim_items(results, examples, deterministic)
             persist()
-            on_message(f"[{CLAIM_TASK}] {len(examples)} items, mode={modes[CLAIM_TASK]}")
+            on_message(
+                f"[{CLAIM_TASK}] {len(examples)} items (split={claim_split}), "
+                f"mode={modes[CLAIM_TASK]}"
+            )
             await _run_claim_task(
                 results,
                 examples,
@@ -1135,11 +1161,16 @@ def render_markdown(results: dict[str, Any]) -> str:
     for task in ALL_TASKS:
         info = results["tasks"][task]
         if info["items"]:
+            dataset = results["datasets"][task]
+            split_note = (
+                f", split `{dataset['split']}`"
+                if dataset.get("split", "all") != "all"
+                else ""
+            )
             out.append(
                 f"- `{task}`: model `{info['model']}`, mode `{info['mode']}`, prompt "
                 f"`{info['prompt_version']}`, dataset "
-                f"`{results['datasets'][task]['name']}` `{results['datasets'][task]['version']}` "
-                f"({results['datasets'][task]['provenance']})"
+                f"`{dataset['name']}` `{dataset['version']}` ({dataset['provenance']}){split_note}"
             )
     usage = results["usage"]
     out += [

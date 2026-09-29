@@ -64,6 +64,14 @@ def main(argv: list[str] | None = None) -> int:
         help="auto mirrors the pipeline (multi-item batch requests when configured).",
     )
     live.add_argument(
+        "--claim-split",
+        choices=("all", "dev", "held_out"),
+        default="all",
+        help="Restrict the claim-extraction task to one fixed half of the phase4 fixture "
+        "(evaluation/datasets/phase4_extraction_split.json): dev for diagnosis/tuning, "
+        "held_out for a one-time final check. Ignored for the change task.",
+    )
+    live.add_argument(
         "--results-dir",
         type=Path,
         default=default_results_dir(),
@@ -169,6 +177,7 @@ def _run_live(args: argparse.Namespace, settings: Settings) -> int:
                 ),
                 tasks=tasks,
                 mode=args.mode,
+                claim_split=args.claim_split,
                 output_path=output_path,
                 resume=args.resume is not None,
                 max_requests=args.max_requests,

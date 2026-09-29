@@ -99,7 +99,7 @@ def test_real_provider_prompt_versions_are_reported() -> None:
     disclosure = versions["disclosure_classification_batch"]
     claims = versions["claim_extraction_batch"]
     assert disclosure.startswith("disclosure-change-batch-json-v1+")
-    assert claims.startswith("financial-claim-extraction-batch-json-v1+")
+    assert claims.startswith("financial-claim-extraction-batch-json-v2+")
     assert prompt_versions(_settings()) == {}  # fake providers stamp none
 
 

@@ -102,21 +102,65 @@ class BatchClaimExtractionResponse(BaseModel):
     items: list[dict[str, object]]
 
 
+# v2 (2026-09): the v1 prompt never named a single field, so the model
+# invented its own shape (e.g. {"metric": ..., "value": ..., "period": ...})
+# instead of the fields FinancialClaimExtraction actually requires - a live
+# evaluation on gemini-3.5-flash-lite found canonical_metric_accuracy of 0.067
+# against a 0.917 deterministic baseline, with 32/60 responses failing schema
+# validation outright. See docs/claim-extraction-prompt-fix.md.
+_CLAIM_FIELDS_PROMPT = (
+    "Each entry in claims must contain ALL of the following fields -- every "
+    "field is REQUIRED in every entry, with no field ever omitted; use null "
+    "for a field that does not apply to that claim:\n"
+    "- claim_text: the exact sentence or clause the claim came from\n"
+    "- canonical_metric_name: exactly one value from the request's "
+    "allowed_metrics, or null if no listed metric matches this claim\n"
+    "- claim_type: exactly one of absolute_value, directional_change, "
+    "percentage_change, percentage_point_change, ratio_change, "
+    "comparative_statement, qualitative_financial_claim -- never any other "
+    "string\n"
+    "- direction: exactly one of increase, decrease, unchanged, positive, "
+    "negative, unknown, or null\n"
+    "- reported_value: the absolute numeric value stated (e.g. 112000000 for "
+    '"$112 million"), or null when the claim is not an absolute value\n'
+    "- reported_unit: the unit of reported_value (e.g. USD), or null\n"
+    "- reported_change: the numeric size of a stated change (e.g. 12 for "
+    '"12%", 1.25 for "1.25 percentage points"), or null when the claim is '
+    "not a change\n"
+    "- reported_change_unit: exactly one of percent, percentage_points, or "
+    "null\n"
+    "- comparison_basis: the comparison period stated (e.g. "
+    "prior_year_quarter), or null\n"
+    "- comparison_text: the exact comparison phrase from the text (e.g. "
+    '"compared with the same period last year"), or null\n'
+    "- qualifiers: an object of any additional qualifiers, or {} when none\n"
+    "- confidence: a number between 0.0 and 1.0\n"
+)
+
+
 _BATCH_CLAIM_SYSTEM_PROMPT = (
     "Extract factual financial claims from SEC filing text. The request holds "
     "several independent items, each with its own item_id. Extract claims for "
-    "every item on its own; never mix claims between items. Return only JSON "
-    'of the form {"items": [{"item_id": "...", "claims": [...]}]} with exactly '
-    "one entry per input item, copying each item_id exactly as given and "
-    "always including a claims array (empty when the item has no claims). Use "
-    "null for unknown values and never infer facts not present in the text."
+    "every item on its own; never mix claims between items. Return only a "
+    'single JSON object of the form {"items": [{"item_id": "...", "claims": '
+    "[...]}]} with exactly one entry per input item, copying each item_id "
+    "exactly as given and always including a claims array (empty when the "
+    "item has no claims). Use null for unknown values and never infer facts "
+    "not present in the text.\n"
+    + _CLAIM_FIELDS_PROMPT
+    + "Do not include any text, commentary, or markdown outside the single "
+    "JSON object."
 )
 
 
 _SINGLE_CLAIM_SYSTEM_PROMPT = (
-    "Extract factual financial claims from SEC filing text. Return only JSON "
-    "with a claims array. Use null for unknown values and never infer facts "
-    "not present in the text."
+    "Extract factual financial claims from SEC filing text. Return only a "
+    'single JSON object of the form {"claims": [...]} with one entry per '
+    "claim found in the text (an empty array when there are none). Use null "
+    "for unknown values and never infer facts not present in the text.\n"
+    + _CLAIM_FIELDS_PROMPT
+    + "Do not include any text, commentary, or markdown outside the single "
+    "JSON object."
 )
 
 
@@ -128,9 +172,11 @@ _CLAIM_PROMPT_FINGERPRINT = canonical_hash(
 
 
 class OpenAICompatibleClaimExtractor:
-    prompt_version = f"financial-claim-extraction-json-v1+{_CLAIM_PROMPT_FINGERPRINT[:8]}"
+    # v2: names every required field and enum explicitly (v1 named none of
+    # them - see the comment above _CLAIM_FIELDS_PROMPT).
+    prompt_version = f"financial-claim-extraction-json-v2+{_CLAIM_PROMPT_FINGERPRINT[:8]}"
     batch_prompt_version = (
-        f"financial-claim-extraction-batch-json-v1+{_CLAIM_PROMPT_FINGERPRINT[:8]}"
+        f"financial-claim-extraction-batch-json-v2+{_CLAIM_PROMPT_FINGERPRINT[:8]}"
     )
     prompt_fingerprint = _CLAIM_PROMPT_FINGERPRINT
 

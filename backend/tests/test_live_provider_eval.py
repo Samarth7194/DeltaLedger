@@ -470,6 +470,40 @@ async def test_markdown_states_the_caveats_and_the_incomplete_run(tmp_path) -> N
     assert "Phase 4 metrics" in markdown
 
 
+# --- dev/held-out claim split -------------------------------------------------------------------
+
+
+def test_the_dev_and_held_out_splits_are_disjoint_and_cover_every_example() -> None:
+    all_examples = live.load_claim_examples()
+    dev = live.load_claim_examples("dev")
+    held_out = live.load_claim_examples("held_out")
+
+    dev_ids = {example["id"] for example in dev}
+    held_out_ids = {example["id"] for example in held_out}
+    assert dev_ids.isdisjoint(held_out_ids)
+    assert dev_ids | held_out_ids == {example["id"] for example in all_examples}
+    assert len(dev) == len(held_out) == 30
+
+
+def test_an_unknown_claim_split_is_refused() -> None:
+    with pytest.raises(EvaluationConfigError, match="Unknown claim split"):
+        live.load_claim_examples("nonexistent")
+
+
+@pytest.mark.asyncio
+async def test_a_held_out_only_run_only_ever_requests_held_out_items(tmp_path) -> None:
+    claims = FakeClaimExtractor()
+    held_out_ids = {example["id"] for example in live.load_claim_examples("held_out")}
+
+    results = await _run(tmp_path, claims=claims, tasks=(CLAIM_TASK,), claim_split="held_out")
+
+    assert set(results["tasks"][CLAIM_TASK]["items"]) == held_out_ids
+    assert results["tasks"][CLAIM_TASK]["metrics"]["n_total"] == 30
+    assert results["datasets"][CLAIM_TASK]["split"] == "held_out"
+    requested = {item_id for call in claims.batch_calls for item_id in call}
+    assert requested == held_out_ids  # never a dev-split item
+
+
 # --- CLI guards -------------------------------------------------------------------------------
 
 
