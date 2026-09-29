@@ -72,7 +72,13 @@ Read the numbers in `backend/evaluation/reports` with these caveats:
 - **Phase 5** has no negative controls, so no false-positive rate exists.
 
 Real-provider quality is measured separately with `python -m app.cli.evaluate_providers`
-and written to `backend/evaluation/results/`.
+and written to `backend/evaluation/results/`. The financial-claim-extraction task supports
+`--claim-split {all,dev,held_out}` against a fixed 30/30 split
+(`backend/evaluation/datasets/phase4_extraction_split.json`), so a prompt change can be
+diagnosed and iterated on the dev half only and checked once, cleanly, against the untouched
+held-out half - see [docs/claim-extraction-prompt-fix.md](claim-extraction-prompt-fix.md) for
+a worked example (a schema-less v1 prompt scoring 0.10 canonical-metric accuracy on held-out,
+a v2 prompt that names every field scoring 0.93).
 
 ## Offline Suites
 

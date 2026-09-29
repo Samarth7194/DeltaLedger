@@ -214,6 +214,7 @@ npm audit --omit=dev
 - [Limitations](docs/limitations.md)
 - [Demo script](docs/demo-script.md)
 - [Portfolio case study](docs/portfolio-case-study.md)
+- [Claim-extraction prompt fix (v1 -> v2)](docs/claim-extraction-prompt-fix.md)
 - [Interview guide](docs/interview-guide.md)
 - [Resume bullets](docs/resume-bullets.md)
 

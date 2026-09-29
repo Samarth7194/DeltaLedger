@@ -1,0 +1,2168 @@
+{
+  "schema_version": "live-provider-eval-v1",
+  "run_id": "42f78f1b-8aca-4de3-80ed-0bac6924a1e7",
+  "created_at": "2026-09-29T07:31:25.379796+00:00",
+  "finished_at": "2026-09-29T07:32:14.721105+00:00",
+  "status": "completed",
+  "stop_reason": null,
+  "code_version": "ad44e1c",
+  "provider": {
+    "provider": "openai_compatible",
+    "base_url_host": "generativelanguage.googleapis.com",
+    "chat_delay_seconds": 15.0,
+    "max_retries": 5,
+    "structured_output_repair_attempts": 1,
+    "batch_max_items": 8,
+    "batch_input_token_budget": 12000,
+    "batch_token_safety_margin": 0.25
+  },
+  "tasks_requested": [
+    "claim_extraction"
+  ],
+  "datasets": {
+    "disclosure_change": {
+      "name": "phase3_fixture",
+      "version": "phase3-v1",
+      "provenance": "author-written fixture (tests/fixtures/comparison)"
+    },
+    "claim_extraction": {
+      "name": "phase4_fixture",
+      "version": "phase4-v1",
+      "provenance": "author-written fixture (tests/fixtures/financial_claims)",
+      "split": "held_out"
+    }
+  },
+  "tasks": {
+    "disclosure_change": {
+      "mode": null,
+      "model": null,
+      "prompt_version": null,
+      "items": {},
+      "metrics": null
+    },
+    "claim_extraction": {
+      "mode": "batch",
+      "model": "gemini-3.5-flash-lite",
+      "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+      "items": {
+        "abs-002": {
+          "id": "abs-002",
+          "input": {
+            "text": "Net sales totaled $1.25 billion.",
+            "category": "absolute_value"
+          },
+          "expected": {
+            "canonical_metric": "revenue",
+            "claim_type": "absolute_value"
+          },
+          "baseline": [
+            {
+              "claim_text": "Net sales totaled $1.25 billion.",
+              "canonical_metric_name": "revenue",
+              "claim_type": "absolute_value",
+              "direction": null,
+              "reported_value": "1250000000.00",
+              "reported_unit": "USD",
+              "reported_change": null,
+              "reported_change_unit": null,
+              "comparison_basis": null,
+              "confidence": "0.95"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:31:31.979580+00:00",
+            "prediction": [
+              {
+                "claim_text": "Net sales totaled $1.25 billion.",
+                "canonical_metric_name": "revenue",
+                "claim_type": "absolute_value",
+                "direction": "positive",
+                "reported_value": "1250000000",
+                "reported_unit": "USD",
+                "reported_change": null,
+                "reported_change_unit": null,
+                "comparison_basis": null,
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:31:31.978647+00:00",
+              "latency_ms": 5848.632,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 810,
+              "output_tokens": 1372,
+              "total_tokens": 2182,
+              "batch_size": 8,
+              "response_id": "UGm7atfzOZXFg8UP_u_OoQI"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "abs-004": {
+          "id": "abs-004",
+          "input": {
+            "text": "Operating income was $9.4 million.",
+            "category": "absolute_value"
+          },
+          "expected": {
+            "canonical_metric": "operating_income",
+            "claim_type": "absolute_value"
+          },
+          "baseline": [
+            {
+              "claim_text": "Operating income was $9.4 million.",
+              "canonical_metric_name": "operating_income",
+              "claim_type": "absolute_value",
+              "direction": null,
+              "reported_value": "9400000.0",
+              "reported_unit": "USD",
+              "reported_change": null,
+              "reported_change_unit": null,
+              "comparison_basis": null,
+              "confidence": "0.95"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:31:31.979671+00:00",
+            "prediction": [
+              {
+                "claim_text": "Operating income was $9.4 million.",
+                "canonical_metric_name": "operating_income",
+                "claim_type": "absolute_value",
+                "direction": "positive",
+                "reported_value": "9400000",
+                "reported_unit": "USD",
+                "reported_change": null,
+                "reported_change_unit": null,
+                "comparison_basis": null,
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:31:31.978647+00:00",
+              "latency_ms": 5848.632,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 810,
+              "output_tokens": 1372,
+              "total_tokens": 2182,
+              "batch_size": 8,
+              "response_id": "UGm7atfzOZXFg8UP_u_OoQI"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "abs-006": {
+          "id": "abs-006",
+          "input": {
+            "text": "Cash and cash equivalents were $300 million at quarter end.",
+            "category": "absolute_value"
+          },
+          "expected": {
+            "canonical_metric": "cash_and_cash_equivalents",
+            "claim_type": "absolute_value"
+          },
+          "baseline": [
+            {
+              "claim_text": "Cash and cash equivalents were $300 million at quarter end.",
+              "canonical_metric_name": "cash_and_cash_equivalents",
+              "claim_type": "absolute_value",
+              "direction": null,
+              "reported_value": "300000000",
+              "reported_unit": "USD",
+              "reported_change": null,
+              "reported_change_unit": null,
+              "comparison_basis": null,
+              "confidence": "0.95"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:31:31.979735+00:00",
+            "prediction": [
+              {
+                "claim_text": "Cash and cash equivalents were $300 million at quarter end.",
+                "canonical_metric_name": "cash_and_cash_equivalents",
+                "claim_type": "absolute_value",
+                "direction": "positive",
+                "reported_value": "300000000",
+                "reported_unit": "USD",
+                "reported_change": null,
+                "reported_change_unit": null,
+                "comparison_basis": null,
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:31:31.978647+00:00",
+              "latency_ms": 5848.632,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 810,
+              "output_tokens": 1372,
+              "total_tokens": 2182,
+              "batch_size": 8,
+              "response_id": "UGm7atfzOZXFg8UP_u_OoQI"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "abs-008": {
+          "id": "abs-008",
+          "input": {
+            "text": "Basic EPS was $1.20.",
+            "category": "absolute_value"
+          },
+          "expected": {
+            "canonical_metric": "basic_eps",
+            "claim_type": "absolute_value"
+          },
+          "baseline": [
+            {
+              "claim_text": "Basic EPS was $1.20.",
+              "canonical_metric_name": "basic_eps",
+              "claim_type": "absolute_value",
+              "direction": null,
+              "reported_value": "1.20",
+              "reported_unit": "USD",
+              "reported_change": null,
+              "reported_change_unit": null,
+              "comparison_basis": null,
+              "confidence": "0.95"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:31:31.979790+00:00",
+            "prediction": [
+              {
+                "claim_text": "Basic EPS was $1.20.",
+                "canonical_metric_name": "basic_eps",
+                "claim_type": "absolute_value",
+                "direction": "positive",
+                "reported_value": "1.2",
+                "reported_unit": "USD",
+                "reported_change": null,
+                "reported_change_unit": null,
+                "comparison_basis": null,
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:31:31.978647+00:00",
+              "latency_ms": 5848.632,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 810,
+              "output_tokens": 1372,
+              "total_tokens": 2182,
+              "batch_size": 8,
+              "response_id": "UGm7atfzOZXFg8UP_u_OoQI"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "abs-010": {
+          "id": "abs-010",
+          "input": {
+            "text": "Revenue was $(12 million).",
+            "category": "absolute_value"
+          },
+          "expected": {
+            "canonical_metric": "revenue",
+            "claim_type": "absolute_value"
+          },
+          "baseline": [
+            {
+              "claim_text": "Revenue was $(12 million).",
+              "canonical_metric_name": "revenue",
+              "claim_type": "absolute_value",
+              "direction": null,
+              "reported_value": "-12000000",
+              "reported_unit": "USD",
+              "reported_change": null,
+              "reported_change_unit": null,
+              "comparison_basis": null,
+              "confidence": "0.95"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:31:31.979865+00:00",
+            "prediction": [
+              {
+                "claim_text": "Revenue was $(12 million).",
+                "canonical_metric_name": "revenue",
+                "claim_type": "absolute_value",
+                "direction": "negative",
+                "reported_value": "-12000000",
+                "reported_unit": "USD",
+                "reported_change": null,
+                "reported_change_unit": null,
+                "comparison_basis": null,
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:31:31.978647+00:00",
+              "latency_ms": 5848.632,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 810,
+              "output_tokens": 1372,
+              "total_tokens": 2182,
+              "batch_size": 8,
+              "response_id": "UGm7atfzOZXFg8UP_u_OoQI"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "abs-012": {
+          "id": "abs-012",
+          "input": {
+            "text": "Cash was $0.3 billion.",
+            "category": "absolute_value"
+          },
+          "expected": {
+            "canonical_metric": "cash_and_cash_equivalents",
+            "claim_type": "absolute_value"
+          },
+          "baseline": [
+            {
+              "claim_text": "Cash was $0.3 billion.",
+              "canonical_metric_name": "cash_and_cash_equivalents",
+              "claim_type": "absolute_value",
+              "direction": null,
+              "reported_value": "300000000.0",
+              "reported_unit": "USD",
+              "reported_change": null,
+              "reported_change_unit": null,
+              "comparison_basis": null,
+              "confidence": "0.95"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:31:31.979907+00:00",
+            "prediction": [
+              {
+                "claim_text": "Cash was $0.3 billion.",
+                "canonical_metric_name": "cash_and_cash_equivalents",
+                "claim_type": "absolute_value",
+                "direction": "positive",
+                "reported_value": "300000000",
+                "reported_unit": "USD",
+                "reported_change": null,
+                "reported_change_unit": null,
+                "comparison_basis": null,
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:31:31.978647+00:00",
+              "latency_ms": 5848.632,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 810,
+              "output_tokens": 1372,
+              "total_tokens": 2182,
+              "batch_size": 8,
+              "response_id": "UGm7atfzOZXFg8UP_u_OoQI"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "abs-014": {
+          "id": "abs-014",
+          "input": {
+            "text": "Earnings per share basic was $1.20 per share.",
+            "category": "absolute_value"
+          },
+          "expected": {
+            "canonical_metric": "basic_eps",
+            "claim_type": "absolute_value"
+          },
+          "baseline": [
+            {
+              "claim_text": "Earnings per share basic was $1.20 per share.",
+              "canonical_metric_name": "basic_eps",
+              "claim_type": "absolute_value",
+              "direction": null,
+              "reported_value": "1.20",
+              "reported_unit": "USD/share",
+              "reported_change": null,
+              "reported_change_unit": null,
+              "comparison_basis": null,
+              "confidence": "0.95"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:31:31.979947+00:00",
+            "prediction": [
+              {
+                "claim_text": "Earnings per share basic was $1.20 per share.",
+                "canonical_metric_name": "basic_eps",
+                "claim_type": "absolute_value",
+                "direction": "positive",
+                "reported_value": "1.2",
+                "reported_unit": "USD",
+                "reported_change": null,
+                "reported_change_unit": null,
+                "comparison_basis": null,
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:31:31.978647+00:00",
+              "latency_ms": 5848.632,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 810,
+              "output_tokens": 1372,
+              "total_tokens": 2182,
+              "batch_size": 8,
+              "response_id": "UGm7atfzOZXFg8UP_u_OoQI"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "pct-001": {
+          "id": "pct-001",
+          "input": {
+            "text": "Revenue increased 12% year over year.",
+            "category": "percentage_change"
+          },
+          "expected": {
+            "canonical_metric": "revenue",
+            "claim_type": "percentage_change"
+          },
+          "baseline": [
+            {
+              "claim_text": "Revenue increased 12% year over year.",
+              "canonical_metric_name": "revenue",
+              "claim_type": "percentage_change",
+              "direction": "increase",
+              "reported_value": null,
+              "reported_unit": null,
+              "reported_change": "12",
+              "reported_change_unit": "percent",
+              "comparison_basis": "same_period_prior_year",
+              "confidence": "0.95"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:31:31.979993+00:00",
+            "prediction": [
+              {
+                "claim_text": "Revenue increased 12% year over year.",
+                "canonical_metric_name": "revenue",
+                "claim_type": "percentage_change",
+                "direction": "increase",
+                "reported_value": null,
+                "reported_unit": null,
+                "reported_change": "12.0",
+                "reported_change_unit": "percent",
+                "comparison_basis": "prior_year_period",
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:31:31.978647+00:00",
+              "latency_ms": 5848.632,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 810,
+              "output_tokens": 1372,
+              "total_tokens": 2182,
+              "batch_size": 8,
+              "response_id": "UGm7atfzOZXFg8UP_u_OoQI"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "pct-003": {
+          "id": "pct-003",
+          "input": {
+            "text": "Revenue increased 10% year over year.",
+            "category": "percentage_change"
+          },
+          "expected": {
+            "canonical_metric": "revenue",
+            "claim_type": "percentage_change"
+          },
+          "baseline": [
+            {
+              "claim_text": "Revenue increased 10% year over year.",
+              "canonical_metric_name": "revenue",
+              "claim_type": "percentage_change",
+              "direction": "increase",
+              "reported_value": null,
+              "reported_unit": null,
+              "reported_change": "10",
+              "reported_change_unit": "percent",
+              "comparison_basis": "same_period_prior_year",
+              "confidence": "0.95"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:31:46.542652+00:00",
+            "prediction": [
+              {
+                "claim_text": "Revenue increased 10% year over year.",
+                "canonical_metric_name": "revenue",
+                "claim_type": "percentage_change",
+                "direction": "increase",
+                "reported_value": null,
+                "reported_unit": null,
+                "reported_change": "10.0",
+                "reported_change_unit": "percent",
+                "comparison_basis": "prior_year",
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:31:46.542089+00:00",
+              "latency_ms": 14554.673,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 815,
+              "output_tokens": 1372,
+              "total_tokens": 2187,
+              "batch_size": 8,
+              "response_id": "X2m7aouME-ayjuMPwJmJgAs"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "pct-005": {
+          "id": "pct-005",
+          "input": {
+            "text": "Gross profit increased 20% year over year.",
+            "category": "percentage_change"
+          },
+          "expected": {
+            "canonical_metric": "gross_profit",
+            "claim_type": "percentage_change"
+          },
+          "baseline": [
+            {
+              "claim_text": "Gross profit increased 20% year over year.",
+              "canonical_metric_name": "gross_profit",
+              "claim_type": "percentage_change",
+              "direction": "increase",
+              "reported_value": null,
+              "reported_unit": null,
+              "reported_change": "20",
+              "reported_change_unit": "percent",
+              "comparison_basis": "same_period_prior_year",
+              "confidence": "0.95"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:31:46.542696+00:00",
+            "prediction": [
+              {
+                "claim_text": "Gross profit increased 20% year over year.",
+                "canonical_metric_name": "gross_profit",
+                "claim_type": "percentage_change",
+                "direction": "increase",
+                "reported_value": null,
+                "reported_unit": null,
+                "reported_change": "20.0",
+                "reported_change_unit": "percent",
+                "comparison_basis": "prior_year",
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:31:46.542089+00:00",
+              "latency_ms": 14554.673,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 815,
+              "output_tokens": 1372,
+              "total_tokens": 2187,
+              "batch_size": 8,
+              "response_id": "X2m7aouME-ayjuMPwJmJgAs"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "pct-007": {
+          "id": "pct-007",
+          "input": {
+            "text": "Net income increased 8.5% year over year.",
+            "category": "percentage_change"
+          },
+          "expected": {
+            "canonical_metric": "net_income",
+            "claim_type": "percentage_change"
+          },
+          "baseline": [
+            {
+              "claim_text": "Net income increased 8.5% year over year.",
+              "canonical_metric_name": "net_income",
+              "claim_type": "percentage_change",
+              "direction": "increase",
+              "reported_value": null,
+              "reported_unit": null,
+              "reported_change": "8.5",
+              "reported_change_unit": "percent",
+              "comparison_basis": "same_period_prior_year",
+              "confidence": "0.95"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:31:46.542726+00:00",
+            "prediction": [
+              {
+                "claim_text": "Net income increased 8.5% year over year.",
+                "canonical_metric_name": "net_income",
+                "claim_type": "percentage_change",
+                "direction": "increase",
+                "reported_value": null,
+                "reported_unit": null,
+                "reported_change": "8.5",
+                "reported_change_unit": "percent",
+                "comparison_basis": "prior_year",
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:31:46.542089+00:00",
+              "latency_ms": 14554.673,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 815,
+              "output_tokens": 1372,
+              "total_tokens": 2187,
+              "batch_size": 8,
+              "response_id": "X2m7aouME-ayjuMPwJmJgAs"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "pct-009": {
+          "id": "pct-009",
+          "input": {
+            "text": "Diluted EPS increased 14% year over year.",
+            "category": "percentage_change"
+          },
+          "expected": {
+            "canonical_metric": "diluted_eps",
+            "claim_type": "percentage_change"
+          },
+          "baseline": [
+            {
+              "claim_text": "Diluted EPS increased 14% year over year.",
+              "canonical_metric_name": "diluted_eps",
+              "claim_type": "percentage_change",
+              "direction": "increase",
+              "reported_value": null,
+              "reported_unit": null,
+              "reported_change": "14",
+              "reported_change_unit": "percent",
+              "comparison_basis": "same_period_prior_year",
+              "confidence": "0.95"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:31:46.542752+00:00",
+            "prediction": [
+              {
+                "claim_text": "Diluted EPS increased 14% year over year.",
+                "canonical_metric_name": "diluted_eps",
+                "claim_type": "percentage_change",
+                "direction": "increase",
+                "reported_value": null,
+                "reported_unit": null,
+                "reported_change": "14.0",
+                "reported_change_unit": "percent",
+                "comparison_basis": "prior_year",
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:31:46.542089+00:00",
+              "latency_ms": 14554.673,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 815,
+              "output_tokens": 1372,
+              "total_tokens": 2187,
+              "batch_size": 8,
+              "response_id": "X2m7aouME-ayjuMPwJmJgAs"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "pct-011": {
+          "id": "pct-011",
+          "input": {
+            "text": "Long-term debt decreased 4% sequentially.",
+            "category": "percentage_change"
+          },
+          "expected": {
+            "canonical_metric": "long_term_debt",
+            "claim_type": "percentage_change"
+          },
+          "baseline": [
+            {
+              "claim_text": "Long-term debt decreased 4% sequentially.",
+              "canonical_metric_name": "long_term_debt",
+              "claim_type": "percentage_change",
+              "direction": "decrease",
+              "reported_value": null,
+              "reported_unit": null,
+              "reported_change": "4",
+              "reported_change_unit": "percent",
+              "comparison_basis": "prior_quarter",
+              "confidence": "0.95"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:31:46.542777+00:00",
+            "prediction": [
+              {
+                "claim_text": "Long-term debt decreased 4% sequentially.",
+                "canonical_metric_name": "long_term_debt",
+                "claim_type": "percentage_change",
+                "direction": "decrease",
+                "reported_value": null,
+                "reported_unit": null,
+                "reported_change": "4.0",
+                "reported_change_unit": "percent",
+                "comparison_basis": "prior_period",
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:31:46.542089+00:00",
+              "latency_ms": 14554.673,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 815,
+              "output_tokens": 1372,
+              "total_tokens": 2187,
+              "batch_size": 8,
+              "response_id": "X2m7aouME-ayjuMPwJmJgAs"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "pct-013": {
+          "id": "pct-013",
+          "input": {
+            "text": "Revenue decreased 12% year over year.",
+            "category": "percentage_change"
+          },
+          "expected": {
+            "canonical_metric": "revenue",
+            "claim_type": "percentage_change"
+          },
+          "baseline": [
+            {
+              "claim_text": "Revenue decreased 12% year over year.",
+              "canonical_metric_name": "revenue",
+              "claim_type": "percentage_change",
+              "direction": "decrease",
+              "reported_value": null,
+              "reported_unit": null,
+              "reported_change": "12",
+              "reported_change_unit": "percent",
+              "comparison_basis": "same_period_prior_year",
+              "confidence": "0.95"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:31:46.542801+00:00",
+            "prediction": [
+              {
+                "claim_text": "Revenue decreased 12% year over year.",
+                "canonical_metric_name": "revenue",
+                "claim_type": "percentage_change",
+                "direction": "decrease",
+                "reported_value": null,
+                "reported_unit": null,
+                "reported_change": "12.0",
+                "reported_change_unit": "percent",
+                "comparison_basis": "prior_year",
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:31:46.542089+00:00",
+              "latency_ms": 14554.673,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 815,
+              "output_tokens": 1372,
+              "total_tokens": 2187,
+              "batch_size": 8,
+              "response_id": "X2m7aouME-ayjuMPwJmJgAs"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "pct-015": {
+          "id": "pct-015",
+          "input": {
+            "text": "Net earnings grew 0% year over year.",
+            "category": "percentage_change"
+          },
+          "expected": {
+            "canonical_metric": "net_income",
+            "claim_type": "percentage_change"
+          },
+          "baseline": [],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:31:46.542826+00:00",
+            "prediction": [
+              {
+                "claim_text": "Net earnings grew 0% year over year.",
+                "canonical_metric_name": "net_income",
+                "claim_type": "percentage_change",
+                "direction": "unchanged",
+                "reported_value": null,
+                "reported_unit": null,
+                "reported_change": "0.0",
+                "reported_change_unit": "percent",
+                "comparison_basis": "prior_year",
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:31:46.542089+00:00",
+              "latency_ms": 14554.673,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 815,
+              "output_tokens": 1372,
+              "total_tokens": 2187,
+              "batch_size": 8,
+              "response_id": "X2m7aouME-ayjuMPwJmJgAs"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "pp-002": {
+          "id": "pp-002",
+          "input": {
+            "text": "Gross margin increased 1.25 percentage points.",
+            "category": "percentage_point_change"
+          },
+          "expected": {
+            "canonical_metric": "gross_margin",
+            "claim_type": "percentage_point_change"
+          },
+          "baseline": [
+            {
+              "claim_text": "Gross margin increased 1.25 percentage points.",
+              "canonical_metric_name": "gross_margin",
+              "claim_type": "percentage_point_change",
+              "direction": "increase",
+              "reported_value": null,
+              "reported_unit": null,
+              "reported_change": "1.25",
+              "reported_change_unit": "percentage_points",
+              "comparison_basis": null,
+              "confidence": "0.95"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:31:46.542853+00:00",
+            "prediction": [
+              {
+                "claim_text": "Gross margin increased 1.25 percentage points.",
+                "canonical_metric_name": "gross_margin",
+                "claim_type": "percentage_point_change",
+                "direction": "increase",
+                "reported_value": null,
+                "reported_unit": null,
+                "reported_change": "1.25",
+                "reported_change_unit": "percentage_points",
+                "comparison_basis": null,
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:31:46.542089+00:00",
+              "latency_ms": 14554.673,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 815,
+              "output_tokens": 1372,
+              "total_tokens": 2187,
+              "batch_size": 8,
+              "response_id": "X2m7aouME-ayjuMPwJmJgAs"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "pp-004": {
+          "id": "pp-004",
+          "input": {
+            "text": "Operating margin improved by 75 basis points.",
+            "category": "percentage_point_change"
+          },
+          "expected": {
+            "canonical_metric": "operating_income",
+            "claim_type": "percentage_point_change"
+          },
+          "baseline": [
+            {
+              "claim_text": "Operating margin improved by 75 basis points.",
+              "canonical_metric_name": null,
+              "claim_type": "absolute_value",
+              "direction": "increase",
+              "reported_value": "75000000000",
+              "reported_unit": "absolute",
+              "reported_change": null,
+              "reported_change_unit": null,
+              "comparison_basis": null,
+              "confidence": "0.70"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:32:01.098491+00:00",
+            "prediction": [
+              {
+                "claim_text": "Operating margin improved by 75 basis points.",
+                "canonical_metric_name": null,
+                "claim_type": "percentage_point_change",
+                "direction": "increase",
+                "reported_value": null,
+                "reported_unit": null,
+                "reported_change": "0.75",
+                "reported_change_unit": "percentage_points",
+                "comparison_basis": null,
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:32:01.098200+00:00",
+              "latency_ms": 14548.953,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 826,
+              "output_tokens": 1022,
+              "total_tokens": 1848,
+              "batch_size": 8,
+              "response_id": "bWm7auvcOPaIg8UPsJLn-A4"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "pp-006": {
+          "id": "pp-006",
+          "input": {
+            "text": "Gross profit margin improved by 1.0 percentage point.",
+            "category": "percentage_point_change"
+          },
+          "expected": {
+            "canonical_metric": "gross_margin",
+            "claim_type": "percentage_point_change"
+          },
+          "baseline": [
+            {
+              "claim_text": "Gross profit margin improved by 1.0 percentage point.",
+              "canonical_metric_name": null,
+              "claim_type": "percentage_point_change",
+              "direction": "increase",
+              "reported_value": null,
+              "reported_unit": null,
+              "reported_change": "1.0",
+              "reported_change_unit": "percentage_points",
+              "comparison_basis": null,
+              "confidence": "0.70"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:32:01.098548+00:00",
+            "prediction": [
+              {
+                "claim_text": "Gross profit margin improved by 1.0 percentage point.",
+                "canonical_metric_name": "gross_margin",
+                "claim_type": "percentage_point_change",
+                "direction": "increase",
+                "reported_value": null,
+                "reported_unit": null,
+                "reported_change": "1.0",
+                "reported_change_unit": "percentage_points",
+                "comparison_basis": null,
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:32:01.098200+00:00",
+              "latency_ms": 14548.953,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 826,
+              "output_tokens": 1022,
+              "total_tokens": 1848,
+              "batch_size": 8,
+              "response_id": "bWm7auvcOPaIg8UPsJLn-A4"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "pp-008": {
+          "id": "pp-008",
+          "input": {
+            "text": "Gross margin was flat, changing 0 basis points.",
+            "category": "percentage_point_change"
+          },
+          "expected": {
+            "canonical_metric": "gross_margin",
+            "claim_type": "percentage_point_change"
+          },
+          "baseline": [
+            {
+              "claim_text": "Gross margin was flat, changing 0 basis points.",
+              "canonical_metric_name": "gross_margin",
+              "claim_type": "absolute_value",
+              "direction": "unchanged",
+              "reported_value": "0",
+              "reported_unit": "absolute",
+              "reported_change": null,
+              "reported_change_unit": null,
+              "comparison_basis": null,
+              "confidence": "0.95"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:32:01.098569+00:00",
+            "prediction": [
+              {
+                "claim_text": "Gross margin was flat, changing 0 basis points.",
+                "canonical_metric_name": "gross_margin",
+                "claim_type": "percentage_point_change",
+                "direction": "unchanged",
+                "reported_value": null,
+                "reported_unit": null,
+                "reported_change": "0.0",
+                "reported_change_unit": "percentage_points",
+                "comparison_basis": null,
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:32:01.098200+00:00",
+              "latency_ms": 14548.953,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 826,
+              "output_tokens": 1022,
+              "total_tokens": 1848,
+              "batch_size": 8,
+              "response_id": "bWm7auvcOPaIg8UPsJLn-A4"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "pp-010": {
+          "id": "pp-010",
+          "input": {
+            "text": "Gross margin improved 120 bps year over year.",
+            "category": "percentage_point_change"
+          },
+          "expected": {
+            "canonical_metric": "gross_margin",
+            "claim_type": "percentage_point_change"
+          },
+          "baseline": [
+            {
+              "claim_text": "Gross margin improved 120 bps year over year.",
+              "canonical_metric_name": "gross_margin",
+              "claim_type": "percentage_point_change",
+              "direction": "increase",
+              "reported_value": null,
+              "reported_unit": null,
+              "reported_change": "1.2",
+              "reported_change_unit": "percentage_points",
+              "comparison_basis": "same_period_prior_year",
+              "confidence": "0.95"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:32:01.098588+00:00",
+            "prediction": [
+              {
+                "claim_text": "Gross margin improved 120 bps year over year.",
+                "canonical_metric_name": "gross_margin",
+                "claim_type": "percentage_point_change",
+                "direction": "increase",
+                "reported_value": null,
+                "reported_unit": null,
+                "reported_change": "1.2",
+                "reported_change_unit": "percentage_points",
+                "comparison_basis": "prior_year",
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:32:01.098200+00:00",
+              "latency_ms": 14548.953,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 826,
+              "output_tokens": 1022,
+              "total_tokens": 1848,
+              "batch_size": 8,
+              "response_id": "bWm7auvcOPaIg8UPsJLn-A4"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "period-002": {
+          "id": "period-002",
+          "input": {
+            "text": "Revenue for the six months ended June 30 was $220 million.",
+            "category": "period_resolution"
+          },
+          "expected": {
+            "canonical_metric": "revenue",
+            "claim_type": null
+          },
+          "baseline": [
+            {
+              "claim_text": "Revenue for the six months ended June 30 was $220 million.",
+              "canonical_metric_name": "revenue",
+              "claim_type": "absolute_value",
+              "direction": null,
+              "reported_value": "30",
+              "reported_unit": "absolute",
+              "reported_change": null,
+              "reported_change_unit": null,
+              "comparison_basis": "year_to_date",
+              "confidence": "0.95"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:32:01.098695+00:00",
+            "prediction": [
+              {
+                "claim_text": "Revenue for the six months ended June 30 was $220 million.",
+                "canonical_metric_name": "revenue",
+                "claim_type": "absolute_value",
+                "direction": "positive",
+                "reported_value": "220000000",
+                "reported_unit": "USD",
+                "reported_change": null,
+                "reported_change_unit": null,
+                "comparison_basis": null,
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:32:01.098200+00:00",
+              "latency_ms": 14548.953,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 826,
+              "output_tokens": 1022,
+              "total_tokens": 1848,
+              "batch_size": 8,
+              "response_id": "bWm7auvcOPaIg8UPsJLn-A4"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "period-004": {
+          "id": "period-004",
+          "input": {
+            "text": "Long-term debt was $800 million as of period end.",
+            "category": "period_resolution"
+          },
+          "expected": {
+            "canonical_metric": "long_term_debt",
+            "claim_type": null
+          },
+          "baseline": [
+            {
+              "claim_text": "Long-term debt was $800 million as of period end.",
+              "canonical_metric_name": "long_term_debt",
+              "claim_type": "absolute_value",
+              "direction": null,
+              "reported_value": "800000000",
+              "reported_unit": "USD",
+              "reported_change": null,
+              "reported_change_unit": null,
+              "comparison_basis": null,
+              "confidence": "0.95"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:32:01.098744+00:00",
+            "prediction": [
+              {
+                "claim_text": "Long-term debt was $800 million as of period end.",
+                "canonical_metric_name": "long_term_debt",
+                "claim_type": "absolute_value",
+                "direction": "positive",
+                "reported_value": "800000000",
+                "reported_unit": "USD",
+                "reported_change": null,
+                "reported_change_unit": null,
+                "comparison_basis": null,
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:32:01.098200+00:00",
+              "latency_ms": 14548.953,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 826,
+              "output_tokens": 1022,
+              "total_tokens": 1848,
+              "batch_size": 8,
+              "response_id": "bWm7auvcOPaIg8UPsJLn-A4"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "period-006": {
+          "id": "period-006",
+          "input": {
+            "text": "Revenue increased 4% sequentially.",
+            "category": "period_resolution"
+          },
+          "expected": {
+            "canonical_metric": "revenue",
+            "claim_type": null
+          },
+          "baseline": [
+            {
+              "claim_text": "Revenue increased 4% sequentially.",
+              "canonical_metric_name": "revenue",
+              "claim_type": "percentage_change",
+              "direction": "increase",
+              "reported_value": null,
+              "reported_unit": null,
+              "reported_change": "4",
+              "reported_change_unit": "percent",
+              "comparison_basis": "prior_quarter",
+              "confidence": "0.95"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:32:01.098771+00:00",
+            "prediction": [
+              {
+                "claim_text": "Revenue increased 4% sequentially.",
+                "canonical_metric_name": "revenue",
+                "claim_type": "percentage_change",
+                "direction": "increase",
+                "reported_value": null,
+                "reported_unit": null,
+                "reported_change": "4.0",
+                "reported_change_unit": "percent",
+                "comparison_basis": "prior_period",
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:32:01.098200+00:00",
+              "latency_ms": 14548.953,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 826,
+              "output_tokens": 1022,
+              "total_tokens": 1848,
+              "batch_size": 8,
+              "response_id": "bWm7auvcOPaIg8UPsJLn-A4"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "period-008": {
+          "id": "period-008",
+          "input": {
+            "text": "Net income for the year to date was $10 million.",
+            "category": "period_resolution"
+          },
+          "expected": {
+            "canonical_metric": "net_income",
+            "claim_type": null
+          },
+          "baseline": [
+            {
+              "claim_text": "Net income for the year to date was $10 million.",
+              "canonical_metric_name": "net_income",
+              "claim_type": "absolute_value",
+              "direction": null,
+              "reported_value": "10000000",
+              "reported_unit": "USD",
+              "reported_change": null,
+              "reported_change_unit": null,
+              "comparison_basis": "year_to_date",
+              "confidence": "0.95"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:32:01.098794+00:00",
+            "prediction": [
+              {
+                "claim_text": "Net income for the year to date was $10 million.",
+                "canonical_metric_name": "net_income",
+                "claim_type": "absolute_value",
+                "direction": "positive",
+                "reported_value": "10000000",
+                "reported_unit": "USD",
+                "reported_change": null,
+                "reported_change_unit": null,
+                "comparison_basis": null,
+                "confidence": "1.0"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:32:01.098200+00:00",
+              "latency_ms": 14548.953,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 826,
+              "output_tokens": 1022,
+              "total_tokens": 1848,
+              "batch_size": 8,
+              "response_id": "bWm7auvcOPaIg8UPsJLn-A4"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "period-010": {
+          "id": "period-010",
+          "input": {
+            "text": "Cash increased during the quarter.",
+            "category": "period_resolution"
+          },
+          "expected": {
+            "canonical_metric": "cash_and_cash_equivalents",
+            "claim_type": null
+          },
+          "baseline": [
+            {
+              "claim_text": "Cash increased during the quarter.",
+              "canonical_metric_name": "cash_and_cash_equivalents",
+              "claim_type": "directional_change",
+              "direction": "increase",
+              "reported_value": null,
+              "reported_unit": null,
+              "reported_change": null,
+              "reported_change_unit": null,
+              "comparison_basis": null,
+              "confidence": "0.70"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:32:14.714979+00:00",
+            "prediction": [
+              {
+                "claim_text": "Cash increased during the quarter.",
+                "canonical_metric_name": null,
+                "claim_type": "directional_change",
+                "direction": "increase",
+                "reported_value": null,
+                "reported_unit": null,
+                "reported_change": null,
+                "reported_change_unit": null,
+                "comparison_basis": "prior_quarter",
+                "confidence": "0.9"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:32:14.714678+00:00",
+              "latency_ms": 13611.322,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 735,
+              "output_tokens": 505,
+              "total_tokens": 1240,
+              "batch_size": 6,
+              "response_id": "fWm7aoaCDZSxjuMP2O_JuAU"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "error-001": {
+          "id": "error-001",
+          "input": {
+            "text": "Income increased 5%.",
+            "category": "ambiguous_or_error"
+          },
+          "expected": {
+            "canonical_metric": null,
+            "claim_type": null
+          },
+          "baseline": [
+            {
+              "claim_text": "Income increased 5%.",
+              "canonical_metric_name": null,
+              "claim_type": "percentage_change",
+              "direction": "increase",
+              "reported_value": null,
+              "reported_unit": null,
+              "reported_change": "5",
+              "reported_change_unit": "percent",
+              "comparison_basis": null,
+              "confidence": "0.70"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:32:14.715003+00:00",
+            "prediction": [],
+            "inference": {},
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "error-003": {
+          "id": "error-003",
+          "input": {
+            "text": "Revenue increased meaningfully.",
+            "category": "ambiguous_or_error"
+          },
+          "expected": {
+            "canonical_metric": "revenue",
+            "claim_type": null
+          },
+          "baseline": [
+            {
+              "claim_text": "Revenue increased meaningfully.",
+              "canonical_metric_name": "revenue",
+              "claim_type": "directional_change",
+              "direction": "increase",
+              "reported_value": null,
+              "reported_unit": null,
+              "reported_change": null,
+              "reported_change_unit": null,
+              "comparison_basis": null,
+              "confidence": "0.70"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:32:14.715028+00:00",
+            "prediction": [
+              {
+                "claim_text": "Revenue increased meaningfully.",
+                "canonical_metric_name": "revenue",
+                "claim_type": "directional_change",
+                "direction": "increase",
+                "reported_value": null,
+                "reported_unit": null,
+                "reported_change": null,
+                "reported_change_unit": null,
+                "comparison_basis": null,
+                "confidence": "0.9"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:32:14.714678+00:00",
+              "latency_ms": 13611.322,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 735,
+              "output_tokens": 505,
+              "total_tokens": 1240,
+              "batch_size": 6,
+              "response_id": "fWm7aoaCDZSxjuMP2O_JuAU"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "error-005": {
+          "id": "error-005",
+          "input": {
+            "text": "Revenue increased 12% but only share facts are available.",
+            "category": "ambiguous_or_error"
+          },
+          "expected": {
+            "canonical_metric": "revenue",
+            "claim_type": null
+          },
+          "baseline": [
+            {
+              "claim_text": "Revenue increased 12% but only share facts are available.",
+              "canonical_metric_name": "revenue",
+              "claim_type": "percentage_change",
+              "direction": "increase",
+              "reported_value": null,
+              "reported_unit": null,
+              "reported_change": "12",
+              "reported_change_unit": "percent",
+              "comparison_basis": null,
+              "confidence": "0.95"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:32:14.715060+00:00",
+            "prediction": [
+              {
+                "claim_text": "Revenue increased 12% but only share facts are available.",
+                "canonical_metric_name": "revenue",
+                "claim_type": "percentage_change",
+                "direction": "increase",
+                "reported_value": null,
+                "reported_unit": null,
+                "reported_change": "12.0",
+                "reported_change_unit": "percent",
+                "comparison_basis": null,
+                "confidence": "0.9"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:32:14.714678+00:00",
+              "latency_ms": 13611.322,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 735,
+              "output_tokens": 505,
+              "total_tokens": 1240,
+              "batch_size": 6,
+              "response_id": "fWm7aoaCDZSxjuMP2O_JuAU"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "error-007": {
+          "id": "error-007",
+          "input": {
+            "text": "Gross margin increased 12% but revenue is zero.",
+            "category": "ambiguous_or_error"
+          },
+          "expected": {
+            "canonical_metric": "gross_margin",
+            "claim_type": null
+          },
+          "baseline": [
+            {
+              "claim_text": "Gross margin increased 12% but revenue is zero.",
+              "canonical_metric_name": null,
+              "claim_type": "percentage_change",
+              "direction": "increase",
+              "reported_value": null,
+              "reported_unit": null,
+              "reported_change": "12",
+              "reported_change_unit": "percent",
+              "comparison_basis": null,
+              "confidence": "0.70"
+            }
+          ],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:32:14.715083+00:00",
+            "prediction": [
+              {
+                "claim_text": "Gross margin increased 12% but revenue is zero.",
+                "canonical_metric_name": "gross_margin",
+                "claim_type": "percentage_change",
+                "direction": "increase",
+                "reported_value": null,
+                "reported_unit": null,
+                "reported_change": "12.0",
+                "reported_change_unit": "percent",
+                "comparison_basis": null,
+                "confidence": "0.9"
+              }
+            ],
+            "inference": {
+              "provider": "openai_compatible",
+              "provider_type": "financial_claim_extractor",
+              "model": "gemini-3.5-flash-lite",
+              "model_version": "gemini-3.5-flash-lite",
+              "prompt_version": "financial-claim-extraction-batch-json-v2+44c2dfaf",
+              "created_at": "2026-09-29T07:32:14.714678+00:00",
+              "latency_ms": 13611.322,
+              "success": true,
+              "parse_status": "valid",
+              "retry_count": 0,
+              "input_tokens": 735,
+              "output_tokens": 505,
+              "total_tokens": 1240,
+              "batch_size": 6,
+              "response_id": "fWm7aoaCDZSxjuMP2O_JuAU"
+            },
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        },
+        "error-009": {
+          "id": "error-009",
+          "input": {
+            "text": "Adjusted EBITDA increased 10%.",
+            "category": "ambiguous_or_error"
+          },
+          "expected": {
+            "canonical_metric": null,
+            "claim_type": null
+          },
+          "baseline": [],
+          "gemini": {
+            "status": "ok",
+            "via": "batch",
+            "run_at": "2026-09-29T07:32:14.715095+00:00",
+            "prediction": [],
+            "inference": {},
+            "error_type": null,
+            "error_subtype": null,
+            "error_status_code": null,
+            "retry_after_seconds": null
+          }
+        }
+      },
+      "metrics": {
+        "n_total": 30,
+        "n_scored": 30,
+        "n_remaining": 0,
+        "provider_status_counts": {
+          "ok": 30
+        },
+        "systems": {
+          "baseline": {
+            "canonical_metric_accuracy": {
+              "value": 0.8667,
+              "n": 30,
+              "status": "evaluated"
+            },
+            "claim_type_accuracy": {
+              "value": 0.85,
+              "n": 20,
+              "status": "evaluated"
+            },
+            "exact_match_rate": {
+              "value": 0.8,
+              "n": 20,
+              "status": "evaluated"
+            },
+            "claim_recall_on_items_with_a_metric": {
+              "value": 0.9643,
+              "n": 28,
+              "status": "evaluated"
+            },
+            "spurious_metric_rate_on_items_without_a_metric": {
+              "value": 0.0,
+              "n": 2,
+              "status": "evaluated"
+            },
+            "metric_accuracy_by_category": {
+              "absolute_value": {
+                "value": 1.0,
+                "n": 7,
+                "status": "evaluated"
+              },
+              "ambiguous_or_error": {
+                "value": 0.8,
+                "n": 5,
+                "status": "evaluated"
+              },
+              "percentage_change": {
+                "value": 0.875,
+                "n": 8,
+                "status": "evaluated"
+              },
+              "percentage_point_change": {
+                "value": 0.6,
+                "n": 5,
+                "status": "evaluated"
+              },
+              "period_resolution": {
+                "value": 1.0,
+                "n": 5,
+                "status": "evaluated"
+              }
+            }
+          },
+          "gemini": {
+            "canonical_metric_accuracy": {
+              "value": 0.9333,
+              "n": 30,
+              "status": "evaluated"
+            },
+            "claim_type_accuracy": {
+              "value": 1.0,
+              "n": 20,
+              "status": "evaluated"
+            },
+            "exact_match_rate": {
+              "value": 0.95,
+              "n": 20,
+              "status": "evaluated"
+            },
+            "claim_recall_on_items_with_a_metric": {
+              "value": 1.0,
+              "n": 28,
+              "status": "evaluated"
+            },
+            "spurious_metric_rate_on_items_without_a_metric": {
+              "value": 0.0,
+              "n": 2,
+              "status": "evaluated"
+            },
+            "metric_accuracy_by_category": {
+              "absolute_value": {
+                "value": 1.0,
+                "n": 7,
+                "status": "evaluated"
+              },
+              "ambiguous_or_error": {
+                "value": 1.0,
+                "n": 5,
+                "status": "evaluated"
+              },
+              "percentage_change": {
+                "value": 1.0,
+                "n": 8,
+                "status": "evaluated"
+              },
+              "percentage_point_change": {
+                "value": 0.8,
+                "n": 5,
+                "status": "evaluated"
+              },
+              "period_resolution": {
+                "value": 0.8,
+                "n": 5,
+                "status": "evaluated"
+              }
+            }
+          },
+          "hybrid": {
+            "canonical_metric_accuracy": {
+              "value": 0.9,
+              "n": 30,
+              "status": "evaluated"
+            },
+            "claim_type_accuracy": {
+              "value": 0.9,
+              "n": 20,
+              "status": "evaluated"
+            },
+            "exact_match_rate": {
+              "value": 0.85,
+              "n": 20,
+              "status": "evaluated"
+            },
+            "claim_recall_on_items_with_a_metric": {
+              "value": 1.0,
+              "n": 28,
+              "status": "evaluated"
+            },
+            "spurious_metric_rate_on_items_without_a_metric": {
+              "value": 0.0,
+              "n": 2,
+              "status": "evaluated"
+            },
+            "metric_accuracy_by_category": {
+              "absolute_value": {
+                "value": 1.0,
+                "n": 7,
+                "status": "evaluated"
+              },
+              "ambiguous_or_error": {
+                "value": 0.8,
+                "n": 5,
+                "status": "evaluated"
+              },
+              "percentage_change": {
+                "value": 1.0,
+                "n": 8,
+                "status": "evaluated"
+              },
+              "percentage_point_change": {
+                "value": 0.6,
+                "n": 5,
+                "status": "evaluated"
+              },
+              "period_resolution": {
+                "value": 1.0,
+                "n": 5,
+                "status": "evaluated"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "usage": {
+    "provider_chat_requests": 4,
+    "requests_reporting_usage": 4,
+    "input_tokens": 3186,
+    "output_tokens": 4271,
+    "total_tokens": 7457,
+    "note": "Token counts are provider-reported and only summed where reported."
+  },
+  "real_sec_claim_extraction": {
+    "status": "not_evaluated",
+    "approved_financial_claim_records": 1,
+    "records_with_stored_input_text": 0,
+    "approved_records_all_tasks": 10,
+    "reason": "The real-SEC benchmark stores identifiers and locators, not filing text, and only 1 human-approved record(s) are financial-claim records; none stores the passage to extract from. Claim extraction is therefore scored on the author-written Phase 4 fixture instead."
+  },
+  "phase4_metrics": {
+    "claim_extraction.canonical_metric_accuracy": {
+      "value": 0.9333,
+      "n": 30,
+      "status": "evaluated",
+      "system": "gemini:gemini-3.5-flash-lite"
+    },
+    "claim_extraction.claim_type_accuracy": {
+      "value": 1.0,
+      "n": 20,
+      "status": "evaluated",
+      "system": "gemini:gemini-3.5-flash-lite"
+    },
+    "xbrl_resolution.concept_selection_accuracy": {
+      "value": "not_evaluated",
+      "n": 0,
+      "status": "not_evaluated",
+      "reason": "Needs XBRL facts and verifier predictions; not produced by a provider evaluation."
+    },
+    "xbrl_resolution.period_resolution_accuracy": {
+      "value": "not_evaluated",
+      "n": 0,
+      "status": "not_evaluated",
+      "reason": "Needs XBRL facts and verifier predictions; not produced by a provider evaluation."
+    },
+    "xbrl_resolution.unit_selection_accuracy": {
+      "value": "not_evaluated",
+      "n": 0,
+      "status": "not_evaluated",
+      "reason": "Needs XBRL facts and verifier predictions; not produced by a provider evaluation."
+    },
+    "verification_status": {
+      "value": "not_evaluated",
+      "n": 0,
+      "status": "not_evaluated",
+      "reason": "Needs XBRL facts and verifier predictions; not produced by a provider evaluation."
+    },
+    "unsafe_period_match_rate": {
+      "value": "not_evaluated",
+      "n": 0,
+      "status": "not_evaluated",
+      "reason": "Needs XBRL facts and verifier predictions; not produced by a provider evaluation."
+    },
+    "unsafe_unit_acceptance_rate": {
+      "value": "not_evaluated",
+      "n": 0,
+      "status": "not_evaluated",
+      "reason": "Needs XBRL facts and verifier predictions; not produced by a provider evaluation."
+    },
+    "deterministic_calculation.reproducible_calculation_rate": {
+      "value": "not_evaluated",
+      "n": 0,
+      "status": "not_evaluated",
+      "reason": "Needs XBRL facts and verifier predictions; not produced by a provider evaluation."
+    }
+  },
+  "remaining_items": {
+    "claim_extraction": 0
+  },
+  "control": {
+    "provider_calls_issued": 4,
+    "max_requests": null,
+    "max_consecutive_provider_errors": 2
+  }
+}
