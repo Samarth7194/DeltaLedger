@@ -35,6 +35,12 @@ class FakeRun:
     failure_code: str | None = None
     failure_message: str | None = None
     failure_node: str | None = None
+    last_heartbeat_at: datetime | None = None
+    started_at: datetime | None = None
+    # "Just created": with no heartbeat/started_at recorded, this is what a
+    # stale-eligible status falls back to for its age - a fresh default here
+    # keeps every existing non-stale-focused test's fixture not-stale too.
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass

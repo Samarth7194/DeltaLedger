@@ -85,6 +85,25 @@ The Postgres integration suite includes a focused interrupt/resume proof that
 recreates the graph runtime and confirms work completed before the interrupt is
 not rerun after resume.
 
+### Worker Heartbeat And Stale-Run Recovery
+
+A deliberate pause (`awaiting_human_review`) is not the only way a run can stop making
+progress: the worker process itself can die mid-node (a crash, an out-of-memory kill, a
+provider outage that outlasts its retries) before its own exception handler ever runs, leaving
+the run stuck at whatever in-progress status it last had. `analysis_runs.last_heartbeat_at` is
+touched at every node boundary (`WorkflowRepository.set_run_status`) and, for the two batched
+stages, at every stage-batch transition too (`StageBatchRepository.mark_processing` /
+`mark_completed` / `mark_failed`), so a genuinely stuck run's heartbeat visibly stops advancing
+while a slow-but-alive one keeps touching it every batch.
+
+A run counts as stale (see `app/services/stale_run_recovery.py`) when its status is still
+in-progress (not a terminal status, and not `awaiting_human_review`), its heartbeat has not
+been renewed for `STALE_RUN_HEARTBEAT_THRESHOLD_SECONDS` (default 600s), and its Postgres
+advisory lock is free right now (`app/db/session.py is_advisory_lock_free`). `POST
+/analyses/{id}/retry` accepts a stale run the same way it already accepted a failed one -
+re-enqueuing the same run id, never creating a new row - and refuses with `409` if a worker
+still genuinely holds the lock. The run detail API reports this as `progress.stale`.
+
 ## Node Contracts
 
 Each node logs `node_started` and `node_completed` or `node_failed`, updates

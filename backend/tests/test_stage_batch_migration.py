@@ -34,7 +34,10 @@ def _sql(direction: str, span: str) -> str:
 def test_there_is_exactly_one_head_and_it_chains_from_the_previous_revision() -> None:
     script = ScriptDirectory.from_config(_config())
 
-    assert script.get_heads() == [REVISION]
+    # A single linear history, not a branch - regardless of what has been added
+    # on top of REVISION since. REVISION's own link to its parent is what this
+    # file is actually about and is checked unconditionally below.
+    assert len(script.get_heads()) == 1
     revision = script.get_revision(REVISION)
     assert revision.down_revision == PARENT
     assert len(REVISION) <= 32  # fits alembic_version.version_num

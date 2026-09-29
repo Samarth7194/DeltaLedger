@@ -70,20 +70,24 @@ export default function AnalysisWorkspacePage() {
   const evidence = useContradictionEvidence(evidenceFindingId);
 
   const runStatus = analysis.data?.status;
+  const runStale = analysis.data?.progress.stale === true;
   const refetchAnalysis = analysis.refetch;
   useEffect(() => {
-    // After "Resume Analysis" the run stays `failed` until the worker picks it
-    // up; poll briefly so the page follows it, and stop once it is running.
+    // After "Resume"/"Retry" a failed run stays `failed`, and a stalled run
+    // keeps its old in-progress status and `stale: true`, until the worker
+    // picks it back up; poll briefly so the page follows it, and stop once
+    // neither condition holds any more (it started running again, or reached
+    // a terminal status).
     if (!resumeRequested) {
       return;
     }
-    if (runStatus !== "failed") {
+    if (runStatus !== "failed" && !runStale) {
       setResumeRequested(false);
       return;
     }
     const timer = setInterval(() => void refetchAnalysis(), 3_000);
     return () => clearInterval(timer);
-  }, [resumeRequested, runStatus, refetchAnalysis]);
+  }, [resumeRequested, runStatus, runStale, refetchAnalysis]);
 
   if (analysis.isLoading) {
     return <SkeletonRows rows={8} />;

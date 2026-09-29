@@ -167,6 +167,12 @@ class Settings(BaseSettings):
     workflow_review_low_confidence_threshold: float = 0.70
     workflow_review_ambiguous_financial_claims: bool = True
     workflow_max_node_attempts: int = 3
+    # How long a non-terminal run's heartbeat may go unrenewed before it is
+    # treated as stale (the worker processing it likely died) and offered for
+    # retry. Must stay comfortably above the longest normal gap between two
+    # heartbeat touches (a single provider call/retry backoff), or a run that
+    # is genuinely still being worked on would be misreported as stale.
+    stale_run_heartbeat_threshold_seconds: float = 600.0
 
     @field_validator("sec_user_agent")
     @classmethod
@@ -222,6 +228,10 @@ class Settings(BaseSettings):
         _require_positive_int(
             "ANALYSIS_WORKFLOW_TIME_LIMIT_SECONDS",
             int(self.analysis_workflow_time_limit_seconds),
+        )
+        _require_positive_int(
+            "STALE_RUN_HEARTBEAT_THRESHOLD_SECONDS",
+            int(self.stale_run_heartbeat_threshold_seconds),
         )
         _require_unit_interval("SECTION_MATCH_MIN_SCORE", self.section_match_min_score)
         _require_unit_interval("PASSAGE_ALIGNMENT_MIN_SCORE", self.passage_alignment_min_score)

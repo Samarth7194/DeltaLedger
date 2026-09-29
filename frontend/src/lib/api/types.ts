@@ -144,6 +144,11 @@ export type AnalysisProgress = {
   completed_nodes: string[];
   progress_percent: number;
   retryable?: boolean | null;
+  /** True when the run is still "in progress" by status but its worker
+   * heartbeat has gone stale (the worker that was processing it likely died
+   * before it could mark the run failed). Distinct from `status === "failed"`;
+   * see docs/end-to-end-testing.md. */
+  stale?: boolean;
   stages?: AnalysisStageProgress[];
 };
 

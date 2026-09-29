@@ -263,12 +263,22 @@ provider-reported and `null` when the provider reported nothing;
 project's own planning limits, not the provider's quota. Nothing here is
 estimated from elapsed time.
 
-### Resuming a failed analysis
+### Resuming a failed or stalled analysis
 
 `POST /api/v1/analyses/{id}/retry` (reviewer role) re-enqueues the **same** run
-after a failure - it never creates a run. It returns `202` with the run id and
-job id, and is refused with `422` unless the run is `failed` and its failure is
-retryable (`progress.retryable` is `true`); a run awaiting human review is
-resumed from its review instead (`POST /analyses/{id}/resume`). Completed
-batches are never repeated: the workflow continues from the first incomplete
-part.
+after a failure - it never creates a run. It returns `202` with the run id, job
+id, and `stale` (whether this was a stale-recovery retry rather than a
+failed-run retry), and is refused with `422` unless the run is `failed` with a
+retryable failure, or stale (see below); a run awaiting human review is resumed
+from its review instead (`POST /analyses/{id}/resume`). Completed batches are
+never repeated: the workflow continues from the first incomplete part.
+
+A run also becomes retryable without ever reaching `failed`, if its worker
+process died before it could mark the run failed: `progress.stale` is `true`
+when the run's status is still in-progress but its heartbeat
+(`analysis_runs.last_heartbeat_at`, touched at every node and stage-batch
+transition) has gone stale (`STALE_RUN_HEARTBEAT_THRESHOLD_SECONDS`, default
+600s). `progress.retryable` is `true` in that case too, so the same client
+logic that offers Retry for a failed run also offers it for a stalled one. If a
+worker genuinely still holds the run's advisory lock when retry is attempted,
+the request is refused with `409`, not queued behind it.

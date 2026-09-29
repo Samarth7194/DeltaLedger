@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from app.db.session import held_advisory_lock
+from app.db.session import held_advisory_lock, is_advisory_lock_free
 
 
 class _FakeCursorResult:
@@ -122,3 +122,31 @@ async def test_held_advisory_lock_cancels_its_keepalive_task_on_exit(
     assert all(task.done() for task in tasks)
     # The keepalive fired at least once during the 0.03s window.
     assert any("SELECT 1" in call for call in fake_engine.connection.executed)
+
+
+@pytest.mark.asyncio
+async def test_is_advisory_lock_free_returns_true_and_releases_what_it_acquired(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_engine = _FakeEngine(lock_acquired=True)
+    monkeypatch.setattr("app.db.session.engine", fake_engine)
+
+    assert await is_advisory_lock_free(123) is True
+
+    # It only ever probed: acquired then immediately released, never held.
+    assert any("pg_try_advisory_lock" in call for call in fake_engine.connection.executed)
+    assert any("pg_advisory_unlock" in call for call in fake_engine.connection.executed)
+    assert fake_engine.connection.closed is True
+
+
+@pytest.mark.asyncio
+async def test_is_advisory_lock_free_returns_false_and_never_unlocks_someone_elses_lock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_engine = _FakeEngine(lock_acquired=False)
+    monkeypatch.setattr("app.db.session.engine", fake_engine)
+
+    assert await is_advisory_lock_free(123) is False
+
+    assert not any("pg_advisory_unlock" in call for call in fake_engine.connection.executed)
+    assert fake_engine.connection.closed is True

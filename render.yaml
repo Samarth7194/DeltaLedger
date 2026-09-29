@@ -89,6 +89,8 @@ services:
         value: "true"
       - key: ANALYSIS_WORKFLOW_TIME_LIMIT_SECONDS
         value: "10800"
+      - key: STALE_RUN_HEARTBEAT_THRESHOLD_SECONDS
+        value: "600"
 
   - type: worker
     name: deltaledger-worker
@@ -178,3 +180,5 @@ services:
         value: "true"
       - key: ANALYSIS_WORKFLOW_TIME_LIMIT_SECONDS
         value: "10800"
+      - key: STALE_RUN_HEARTBEAT_THRESHOLD_SECONDS
+        value: "600"

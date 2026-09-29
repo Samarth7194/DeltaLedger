@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   RecoveryNotice,
   canResume,
+  isStalled,
   providerPauseMessage
 } from "@/components/analyses/analysis-recovery";
 import { AnalysisStageProgress } from "@/components/analyses/analysis-stage-progress";
@@ -315,6 +316,73 @@ describe("resume analysis UX", () => {
     for (const type of ["rate_limited_short_term", "timeout", null, "unexpected_thing"]) {
       expect(providerPauseMessage(type)).not.toMatch(/traceback|exception|stack|Error:/i);
     }
+  });
+});
+
+function staleRun(overrides: Partial<AnalysisRun> = {}): AnalysisRun {
+  return run({
+    status: "verifying_claims",
+    current_node: "verify_financial_claims",
+    failure_code: null,
+    failure_message: null,
+    failure_node: null,
+    progress: progress({ status: "verifying_claims", retryable: true, stale: true }),
+    ...overrides
+  });
+}
+
+describe("stalled run recovery UX", () => {
+  it("treats a stale in-progress run as recoverable, distinct from a failed one", () => {
+    expect(isStalled(staleRun())).toBe(true);
+    expect(isStalled(run())).toBe(false); // failed, not stale
+    expect(
+      isStalled(run({ status: "verifying_claims", progress: { ...run().progress, stale: false } }))
+    ).toBe(false);
+  });
+
+  it("shows a distinct 'stalled — recoverable' notice with a Retry button", () => {
+    render(<RecoveryNotice run={staleRun()} resuming={false} resumeRequested={false} onResume={vi.fn()} />);
+
+    expect(screen.getByText("Analysis stalled — recoverable")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /retry analysis/i })).toBeInTheDocument();
+    // Not the failed-run copy.
+    expect(screen.queryByText("Analysis paused")).not.toBeInTheDocument();
+    expect(screen.queryByText("Analysis failed")).not.toBeInTheDocument();
+  });
+
+  it("calls the same onResume handler on click, and shows loading/requested states", async () => {
+    const onResume = vi.fn();
+    const { rerender } = render(
+      <RecoveryNotice run={staleRun()} resuming={false} resumeRequested={false} onResume={onResume} />
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /retry analysis/i }));
+    expect(onResume).toHaveBeenCalledTimes(1);
+
+    rerender(<RecoveryNotice run={staleRun()} resuming resumeRequested={false} onResume={onResume} />);
+    expect(screen.getByRole("button", { name: /retrying/i })).toBeDisabled();
+
+    rerender(<RecoveryNotice run={staleRun()} resuming={false} resumeRequested onResume={onResume} />);
+    expect(screen.getByRole("button", { name: /retry requested/i })).toBeDisabled();
+    expect(screen.getByText(/continue from the first incomplete part/)).toBeInTheDocument();
+  });
+
+  it("shows a backend error (e.g. lock still held) without hiding the button", () => {
+    render(
+      <RecoveryNotice
+        run={staleRun()}
+        resuming={false}
+        resumeRequested={false}
+        resumeError="A worker is currently processing this analysis; it is not stalled."
+        onResume={vi.fn()}
+      />
+    );
+
+    expect(
+      screen.getByText("A worker is currently processing this analysis; it is not stalled.")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /retry analysis/i })).toBeEnabled();
   });
 });
 

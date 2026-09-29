@@ -90,3 +90,26 @@ async def _ping_periodically(connection: AsyncConnection) -> None:
         await asyncio.sleep(_ADVISORY_LOCK_KEEPALIVE_INTERVAL_SECONDS)
         with contextlib.suppress(Exception):
             await connection.execute(text("SELECT 1"))
+
+
+async def is_advisory_lock_free(lock_key: int) -> bool:
+    """Non-blocking snapshot: True if nobody currently holds this advisory
+    lock. Acquires it and immediately releases it on a dedicated throwaway
+    connection - a session-level advisory lock is tied to the physical
+    connection that took it, so this never disturbs a lock a live worker
+    holds on its own connection, and never leaves one behind on this one.
+
+    This is a snapshot only: another session can acquire the lock a moment
+    after this returns True. Callers that need to actually start work under
+    the lock must still use `held_advisory_lock`, which acquires-and-holds
+    atomically; this function only answers "is it free right now", for
+    deciding whether a stale-looking run is safe to offer for retry.
+    """
+    async with engine.connect() as connection:
+        connection = await connection.execution_options(isolation_level="AUTOCOMMIT")
+        acquired = bool(
+            (await connection.execute(select(func.pg_try_advisory_lock(lock_key)))).scalar()
+        )
+        if acquired:
+            await connection.execute(select(func.pg_advisory_unlock(lock_key)))
+        return acquired

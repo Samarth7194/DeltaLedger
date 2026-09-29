@@ -3,6 +3,8 @@ else; the run payload says whether a failure is retryable."""
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -24,6 +26,7 @@ class _Session:
 class _Repo(FakeRepo):
     run_kwargs: dict = {}
     events: list = []
+    lock_checks: list = []
 
     def __init__(self, _session) -> None:
         self.run = FakeRun(**self.run_kwargs)
@@ -42,9 +45,10 @@ def _client(session: _Session) -> TestClient:
     return TestClient(app)
 
 
-def _setup(monkeypatch, *, batches=None, **run_kwargs):
+def _setup(monkeypatch, *, batches=None, lock_free: bool | None = None, **run_kwargs):
     _Repo.run_kwargs = run_kwargs
     _Repo.events = []
+    _Repo.lock_checks = []
     enqueued: list = []
     created: list = []
     session = _Session()
@@ -52,8 +56,15 @@ def _setup(monkeypatch, *, batches=None, **run_kwargs):
     async def fake_batches(_session, _run_id):
         return batches or {}
 
+    async def fake_lock_free(lock_key):
+        _Repo.lock_checks.append(lock_key)
+        if lock_free is None:
+            raise AssertionError("the advisory lock was checked but no lock_free= was given")
+        return lock_free
+
     monkeypatch.setattr("app.api.routes.analyses.WorkflowRepository", _Repo)
     monkeypatch.setattr("app.api.routes.analyses._batch_progress", fake_batches)
+    monkeypatch.setattr("app.api.routes.analyses.is_advisory_lock_free", fake_lock_free)
     monkeypatch.setattr(
         "app.api.routes.analyses.enqueue_run_analysis_workflow",
         lambda run_id: enqueued.append(run_id) or "job-retry",
@@ -195,3 +206,76 @@ def test_retrying_an_unknown_run_is_a_404(monkeypatch) -> None:
         response = client.post(f"/api/v1/analyses/{RUN_ID}/retry")
 
     assert response.status_code == 404 and enqueued == []
+
+
+# --- stale-run recovery (the worker died without ever marking the run failed) -------------------
+
+STALE_HEARTBEAT = datetime.now(UTC) - timedelta(seconds=700)  # comfortably over the 600s default
+FRESH_HEARTBEAT = datetime.now(UTC) - timedelta(seconds=1)
+
+STALE = {
+    "status": "verifying_claims",
+    "current_node": "verify_financial_claims",
+    "requires_human_review": False,
+    "last_heartbeat_at": STALE_HEARTBEAT,
+}
+
+
+def test_a_stale_run_is_retried_when_its_lock_is_free(monkeypatch) -> None:
+    session, enqueued, created = _setup(monkeypatch, lock_free=True, **STALE)
+
+    with _client(session) as client:
+        response = client.post(f"/api/v1/analyses/{RUN_ID}/retry")
+
+    assert response.status_code == 202
+    body = response.json()["data"]
+    assert body["analysis_run_id"] == str(RUN_ID) and body["stale"] is True
+    assert enqueued == [RUN_ID]  # the existing run, re-enqueued
+    assert created == []  # no new analysis was created
+    assert _Repo.events[0]["event_type"] == "workflow_resumed"
+    assert _Repo.events[0]["event_payload"]["reason"] == "stale_recovery"
+    assert _Repo.events[0]["event_payload"]["previous_status"] == "verifying_claims"
+    assert session.commits == 1
+
+
+def test_a_stale_run_is_refused_while_a_live_worker_still_holds_its_lock(monkeypatch) -> None:
+    session, enqueued, created = _setup(monkeypatch, lock_free=False, **STALE)
+
+    with _client(session) as client:
+        response = client.post(f"/api/v1/analyses/{RUN_ID}/retry")
+
+    assert response.status_code == 409
+    assert "processing this analysis" in response.json()["detail"]
+    assert enqueued == [] and created == [] and session.commits == 0
+    assert _Repo.lock_checks  # it actually checked, not just guessed
+
+
+def test_a_run_still_within_the_heartbeat_threshold_is_not_treated_as_stale(monkeypatch) -> None:
+    # Same in-progress status as STALE, but the heartbeat is fresh: a worker is
+    # almost certainly still actively processing it. No lock probe should even
+    # happen - there is nothing for it to decide.
+    session, enqueued, _ = _setup(
+        monkeypatch,
+        status="verifying_claims",
+        current_node="verify_financial_claims",
+        requires_human_review=False,
+        last_heartbeat_at=FRESH_HEARTBEAT,
+    )
+
+    with _client(session) as client:
+        response = client.post(f"/api/v1/analyses/{RUN_ID}/retry")
+
+    assert response.status_code == 422
+    assert enqueued == [] and session.commits == 0
+    assert _Repo.lock_checks == []
+
+
+def test_the_run_payload_shows_stalled_as_retryable_and_distinct_from_failed(monkeypatch) -> None:
+    session, _, _ = _setup(monkeypatch, **STALE)
+
+    with _client(session) as client:
+        payload = client.get(f"/api/v1/analyses/{RUN_ID}").json()["data"]
+
+    assert payload["status"] == "verifying_claims"  # never overwritten to "failed"
+    assert payload["progress"]["stale"] is True
+    assert payload["progress"]["retryable"] is True

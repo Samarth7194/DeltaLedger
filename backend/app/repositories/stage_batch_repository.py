@@ -18,6 +18,7 @@ from app.ai.batching import (
 )
 from app.ai.inference import UsageTotals
 from app.db.models import AnalysisStageBatch
+from app.repositories.workflow_repository import touch_heartbeat
 
 _MAX_ERROR_MESSAGE_CHARS = 500
 _SECRET_PATTERNS = (
@@ -249,6 +250,7 @@ class StageBatchRepository:
             row.retry_count += 1
         row.status = "processing"
         row.started_at = datetime.now(UTC)
+        await touch_heartbeat(self.session, row.analysis_run_id)
         await self.session.flush()
 
     async def mark_completed(
@@ -272,6 +274,7 @@ class StageBatchRepository:
         row.provider_call_count += provider_calls
         row.last_error_category = None
         row.last_error_message = None
+        await touch_heartbeat(self.session, row.analysis_run_id)
         await self.session.flush()
 
     async def mark_failed(
@@ -297,6 +300,7 @@ class StageBatchRepository:
             row.last_provider_error_type = provider_error.error_type[:48]
             row.last_retry_after_seconds = provider_error.retry_after_seconds
             row.last_provider_error_at = datetime.now(UTC)
+        await touch_heartbeat(self.session, row.analysis_run_id)
         await self.session.flush()
 
     async def list_batches(self, analysis_run_id: uuid.UUID, stage: str) -> list[StageBatchState]:

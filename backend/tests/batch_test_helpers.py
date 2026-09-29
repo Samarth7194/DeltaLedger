@@ -7,6 +7,8 @@ from __future__ import annotations
 import uuid
 from types import SimpleNamespace
 
+from sqlalchemy.sql.dml import Update
+
 from app.db.models import AnalysisStageBatch
 
 
@@ -25,6 +27,12 @@ class InMemoryBatchSession:
     def __init__(self, store: list[AnalysisStageBatch] | None = None) -> None:
         self.store: list[AnalysisStageBatch] = store if store is not None else []
         self.commit_count = 0
+        # Heartbeat touches (UPDATE analysis_runs ...) land here instead of a
+        # modelled table: this fake only models AnalysisStageBatch rows, and
+        # heartbeat behavior itself is covered by test_stale_run_recovery.py
+        # (the pure predicate) and the Postgres integration test (the real
+        # write). Recording call count here still lets a test assert it ran.
+        self.heartbeat_touches: list[uuid.UUID] = []
 
     async def __aenter__(self) -> InMemoryBatchSession:
         return self
@@ -46,7 +54,13 @@ class InMemoryBatchSession:
 
     async def execute(self, statement):
         """Column-projection selects (stage_progress): rows as tuples in the
-        selected column order, filtered to the statement's analysis run."""
+        selected column order, filtered to the statement's analysis run. An
+        UPDATE (the heartbeat touch) is recorded, not modelled in `store`."""
+        if isinstance(statement, Update):
+            params = statement.compile().params
+            run_id = next(v for k, v in params.items() if k.startswith("id"))
+            self.heartbeat_touches.append(run_id)
+            return None
         params = statement.compile().params
         run_id = next(v for k, v in params.items() if k.startswith("analysis_run_id"))
         names = [column.key for column in statement.selected_columns]

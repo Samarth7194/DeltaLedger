@@ -5,7 +5,7 @@ import json
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import (
@@ -116,6 +116,7 @@ class WorkflowRepository:
         now = datetime.now(UTC)
         run.status = status
         run.current_node = current_node
+        run.last_heartbeat_at = now
         if run.started_at is None and status != "queued":
             run.started_at = now
         if status in {"completed", "completed_with_warnings", "failed", "cancelled"}:
@@ -276,6 +277,22 @@ class WorkflowRepository:
     async def get_report(self, analysis_run_id: uuid.UUID) -> AnalysisReport | None:
         stmt = select(AnalysisReport).where(AnalysisReport.analysis_run_id == analysis_run_id)
         return await self.session.scalar(stmt)
+
+
+async def touch_heartbeat(session: AsyncSession, analysis_run_id: uuid.UUID) -> None:
+    """Bump `analysis_runs.last_heartbeat_at` for a run without loading (and
+    so without risking an implicit lazy-load of) its ORM object.
+
+    Used from `StageBatchRepository`, which only ever has the batch row (and
+    therefore `analysis_run_id`), not a loaded `AnalysisRun`, and which is
+    called from inside long provider-call loops where the shared session may
+    have just been closed/reopened around the previous call.
+    """
+    await session.execute(
+        update(AnalysisRun)
+        .where(AnalysisRun.id == analysis_run_id)
+        .values(last_heartbeat_at=datetime.now(UTC))
+    )
 
 
 def advisory_lock_key(analysis_run_id: uuid.UUID) -> int:

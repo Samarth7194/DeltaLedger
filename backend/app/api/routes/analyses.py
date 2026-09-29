@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -20,11 +21,12 @@ from app.api.schemas import (
     ResponseMeta,
 )
 from app.core.auth import AuthPrincipal, require_role
-from app.db.session import get_session
+from app.db.session import get_session, is_advisory_lock_free
 from app.repositories.stage_batch_repository import StageBatchRepository, is_retryable_error_type
-from app.repositories.workflow_repository import WorkflowRepository
+from app.repositories.workflow_repository import WorkflowRepository, advisory_lock_key
 from app.services.analysis_progress import build_stage_progress, current_stage_fraction
 from app.services.analysis_workflow_service import AnalysisWorkflowService, WorkflowError
+from app.services.stale_run_recovery import is_stale_by_heartbeat
 from app.workers.tasks import (
     enqueue_resume_analysis_workflow,
     enqueue_run_analysis_workflow,
@@ -200,42 +202,75 @@ async def retry_analysis(
     session: SessionDep,
     _principal: ReviewerDep,
 ) -> ResponseEnvelope:
-    """Continue the SAME failed run from its first incomplete part.
+    """Continue the SAME run from its first incomplete part - never creates a
+    new one; completed batches are skipped by the workflow itself.
 
-    Re-enqueues the existing run (never creates one): completed batches are
-    skipped by the workflow itself. Only a failed run whose failure is
-    retryable is accepted - a running, completed, cancelled or
-    awaiting-review run, or a failure that re-running cannot fix, is refused.
+    Two cases are accepted:
+
+    - **Failed**: the run's own failure must be retryable (a provider/transport
+      error, not a bug or a rejected request).
+    - **Stale**: the run is still in an in-progress status but its heartbeat
+      has gone stale (see app.services.stale_run_recovery) - the worker that
+      was processing it almost certainly died before reaching its own failure
+      handler. Accepted only if its advisory lock is free right now: if a
+      worker is still actually holding it (heartbeat stale but not yet dead,
+      or a live worker just picked it back up), retry is refused rather than
+      enqueuing a second worker onto the same run.
+
+    Anything else (running with a live heartbeat, completed, cancelled, or
+    awaiting human review - which resumes from its review instead) is refused.
     """
     repo = WorkflowRepository(session)
     run = await repo.get_run(analysis_run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Analysis run not found.")
-    if run.status != "failed":
+    settings = _settings()
+    stale = run.status != "failed" and is_stale_by_heartbeat(
+        status=run.status,
+        last_heartbeat_at=run.last_heartbeat_at,
+        started_at=run.started_at,
+        created_at=run.created_at,
+        now=datetime.now(UTC),
+        threshold_seconds=settings.stale_run_heartbeat_threshold_seconds,
+    )
+    if run.status != "failed" and not stale:
         raise HTTPException(
             status_code=422,
             detail=(
-                "Only a failed analysis can be resumed. "
                 "A run awaiting human review is resumed from its review."
                 if run.status == "awaiting_human_review"
-                else "Only a failed analysis can be resumed."
+                else "Only a failed or stalled analysis can be retried."
             ),
         )
-    response = await _run_response(session, repo, run)
-    if response.progress.retryable is not True:
+    if run.status == "failed":
+        response = await _run_response(session, repo, run)
+        if response.progress.retryable is not True:
+            raise HTTPException(
+                status_code=422,
+                detail="This failure cannot be fixed by running the analysis again.",
+            )
+    if stale and not await is_advisory_lock_free(advisory_lock_key(run.id)):
         raise HTTPException(
-            status_code=422,
-            detail="This failure cannot be fixed by running the analysis again.",
+            status_code=409,
+            detail=(
+                "A worker is currently processing this analysis; it is not stalled. "
+                "Try again shortly if it still looks stuck."
+            ),
         )
     job_id = enqueue_run_analysis_workflow(run.id)
     await repo.add_event(
         analysis_run_id=run.id,
         event_type="workflow_resumed",
-        event_payload={"reason": "retry_after_failure", "previous_failure_code": run.failure_code},
+        event_payload={
+            "reason": "stale_recovery" if stale else "retry_after_failure",
+            "previous_failure_code": run.failure_code,
+            "previous_status": run.status,
+            "previous_current_node": run.current_node,
+        },
     )
     await session.commit()
     return ResponseEnvelope(
-        data={"analysis_run_id": run.id, "job_id": job_id, "status": run.status},
+        data={"analysis_run_id": run.id, "job_id": job_id, "status": run.status, "stale": stale},
         meta=_meta(request),
     )
 
@@ -290,6 +325,14 @@ async def _run_response(
         batching=BatchingConfig.from_settings(_settings()),
     )
     failed_stage = next((stage for stage in stages if stage["status"] == "failed"), None)
+    stale = is_stale_by_heartbeat(
+        status=run.status,
+        last_heartbeat_at=run.last_heartbeat_at,
+        started_at=run.started_at,
+        created_at=run.created_at,
+        now=datetime.now(UTC),
+        threshold_seconds=_settings().stale_run_heartbeat_threshold_seconds,
+    )
     return AnalysisRunResponse(
         id=run.id,
         company_id=run.company_id,
@@ -311,7 +354,8 @@ async def _run_response(
             "progress_percent": _progress_percent(
                 completed_nodes, run.status, current_stage_fraction(stages)
             ),
-            "retryable": _run_retryable(run, failed_stage),
+            "retryable": _run_retryable(run, failed_stage, stale),
+            "stale": stale,
             "stages": stages,
         },
         counts={key: value for key, value in metrics.items() if key != "completed_nodes"},
@@ -322,8 +366,11 @@ async def _run_response(
     )
 
 
-def _run_retryable(run: object, failed_stage: dict | None) -> bool | None:
-    """For a failed run: can running it again succeed? None otherwise."""
+def _run_retryable(run: object, failed_stage: dict | None, stale: bool) -> bool | None:
+    """Can POST /retry help right now? True/False for a failed or stale run,
+    None otherwise (nothing to retry)."""
+    if stale:
+        return True
     if run.status != "failed":
         return None
     if failed_stage is not None:

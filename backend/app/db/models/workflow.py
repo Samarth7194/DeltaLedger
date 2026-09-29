@@ -102,6 +102,7 @@ class AnalysisRun(UuidPrimaryKeyMixin, TimestampMixin, Base):
             "comparison_filing_id",
         ),
         Index("ix_analysis_runs_checkpoint_thread", "checkpoint_thread_id"),
+        Index("ix_analysis_runs_status_heartbeat", "status", "last_heartbeat_at"),
     )
 
     company_id: Mapped[uuid.UUID] = mapped_column(
@@ -138,6 +139,14 @@ class AnalysisRun(UuidPrimaryKeyMixin, TimestampMixin, Base):
     )
     input_snapshot: Mapped[dict[str, object]] = mapped_column(
         JSONB, default=dict, server_default="{}", nullable=False
+    )
+    # Worker lease/heartbeat: touched at every node boundary (WorkflowRepository.
+    # set_run_status) and at every stage-batch transition (StageBatchRepository).
+    # A run whose status is still in-progress but whose heartbeat has gone stale
+    # and whose advisory lock is not held means the worker that was processing it
+    # died - see app/services/stale_run_recovery.py.
+    last_heartbeat_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
 
 

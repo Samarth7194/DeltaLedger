@@ -268,7 +268,7 @@ async def test_a_failed_part_is_logged_with_its_error_type_and_kept_parts(caplog
 
 
 def test_the_doctor_expects_the_actual_migration_head_and_the_batch_table() -> None:
-    assert production_doctor._expected_alembic_head() == "0007_stage_batches"
+    assert production_doctor._expected_alembic_head() == "0008_stale_run_recovery"
     assert "analysis_stage_batches" in production_doctor.EXPECTED_TABLES
 
 

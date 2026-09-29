@@ -18,6 +18,16 @@ export function canResume(run: Pick<AnalysisRun, "status" | "progress">) {
   return run.status === "failed" && run.progress.retryable === true;
 }
 
+/**
+ * A run whose status is still "in progress" but whose worker heartbeat has
+ * gone stale - its worker almost certainly died before it could mark the run
+ * failed. Distinct from `canResume` (which is the `status === "failed"`
+ * case); both use the same POST /retry action underneath.
+ */
+export function isStalled(run: Pick<AnalysisRun, "status" | "progress">) {
+  return run.status !== "failed" && run.progress.stale === true;
+}
+
 /** Calm, non-technical explanation of a provider-caused pause. No tracebacks. */
 export function providerPauseMessage(errorType?: string | null): string {
   const saved = "Completed parts were saved and will not be repeated.";
@@ -51,6 +61,50 @@ export function RecoveryNotice({
   resumeError?: string | null;
   onResume: () => void;
 }) {
+  if (isStalled(run)) {
+    return (
+      <Panel className="border-amber-300/30 bg-amber-400/10" role="status">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex gap-3 text-amber-100">
+            <PauseCircle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />
+            <div>
+              <h3 className="font-semibold">Analysis stalled — recoverable</h3>
+              <p className="mt-1 text-sm text-amber-100/85">
+                This analysis stopped mid-step, most likely because the worker processing it was
+                interrupted. Completed parts were saved and will not be repeated.
+              </p>
+              {resumeRequested ? (
+                <p className="mt-2 flex items-center gap-2 text-sm text-emerald-200">
+                  <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
+                  Retry requested. The worker will continue from the first incomplete part.
+                </p>
+              ) : null}
+              {resumeError ? (
+                <p className="mt-2 text-sm text-red-200" role="alert">
+                  {resumeError}
+                </p>
+              ) : null}
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="primary"
+            className="no-print shrink-0"
+            disabled={resuming || resumeRequested}
+            onClick={onResume}
+          >
+            {resuming ? (
+              <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+            ) : (
+              <PlayCircle aria-hidden="true" className="h-4 w-4" />
+            )}
+            {resuming ? "Retrying…" : resumeRequested ? "Retry requested" : "Retry Analysis"}
+          </Button>
+        </div>
+      </Panel>
+    );
+  }
+
   if (run.status !== "failed") {
     return null;
   }

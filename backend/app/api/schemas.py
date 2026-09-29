@@ -488,6 +488,7 @@ class AnalysisProgressResponse(BaseModel):
     completed_nodes: list[str]
     progress_percent: int
     retryable: bool | None = None
+    stale: bool = False
     stages: list[AnalysisStageProgressResponse] = []
 
 
