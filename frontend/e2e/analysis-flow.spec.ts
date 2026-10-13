@@ -34,10 +34,8 @@ test("critical browser analysis flow reaches review, resumes, and renders report
 
   await page.getByRole("link", { name: /Companies/i }).click();
   await expect(page.getByRole("heading", { name: "Companies" })).toBeVisible();
-  await Promise.all([
-    page.waitForURL(`/companies/${ids.companyId}`),
-    page.getByRole("link", { name: "AAPL", exact: true }).click()
-  ]);
+  await page.getByRole("link", { name: "Inspect", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/companies/${ids.companyId}$`));
   await expect(page.getByRole("heading", { name: "AAPL" })).toBeVisible();
   await expect(page.getByText("Jun 29, 2024").first()).toBeVisible();
 
@@ -53,7 +51,7 @@ test("critical browser analysis flow reaches review, resumes, and renders report
   await page.getByRole("button", { name: /Refresh/i }).click();
   await expect(page.getByText("Awaiting Human Review").first()).toBeVisible();
 
-  await page.getByRole("button", { name: /Potential Inconsistencies/i }).click();
+  await page.getByRole("tab", { name: "Potential Inconsistencies", exact: true }).click();
   await expect(page.getByText("Potential Inconsistency.")).toBeVisible();
   await expect(
     page.getByText("Numerical Claim Differs From Official Data").first()
@@ -65,7 +63,7 @@ test("critical browser analysis flow reaches review, resumes, and renders report
   await expect(page.getByText("RevenueFromContractWithCustomerExcludingAssessedTax")).toBeVisible();
   await page.getByRole("button", { name: "Close", exact: true }).click();
 
-  await page.getByRole("button", { name: "Review" }).click();
+  await page.getByRole("tab", { name: "Review", exact: true }).click();
   await page.getByLabel("Review decision").selectOption("approved");
   await page.getByLabel("Analyst note").fill("Evidence reviewed.");
   await page.getByRole("button", { name: /Submit Review/i }).click();
@@ -75,7 +73,7 @@ test("critical browser analysis flow reaches review, resumes, and renders report
   await page.getByRole("button", { name: /Refresh/i }).click();
   await expect(page.getByText("Completed").first()).toBeVisible();
 
-  await page.getByRole("button", { name: "Report" }).click();
+  await page.getByRole("tab", { name: "Report", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Executive Summary" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Disclosure Changes" })).toBeVisible();
   await expect(
@@ -106,7 +104,9 @@ test("invalid filing pair prevents analysis submission", async ({ page }) => {
   await page.getByRole("button", { name: "Current" }).last().click();
   await page.getByRole("button", { name: "Previous" }).first().click();
   await expect(page.getByRole("button", { name: /Create Analysis/i })).toBeDisabled();
-  await expect(page.getByText(/Select a current filing with a later report period/i)).toBeVisible();
+  await expect(
+    page.getByText("Select a later filing with a newer report period than the earlier filing.")
+  ).toBeVisible();
 });
 
 test("workflow progress labels follow backend status transitions", async ({ page }) => {
