@@ -49,6 +49,13 @@ Dense search uses cosine similarity through PGVector. The default configured emb
 dimension is 1024 for `BAAI/bge-large-en-v1.5`. The embedding service validates model output dimensions
 and fails clearly instead of truncating or padding vectors.
 
+Dense search requires each stored vector's `embedding_model` and `embedding_version`
+to match the query provider. Equal dimensions alone do not make Gemini and BGE vectors
+compatible. Vectors with missing or older model metadata are excluded from dense search;
+their text remains eligible for lexical search. The analysis workflow also checks model
+and version before treating a filing's embeddings as complete, so changing the configured
+model causes processing to re-embed affected chunks using the existing stored document.
+
 Lexical search uses PostgreSQL `websearch_to_tsquery('english', query)` against a
 generated `tsvector` column on `filing_chunks.text`, indexed with GIN.
 
@@ -64,6 +71,11 @@ chunk ID before optional reranking.
 Reranking uses a provider abstraction. Production can use a sentence-transformers
 CrossEncoder; tests use a deterministic overlap-based fake. Reranking is limited by
 `RERANKER_CANDIDATE_LIMIT` and can be disabled.
+
+When reranking is enabled, the final results follow the reranker's returned ordering,
+including zero or negative scores. Unselected candidates' positive fusion scores do not
+compete with reranker scores, which use a different scale. CrossEncoder prediction runs
+in a worker thread so it does not block the async event loop.
 
 Embedding providers:
 

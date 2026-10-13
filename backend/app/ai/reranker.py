@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import partial
 from typing import Protocol
 
 import anyio
@@ -54,9 +55,7 @@ class CrossEncoderReranker:
     async def rerank(self, query: str, documents: list[str], top_k: int) -> list[RerankResult]:
         pairs = [(query, document) for document in documents]
         scores = await anyio.to_thread.run_sync(
-            self._model.predict,
-            pairs,
-            batch_size=self.batch_size,
+            partial(self._model.predict, pairs, batch_size=self.batch_size),
         )
         results = [
             RerankResult(index=index, score=float(score))

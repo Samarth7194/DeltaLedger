@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import threading
 import types
 from typing import Any
 
@@ -14,7 +15,7 @@ from app.ai.embeddings import (
     _reset_sentence_transformer_cache,
     create_embedding_service,
 )
-from app.ai.reranker import DeterministicFakeReranker
+from app.ai.reranker import CrossEncoderReranker, DeterministicFakeReranker
 from app.core.config import Settings
 
 
@@ -361,3 +362,30 @@ async def test_fake_reranker_orders_by_query_overlap() -> None:
 
     assert results[0].index == 1
     assert results[0].score > results[1].score
+
+
+@pytest.mark.asyncio
+async def test_cross_encoder_predicts_in_thread_with_configured_batch_size(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    event_loop_thread = threading.get_ident()
+    predictions: list[tuple[list[tuple[str, str]], int, int]] = []
+
+    class _FakeCrossEncoder:
+        def __init__(self, model_name: str) -> None:
+            assert model_name == "BAAI/bge-reranker-base"
+
+        def predict(self, pairs: list[tuple[str, str]], *, batch_size: int) -> list[float]:
+            predictions.append((pairs, batch_size, threading.get_ident()))
+            return [-2.0, -1.0]
+
+    monkeypatch.setitem(
+        sys.modules, "sentence_transformers", types.SimpleNamespace(CrossEncoder=_FakeCrossEncoder)
+    )
+    reranker = CrossEncoderReranker(Settings(reranker_batch_size=4))
+
+    results = await reranker.rerank("liquidity", ["debt", "cash reserves"], top_k=1)
+
+    assert [(result.index, result.score) for result in results] == [(1, -1.0)]
+    assert predictions[0][:2] == ([("liquidity", "debt"), ("liquidity", "cash reserves")], 4)
+    assert predictions[0][2] != event_loop_thread

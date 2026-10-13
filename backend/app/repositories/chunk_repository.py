@@ -152,6 +152,8 @@ class ChunkRepository:
         self,
         *,
         query_embedding: list[float],
+        embedding_model: str,
+        embedding_version: str,
         filters: RetrievalFilters,
         top_k: int,
         min_similarity: float | None = None,
@@ -162,7 +164,12 @@ class ChunkRepository:
             .join(FilingSection, FilingChunk.filing_section_id == FilingSection.id)
             .join(Filing, FilingSection.filing_id == Filing.id)
             .join(Company, Filing.company_id == Company.id)
-            .where(FilingChunk.embedding.is_not(None), Company.is_active.is_(True))
+            .where(
+                FilingChunk.embedding.is_not(None),
+                FilingChunk.embedding_model == embedding_model,
+                FilingChunk.embedding_version == embedding_version,
+                Company.is_active.is_(True),
+            )
         )
         stmt = self._apply_filters(stmt, filters)
         if min_similarity is not None:

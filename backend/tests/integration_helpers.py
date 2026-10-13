@@ -7,6 +7,7 @@ from uuid import NAMESPACE_URL, UUID, uuid5
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai.embeddings import DeterministicFakeEmbeddingProvider
 from app.db.models import (
     Company,
     Filing,
@@ -32,6 +33,7 @@ async def reset_corpus(session: AsyncSession) -> None:
 
 async def create_retrieval_corpus(session: AsyncSession) -> dict[str, object]:
     await reset_corpus(session)
+    embedding_provider = DeterministicFakeEmbeddingProvider()
     active = Company(cik="0000000001", ticker="ACTV", legal_name="Active Test Inc.")
     inactive = Company(
         cik="0000000002",
@@ -169,8 +171,8 @@ async def create_retrieval_corpus(session: AsyncSession) -> dict[str, object]:
             content_hash="risk-customer",
             parser_version="parser-test",
             chunker_version="chunker-test",
-            embedding_model="fake",
-            embedding_version="fake-v1",
+            embedding_model=embedding_provider.model_name,
+            embedding_version=embedding_provider.model_version,
             metadata_={"fixture_key": "customer"},
         ),
         FilingChunk(
@@ -185,8 +187,8 @@ async def create_retrieval_corpus(session: AsyncSession) -> dict[str, object]:
             content_hash="mda-liquidity",
             parser_version="parser-test",
             chunker_version="chunker-test",
-            embedding_model="fake",
-            embedding_version="fake-v1",
+            embedding_model=embedding_provider.model_name,
+            embedding_version=embedding_provider.model_version,
             metadata_={"fixture_key": "liquidity"},
         ),
         FilingChunk(
@@ -201,8 +203,8 @@ async def create_retrieval_corpus(session: AsyncSession) -> dict[str, object]:
             content_hash="mda-debt",
             parser_version="parser-test",
             chunker_version="chunker-test",
-            embedding_model="fake",
-            embedding_version="fake-v1",
+            embedding_model=embedding_provider.model_name,
+            embedding_version=embedding_provider.model_version,
             metadata_={"fixture_key": "debt"},
         ),
         FilingChunk(
@@ -217,8 +219,8 @@ async def create_retrieval_corpus(session: AsyncSession) -> dict[str, object]:
             content_hash="other-revenue",
             parser_version="parser-test",
             chunker_version="chunker-test",
-            embedding_model="fake",
-            embedding_version="fake-v1",
+            embedding_model=embedding_provider.model_name,
+            embedding_version=embedding_provider.model_version,
             metadata_={"fixture_key": "revenue"},
         ),
         FilingChunk(
@@ -263,6 +265,7 @@ async def create_retrieval_corpus(session: AsyncSession) -> dict[str, object]:
 
 async def create_comparison_corpus(session: AsyncSession) -> dict[str, object]:
     await reset_corpus(session)
+    embedding_provider = DeterministicFakeEmbeddingProvider()
     company = Company(cik="0000000100", ticker="CMP", legal_name="Comparison Test Inc.")
     session.add(company)
     await session.flush()
@@ -347,8 +350,8 @@ async def create_comparison_corpus(session: AsyncSession) -> dict[str, object]:
             end_offset=len(previous_text),
             source_reference="#previous-mda",
             content_hash="previous-mda-chunk",
-            embedding_model="fake",
-            embedding_version="fake-v1",
+            embedding_model=embedding_provider.model_name,
+            embedding_version=embedding_provider.model_version,
             metadata_={},
         ),
         FilingChunk(
@@ -361,8 +364,8 @@ async def create_comparison_corpus(session: AsyncSession) -> dict[str, object]:
             end_offset=len(current_text),
             source_reference="#current-mda",
             content_hash="current-mda-chunk",
-            embedding_model="fake",
-            embedding_version="fake-v1",
+            embedding_model=embedding_provider.model_name,
+            embedding_version=embedding_provider.model_version,
             metadata_={},
         ),
     ]

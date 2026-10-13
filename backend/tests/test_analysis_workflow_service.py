@@ -3,9 +3,11 @@ from __future__ import annotations
 import uuid
 from decimal import Decimal
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
+from app.ai.embeddings import DeterministicFakeEmbeddingProvider, EmbeddingService
 from app.ai.openai_compatible import ProviderRequestError
 from app.api.routes.analyses import _progress_percent
 from app.core.config import Settings
@@ -82,6 +84,25 @@ def test_checkpoint_database_url_uses_runtime_database_not_alembic_url() -> None
     )
 
     assert _checkpoint_database_url(settings) == "postgresql://user@host/runtime_db"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("matched_count,expected", [(3, True), (2, False), (0, False)])
+async def test_processing_readiness_counts_only_current_model_embeddings(
+    matched_count: int,
+    expected: bool,
+) -> None:
+    session = SimpleNamespace(scalar=AsyncMock(side_effect=[1, 3, matched_count]))
+    service = AnalysisWorkflowService(session, Settings())
+    embeddings = EmbeddingService(
+        DeterministicFakeEmbeddingProvider(), expected_dimension=1024, batch_size=2
+    )
+
+    assert await service._has_processing_ready(uuid.uuid4(), embeddings) is expected
+
+    query = session.scalar.call_args.args[0].whereclause.compile()
+    assert query.params["embedding_model_1"] == embeddings.model_name
+    assert query.params["embedding_version_1"] == embeddings.model_version
 
 
 @pytest.mark.asyncio

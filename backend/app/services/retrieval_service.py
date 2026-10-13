@@ -72,6 +72,8 @@ class RetrievalService:
         query_embedding = await self.embeddings.embed_query(request.query)
         dense_results = await self.chunks.dense_search(
             query_embedding=query_embedding,
+            embedding_model=self.embeddings.model_name,
+            embedding_version=self.embeddings.model_version,
             filters=filters,
             top_k=request.candidate_k,
             min_similarity=request.min_dense_similarity,
@@ -94,14 +96,7 @@ class RetrievalService:
             reranker_scores = {
                 candidates[result.index].chunk_id: result.score for result in reranked
             }
-            candidates = sorted(
-                candidates,
-                key=lambda candidate: reranker_scores.get(
-                    candidate.chunk_id,
-                    candidate.fusion_score,
-                ),
-                reverse=True,
-            )
+            candidates = [candidates[result.index] for result in reranked]
 
         final_results: list[HybridSearchResult] = []
         for candidate in candidates[: request.top_k]:
@@ -137,6 +132,8 @@ class RetrievalService:
         query_embedding = await self.embeddings.embed_query(request.query)
         return await self.chunks.dense_search(
             query_embedding=query_embedding,
+            embedding_model=self.embeddings.model_name,
+            embedding_version=self.embeddings.model_version,
             filters=filters,
             top_k=request.top_k,
             min_similarity=request.min_dense_similarity,

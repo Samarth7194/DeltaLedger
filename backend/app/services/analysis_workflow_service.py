@@ -10,6 +10,7 @@ from langgraph.types import Command, interrupt
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai.embeddings import EmbeddingService
 from app.ai.openai_compatible import ProviderRequestError
 from app.core.config import Settings
 from app.db.models import (
@@ -385,20 +386,25 @@ class AnalysisWorkflowService:
             warnings = list(state.get("warnings", []))
             processor = FilingProcessingService(self.session, self.settings)
             for filing in (current, previous):
-                if await self._has_processing_ready(filing.id):
+                if await self._has_processing_ready(filing.id, processor.embedding_service):
                     continue
                 if filing.storage_key:
                     await processor.process_filing(filing.id)
                 else:
                     warnings.append(f"Filing {filing.id} cannot be processed without storage_key.")
-            current_ready = await self._has_processing_ready(current.id)
-            previous_ready = await self._has_processing_ready(previous.id)
+            current_ready = await self._has_processing_ready(
+                current.id, processor.embedding_service
+            )
+            previous_ready = await self._has_processing_ready(
+                previous.id, processor.embedding_service
+            )
             ready = current_ready and previous_ready
             if not ready:
                 raise WorkflowError(
                     "missing_dependency",
                     "filings_not_processed",
-                    "Required filings do not have parsed sections and chunks.",
+                    "Required filings need parsed sections, chunks, and complete embeddings "
+                    "from the configured model.",
                 )
             return {"processing_ready": True, "warnings": warnings}
 
@@ -835,7 +841,11 @@ class AnalysisWorkflowService:
             raise WorkflowError("validation_error", "filing_not_found", "Both filings must exist.")
         return current, previous
 
-    async def _has_processing_ready(self, filing_id: uuid.UUID) -> bool:
+    async def _has_processing_ready(
+        self,
+        filing_id: uuid.UUID,
+        embeddings: EmbeddingService,
+    ) -> bool:
         section_count = await self.session.scalar(
             select(func.count())
             .select_from(FilingSection)
@@ -854,6 +864,8 @@ class AnalysisWorkflowService:
             .where(
                 FilingSection.filing_id == filing_id,
                 FilingChunk.embedding.is_not(None),
+                FilingChunk.embedding_model == embeddings.model_name,
+                FilingChunk.embedding_version == embeddings.model_version,
             )
         )
         return bool(section_count and chunk_count and chunk_count == embedded_chunk_count)
