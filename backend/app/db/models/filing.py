@@ -14,6 +14,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -32,7 +33,9 @@ class Filing(UuidPrimaryKeyMixin, TimestampMixin, Base):
             "accession_number",
             name="uq_filings_company_form_period_accession",
         ),
-        Index("ix_filings_company_form_period", "company_id", "form_type", "report_period"),
+        Index(
+            "ix_filings_company_form_period", "company_id", "form_type", text("report_period DESC")
+        ),
         Index("ix_filings_ingestion_status_created", "ingestion_status", "created_at"),
         Index("ix_filings_raw_metadata_gin", "raw_metadata", postgresql_using="gin"),
     )

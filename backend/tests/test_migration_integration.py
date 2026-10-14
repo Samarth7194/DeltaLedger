@@ -28,6 +28,7 @@ def test_clean_database_migrates_to_head_and_schema_objects_exist(
     config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
     (head,) = ScriptDirectory.from_config(config).get_heads()
     assert head in current.stdout
+    run_alembic("check", test_database_url=test_database_url)
 
     engine = create_engine(sync_url)
     with engine.connect() as connection:
