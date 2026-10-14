@@ -113,8 +113,12 @@ async def test_reusable_change_results_are_scoped_to_model_and_prompt_version(
 @pytest.mark.asyncio
 async def test_phase3_comparison_pipeline_persists_api_visible_results(
     integration_session,
+    fresh_session_factory,
+    monkeypatch,
 ) -> None:
     corpus = await create_comparison_corpus(integration_session)
+    # API overrides do not redirect the dedicated advisory-lock connection.
+    monkeypatch.setattr("app.db.session.engine", integration_session.bind)
     settings = Settings(
         app_profile="local-cloud",
         embedding_provider="fake",
@@ -149,9 +153,9 @@ async def test_phase3_comparison_pipeline_persists_api_visible_results(
             assert create_response.status_code == 202
             comparison_id = create_response.json()["data"]["comparison_id"]
 
-            await FilingComparisonService(integration_session, settings).process_comparison(
-                UUID(comparison_id)
-            )
+            await FilingComparisonService(
+                integration_session, settings, session_factory=fresh_session_factory
+            ).process_comparison(UUID(comparison_id))
 
             summary_response = await client.get(f"/api/v1/comparisons/{comparison_id}")
             sections_response = await client.get(
